@@ -18,7 +18,8 @@ enum Geo {
     /// Hinge is on the left edge of the door, at mid height.
     static let hinge = CGPoint(x: 4, y: 260)
     /// Half the door thickness; front face sits at +z, back face at -z.
-    static let doorHalfThickness: CGFloat = 2
+    static let doorHalfThickness: CGFloat = 6
+    static let doorCornerRadius: CGFloat = 24
 
     /// The opening into the cabinet, in scene coordinates.
     static let opening = CGRect(x: 14, y: 14, width: InteriorGeometry.openingWidth, height: InteriorGeometry.openingHeight)

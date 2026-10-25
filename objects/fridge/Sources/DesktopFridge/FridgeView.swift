@@ -23,6 +23,7 @@ final class FridgeView: NSView, NSDraggingSource {
     private let contactShadow = CALayer()
     private let liftShadow = CALayer()
     private let scene = CALayer()
+    private let body = CALayer()
     private let cabinet = CALayer()
     private let interior = CALayer()
     private let frost = CALayer()
@@ -31,7 +32,7 @@ final class FridgeView: NSView, NSDraggingSource {
     private let doorRoot = CATransformLayer()
     private let doorFront = CALayer()
     private let doorBack = CALayer()
-    private let doorEdge = CALayer()
+    private let doorEdge = CAGradientLayer()
     private let frontShade = CALayer()
     private let backShade = CALayer()
     private let led = CATextLayer()
@@ -83,6 +84,17 @@ final class FridgeView: NSView, NSDraggingSource {
         renderArt(scale: scale)
         applyDoor(angle: 0)
         registerForDraggedTypes([.fileURL])
+
+        if let raw = ProcessInfo.processInfo.environment["FRIDGE_DEBUG_ANGLE"], let degrees = Double(raw) {
+            let angle = degrees * Double.pi / 180
+            driver.debugPin(angle: angle)
+            applyDoor(angle: angle)
+        }
+        if let hide = ProcessInfo.processInfo.environment["FRIDGE_DEBUG_HIDE"] {
+            let named: [String: CALayer] = ["cabinet": cabinet, "door": doorRoot, "interior": interior, "darkness": darkness]
+            for key in hide.split(separator: ",") { named[String(key)]?.isHidden = true }
+            NSLog("debug layers interior=%@ glowOpacity=%f darkOpacity=%f", String(describing: interior.contents != nil), glow.opacity, darkness.opacity)
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -112,29 +124,37 @@ final class FridgeView: NSView, NSDraggingSource {
         scene.sublayerTransform = perspective
         root.addSublayer(scene)
 
+        // The scene holds a 3D door, so Core Animation depth-tests its direct children. Everything
+        // that lies flat in the cabinet plane goes into one plain container, which flattens it in
+        // painter's order. Without this the cabinet z-fights the interior and hides it.
+        body.frame = CGRect(origin: .zero, size: Geo.bodySize)
+        scene.addSublayer(body)
+
         cabinet.frame = CGRect(origin: .zero, size: Geo.bodySize)
-        scene.addSublayer(cabinet)
+        body.addSublayer(cabinet)
 
         interior.frame = Geo.opening
-        scene.addSublayer(interior)
+        body.addSublayer(interior)
         frost.frame = Geo.opening
-        scene.addSublayer(frost)
-        scene.addSublayer(items.layer)
+        body.addSublayer(frost)
+        body.addSublayer(items.layer)
 
         darkness.frame = Geo.opening
         darkness.backgroundColor = CGColor(gray: 0, alpha: 1)
-        scene.addSublayer(darkness)
+        body.addSublayer(darkness)
 
         glow.frame = Geo.opening
         glow.type = .radial
         glow.startPoint = CGPoint(x: 0.5, y: 0.78)
         glow.endPoint = CGPoint(x: 1.15, y: 0.02)
-        scene.addSublayer(glow)
+        body.addSublayer(glow)
 
         // Door: a transform layer so its faces and edge keep their own 3D positions.
         doorRoot.bounds = CGRect(origin: .zero, size: Geo.doorSize)
         doorRoot.anchorPoint = CGPoint(x: 0, y: 0.5)
         doorRoot.position = Geo.hinge
+        // Lift the whole door so its back face sits just in front of the cabinet plane.
+        doorRoot.zPosition = Geo.doorHalfThickness + 0.5
         scene.addSublayer(doorRoot)
 
         let doorBounds = CGRect(origin: .zero, size: Geo.doorSize)
@@ -149,10 +169,14 @@ final class FridgeView: NSView, NSDraggingSource {
         doorBack.isDoubleSided = false
         doorRoot.addSublayer(doorBack)
 
-        doorEdge.bounds = CGRect(x: 0, y: 0, width: Geo.doorHalfThickness * 2, height: Geo.doorSize.height)
-        doorEdge.position = CGPoint(x: Geo.doorSize.width, y: Geo.doorSize.height / 2)
+        // The free edge is inset by the corner radius so it never pokes past the rounded corners.
+        doorEdge.bounds = CGRect(x: 0, y: 0, width: Geo.doorHalfThickness * 2, height: Geo.doorSize.height - 2 * Geo.doorCornerRadius)
+        doorEdge.position = CGPoint(x: Geo.doorSize.width - 1, y: Geo.doorSize.height / 2)
         doorEdge.transform = CATransform3DMakeRotation(.pi / 2, 0, 1, 0)
-        doorEdge.backgroundColor = Art.hex(0x7E9E92)
+        doorEdge.colors = [Art.hex(0x9DBDB0), Art.hex(0xC9E0D6), Art.hex(0x6F8C81)]
+        doorEdge.locations = [0, 0.35, 1]
+        doorEdge.startPoint = CGPoint(x: 0, y: 0.5)
+        doorEdge.endPoint = CGPoint(x: 1, y: 0.5)
         doorEdge.isDoubleSided = true
         doorRoot.addSublayer(doorEdge)
 
@@ -176,8 +200,11 @@ final class FridgeView: NSView, NSDraggingSource {
         // Hinge plates straddle the door's left edge and stay put when the door swings.
         hingeTop.frame = CGRect(x: Geo.hinge.x - 8, y: 396, width: FridgeArt.hingeSize.width, height: FridgeArt.hingeSize.height)
         hingeBottom.frame = CGRect(x: Geo.hinge.x - 8, y: 56, width: FridgeArt.hingeSize.width, height: FridgeArt.hingeSize.height)
-        scene.addSublayer(hingeTop)
-        scene.addSublayer(hingeBottom)
+        // Hinges sit in front of the door's front face so the depth test never hides them.
+        for hinge in [hingeTop, hingeBottom] {
+            hinge.zPosition = Geo.doorHalfThickness * 2 + 2
+            scene.addSublayer(hinge)
+        }
 
         fogHost.frame = CGRect(origin: .zero, size: Geo.windowSize)
         root.addSublayer(fogHost)

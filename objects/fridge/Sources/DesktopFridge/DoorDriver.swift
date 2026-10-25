@@ -42,6 +42,12 @@ final class DoorDriver: NSObject {
         wake()
     }
 
+    /// Development aid: pins the door at an angle (no physics), for screenshots.
+    func debugPin(angle: Double) {
+        physics.reset(angle: angle)
+        physics.handTarget = angle
+    }
+
     // MARK: Lifecycle
 
     /// Freezes the door exactly where it is. Used on lock and sleep.
