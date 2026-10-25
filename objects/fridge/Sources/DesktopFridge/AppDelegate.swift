@@ -27,7 +27,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let fridgeView = FridgeView(store: store)
-        let fridgePanel = FridgePanel(contentView: fridgeView, origin: initialOrigin())
+        let origin = initialOrigin()
+        let fridgePanel = FridgePanel(contentView: fridgeView, origin: origin.point)
+        // The panel starts at design size. A saved origin already belongs to the saved size; the default
+        // spot is worked out at design size, so grow or shrink around the feet from there.
+        fridgeView.setUserScale(fridgeView.userScale, rerender: false, windowScale: 1, keepOrigin: origin.saved)
         fridgePanel.orderFrontRegardless()
 
         view = fridgeView
@@ -47,24 +51,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: Placement
 
     /// Last saved position, or the lower right of the main screen with the feet near the Dock.
-    private func initialOrigin() -> NSPoint {
+    private func initialOrigin() -> (point: NSPoint, saved: Bool) {
+        let scale = view?.userScale ?? CGFloat(max(UserDefaults.standard.double(forKey: "fridgeScale"), 0))
         if let saved = UserDefaults.standard.string(forKey: "windowOrigin") {
             let p = NSPointFromString(saved)
-            if bodyIsVisible(windowOrigin: p) { return p }
+            if bodyIsVisible(windowOrigin: p, scale: scale > 0 ? scale : 1) { return (p, true) }
         }
         let visible = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        return NSPoint(x: visible.maxX - Geo.bodyOrigin.x - Geo.bodySize.width - 36,
-                       y: visible.minY + 24 - Geo.bodyOrigin.y)
+        return (NSPoint(x: visible.maxX - Geo.bodyOrigin.x - Geo.bodySize.width - 36,
+                        y: visible.minY + 24 - Geo.bodyOrigin.y), false)
     }
 
-    private func bodyIsVisible(windowOrigin p: NSPoint) -> Bool {
-        let body = NSRect(x: p.x + Geo.bodyOrigin.x, y: p.y + Geo.bodyOrigin.y,
-                          width: Geo.bodySize.width, height: Geo.bodySize.height)
+    private func bodyIsVisible(windowOrigin p: NSPoint, scale: CGFloat) -> Bool {
+        let body = NSRect(x: p.x + Geo.bodyOrigin.x * scale, y: p.y + Geo.bodyOrigin.y * scale,
+                          width: Geo.bodySize.width * scale, height: Geo.bodySize.height * scale)
         return NSScreen.screens.contains { $0.frame.intersects(body) }
     }
 
     private func keepOnScreen() {
-        guard let panel = panel, !bodyIsVisible(windowOrigin: panel.frame.origin) else { return }
-        panel.setFrameOrigin(initialOrigin())
+        guard let panel = panel, let view = view,
+              !bodyIsVisible(windowOrigin: panel.frame.origin, scale: view.userScale) else { return }
+        let origin = initialOrigin()
+        panel.setFrameOrigin(origin.point)
+        view.setUserScale(view.userScale, rerender: false, windowScale: 1, keepOrigin: origin.saved)
     }
 }

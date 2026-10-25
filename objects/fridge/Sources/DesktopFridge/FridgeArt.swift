@@ -239,10 +239,13 @@ enum FridgeArt {
 
     // MARK: Hinge
 
-    static let hingeSize = CGSize(width: 20, height: 64)
+    static let hingeSize = CGSize(width: 13, height: 40)
+    /// The hinge is drawn on a 20 x 64 grid and scaled down to `hingeSize`.
+    private static let hingeDesign = CGSize(width: 20, height: 64)
 
     static func hinge(scale: CGFloat) -> CGImage? {
         return Art.render(size: hingeSize, scale: scale) { ctx in
+            ctx.scaleBy(x: hingeSize.width / hingeDesign.width, y: hingeSize.height / hingeDesign.height)
             let plate = Art.roundedPath(CGRect(x: 1, y: 2, width: 18, height: 60), 4)
             ctx.saveGState()
             ctx.setShadow(offset: CGSize(width: 1, height: -1.5), blur: 2.5, color: Art.color(0, 0, 0, 0.5))

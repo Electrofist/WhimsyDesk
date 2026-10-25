@@ -20,7 +20,7 @@ enum Geo {
     /// Hinge is on the left edge of the door, at mid height.
     static let hinge = CGPoint(x: 4, y: 4 + 555.0 / 2)
     /// Hinge plates on the cabinet (scene y of their bottom edge), near the top and bottom of the door.
-    static let hingePlateY: [CGFloat] = [470, 50]
+    static let hingePlateY: [CGFloat] = [490, 40]
     /// Half the door thickness; front face sits at +z, back face at -z.
     /// A fridge door has some depth (insulation plus the liner), but reads slim at this scale. 18 pt in all.
     static let doorHalfThickness: CGFloat = 9

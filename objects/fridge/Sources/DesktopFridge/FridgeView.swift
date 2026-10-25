@@ -52,6 +52,8 @@ final class FridgeView: NSView, NSDraggingSource {
         case doorPress(doorX: CGFloat, start: NSPoint)
         /// Holding the door at `doorX` (door space), so that spot stays under the pointer.
         case door(doorX: CGFloat)
+        /// ⌥ drag: resizing the whole fridge.
+        case resize(startMouse: NSPoint, startScale: CGFloat)
         case window(startMouse: NSPoint, startOrigin: NSPoint)
         case item(entry: FridgeEntry, start: NSPoint)
     }
@@ -75,7 +77,7 @@ final class FridgeView: NSView, NSDraggingSource {
         wantsLayer = true
         layerContentsRedrawPolicy = .never
 
-        let scale = NSScreen.main?.backingScaleFactor ?? 2
+        let scale = (NSScreen.main?.backingScaleFactor ?? 2) * userScale
         items = ItemsController(store: store, scale: scale)
         buildLayers()
         driver = DoorDriver(view: self)
@@ -206,8 +208,9 @@ final class FridgeView: NSView, NSDraggingSource {
         led.isHidden = true
 
         // Hinge plates straddle the door's left edge and stay put when the door swings.
-        hingeTop.frame = CGRect(x: Geo.hinge.x - 8, y: Geo.hingePlateY[0], width: FridgeArt.hingeSize.width, height: FridgeArt.hingeSize.height)
-        hingeBottom.frame = CGRect(x: Geo.hinge.x - 8, y: Geo.hingePlateY[1], width: FridgeArt.hingeSize.width, height: FridgeArt.hingeSize.height)
+        let hingeX = Geo.hinge.x - FridgeArt.hingeSize.width * 0.4
+        hingeTop.frame = CGRect(x: hingeX, y: Geo.hingePlateY[0], width: FridgeArt.hingeSize.width, height: FridgeArt.hingeSize.height)
+        hingeBottom.frame = CGRect(x: hingeX, y: Geo.hingePlateY[1], width: FridgeArt.hingeSize.width, height: FridgeArt.hingeSize.height)
         // Hinges sit in front of the door's front face so the depth test never hides them.
         for hinge in [hingeTop, hingeBottom] {
             hinge.zPosition = Geo.doorHalfThickness * 2 + 2
@@ -289,7 +292,7 @@ final class FridgeView: NSView, NSDraggingSource {
 
     override func viewDidChangeBackingProperties() {
         super.viewDidChangeBackingProperties()
-        if let scale = window?.backingScaleFactor { renderArt(scale: scale) }
+        if let scale = window?.backingScaleFactor { renderArt(scale: scale * userScale) }
     }
 
     override func viewDidChangeEffectiveAppearance() {
@@ -399,9 +402,36 @@ final class FridgeView: NSView, NSDraggingSource {
     /// Swing-open angle used by double-click and by files hovering over a closed fridge.
     private static let swingOpenAngle = 96.0 * Double.pi / 180
 
+    /// ⌥ drag resizes the fridge, ⌥⌘ drag moves it. A plain drag only ever works the door.
+    private enum Gesture { case none, resize, move }
+
+    private func gesture(for flags: NSEvent.ModifierFlags) -> Gesture {
+        let f = flags.intersection(.deviceIndependentFlagsMask)
+        if f.contains(.option) && f.contains(.command) { return .move }
+        if f.contains(.option) { return .resize }
+        return .none
+    }
+
+    private func isOnFridge(_ s: CGPoint) -> Bool {
+        return Geo.contains(Geo.doorQuad(angle: driver.angle), s)
+            || CGRect(origin: .zero, size: Geo.bodySize).contains(s)
+    }
+
     override func mouseDown(with event: NSEvent) {
         let s = scenePoint(event)
         let angle = driver.angle
+
+        switch gesture(for: event.modifierFlags) {
+        case .move where isOnFridge(s):
+            beginWindowDrag()
+            NSCursor.closedHand.set()
+            return
+        case .resize where isOnFridge(s):
+            interaction = .resize(startMouse: NSEvent.mouseLocation, startScale: userScale)
+            return
+        default:
+            break
+        }
 
         if Geo.contains(Geo.doorQuad(angle: angle), s) {
             if event.clickCount == 2 {
@@ -425,28 +455,22 @@ final class FridgeView: NSView, NSDraggingSource {
             }
             return
         }
-        if Geo.bodyRectInView.contains(convert(event.locationInWindow, from: nil)) {
-            beginWindowDrag()
-        }
     }
 
     override func mouseDragged(with event: NSEvent) {
         switch interaction {
         case .doorPress(let doorX, let start):
             let m = NSEvent.mouseLocation
-            let dx = m.x - start.x, dy = m.y - start.y
-            guard hypot(dx, dy) > 4 else { return }
-            if abs(dy) > abs(dx) * 1.6 {
-                // Lifting or lowering the fridge rather than pulling the door.
-                guard let window = window else { return }
-                interaction = .window(startMouse: start, startOrigin: window.frame.origin)
-                setLifted(true)
-                mouseDragged(with: event)
-            } else {
-                interaction = .door(doorX: doorX)
-                driver.hold(at: driver.angle)
-                mouseDragged(with: event)
-            }
+            guard hypot(m.x - start.x, m.y - start.y) > 3 else { return }
+            interaction = .door(doorX: doorX)
+            driver.hold(at: driver.angle)
+            mouseDragged(with: event)
+
+        case .resize(let startMouse, let startScale):
+            // Drag up or right to grow, down or left to shrink. The feet stay planted.
+            let m = NSEvent.mouseLocation
+            let d = (m.y - startMouse.y) + (m.x - startMouse.x) * 0.5
+            setUserScale(startScale * exp(d / 320), rerender: false)
 
         case .door(let doorX):
             let s = scenePoint(event)
@@ -478,6 +502,12 @@ final class FridgeView: NSView, NSDraggingSource {
             NSCursor.openHand.set()
         case .doorPress:
             NSCursor.openHand.set()
+        case .resize:
+            setUserScale(userScale, rerender: true)   // crisp bitmaps at the new size
+            UserDefaults.standard.set(Double(userScale), forKey: "fridgeScale")
+            if let origin = window?.frame.origin {
+                UserDefaults.standard.set(NSStringFromPoint(origin), forKey: "windowOrigin")
+            }
         case .window:
             setLifted(false)
             if let origin = window?.frame.origin {
@@ -504,8 +534,59 @@ final class FridgeView: NSView, NSDraggingSource {
 
     override func mouseMoved(with event: NSEvent) {
         guard case .none = interaction else { return }
-        let overDoor = Geo.contains(Geo.doorQuad(angle: driver.angle), scenePoint(event))
-        (overDoor ? NSCursor.openHand : NSCursor.arrow).set()
+        let s = scenePoint(event)
+        switch gesture(for: event.modifierFlags) {
+        case .move where isOnFridge(s):
+            NSCursor.openHand.set()
+        case .resize where isOnFridge(s):
+            resizeCursor.set()
+        default:
+            let overDoor = Geo.contains(Geo.doorQuad(angle: driver.angle), s)
+            (overDoor ? NSCursor.openHand : NSCursor.arrow).set()
+        }
+    }
+
+    private var resizeCursor: NSCursor {
+        if #available(macOS 15.0, *) {
+            return NSCursor.frameResize(position: .topRight, directions: .all)
+        }
+        return NSCursor.resizeUpDown
+    }
+
+    // MARK: Size (⌥ drag)
+
+    /// How big the fridge is drawn, relative to its design size. Saved between launches.
+    private(set) var userScale: CGFloat = {
+        let saved = UserDefaults.standard.double(forKey: "fridgeScale")
+        return saved > 0 ? CGFloat(saved) : 1
+    }()
+
+    static let scaleRange: ClosedRange<CGFloat> = 0.45...1.6
+
+    /// Resizes the window around the fridge's feet. The view keeps its design-size bounds, so all
+    /// geometry and hit testing stay in design points and AppKit scales the result.
+    /// `rerender` redraws the art at the new pixel density (skipped mid-drag to keep it smooth).
+    /// `windowScale` is the scale the window currently has (defaults to `userScale`).
+    /// `keepOrigin` leaves the window's origin alone, for restoring a saved position at launch.
+    func setUserScale(_ newScale: CGFloat, rerender: Bool, windowScale: CGFloat? = nil, keepOrigin: Bool = false) {
+        guard let window = window else { return }
+        let old = windowScale ?? userScale
+        let s = min(max(newScale, FridgeView.scaleRange.lowerBound), FridgeView.scaleRange.upperBound)
+        userScale = s
+
+        let feet = CGPoint(x: Geo.bodyOrigin.x + Geo.bodySize.width / 2, y: Geo.bodyOrigin.y)
+        let planted = NSPoint(x: window.frame.minX + feet.x * old, y: window.frame.minY + feet.y * old)
+        let size = NSSize(width: (Geo.windowSize.width * s).rounded(), height: (Geo.windowSize.height * s).rounded())
+        let origin = keepOrigin
+            ? window.frame.origin
+            : NSPoint(x: (planted.x - feet.x * s).rounded(), y: (planted.y - feet.y * s).rounded())
+        window.setFrame(NSRect(origin: origin, size: size), display: true)
+        setFrameSize(size)
+        setBoundsSize(Geo.windowSize)
+
+        if rerender {
+            renderArt(scale: window.backingScaleFactor * s)
+        }
     }
 
     override func mouseExited(with event: NSEvent) {
