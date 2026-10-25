@@ -89,13 +89,7 @@ final class FridgeView: NSView, NSDraggingSource {
             let angle = degrees * Double.pi / 180
             driver.debugPin(angle: angle)
             applyDoor(angle: angle)
-        }
-        if let hide = ProcessInfo.processInfo.environment["FRIDGE_DEBUG_HIDE"] {
-            let named: [String: CALayer] = ["cabinet": cabinet, "door": doorRoot, "interior": interior, "darkness": darkness]
-            for key in hide.split(separator: ",") { named[String(key)]?.isHidden = true }
-            NSLog("debug layers interior=%@ glowOpacity=%f darkOpacity=%f", String(describing: interior.contents != nil), glow.opacity, darkness.opacity)
-        }
-    }
+        }    }
 
     required init?(coder: NSCoder) {
         fatalError("not used")
@@ -172,12 +166,14 @@ final class FridgeView: NSView, NSDraggingSource {
         // The free edge is inset by the corner radius so it never pokes past the rounded corners.
         doorEdge.bounds = CGRect(x: 0, y: 0, width: Geo.doorHalfThickness * 2, height: Geo.doorSize.height - 2 * Geo.doorCornerRadius)
         doorEdge.position = CGPoint(x: Geo.doorSize.width - 1, y: Geo.doorSize.height / 2)
-        doorEdge.transform = CATransform3DMakeRotation(.pi / 2, 0, 1, 0)
+        doorEdge.transform = CATransform3DMakeRotation(-.pi / 2, 0, 1, 0)
         doorEdge.colors = [Art.hex(0x9DBDB0), Art.hex(0xC9E0D6), Art.hex(0x6F8C81)]
         doorEdge.locations = [0, 0.35, 1]
         doorEdge.startPoint = CGPoint(x: 0, y: 0.5)
         doorEdge.endPoint = CGPoint(x: 1, y: 0.5)
-        doorEdge.isDoubleSided = true
+        // Single sided: the edge shows while the door swings toward the viewer and disappears
+        // once the door passes 90 degrees and the edge faces away.
+        doorEdge.isDoubleSided = false
         doorRoot.addSublayer(doorEdge)
 
         for shade in [frontShade, backShade] {
@@ -270,7 +266,8 @@ final class FridgeView: NSView, NSDraggingSource {
         CATransaction.setDisableActions(true)
         doorRoot.transform = CATransform3DMakeRotation(-CGFloat(angle), 0, 1, 0)
         frontShade.opacity = Float(max(0, 1 - c) * 0.40)
-        backShade.opacity = Float(max(0, 1 + c) * 0.30)
+        // The liner faces the lit interior, so it only darkens a little while it is edge-on.
+        backShade.opacity = Float(max(0, 1 + c) * 0.12)
         darkness.opacity = Float(Double(darknessPeak) * (1 - light))
         glow.opacity = Float(light)
         CATransaction.commit()

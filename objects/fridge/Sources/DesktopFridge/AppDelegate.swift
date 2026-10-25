@@ -11,7 +11,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let store: FridgeStore
         do {
-            store = try FridgeStore()
+            // FRIDGE_ROOT points the app at a scratch folder, for development and screenshots.
+            if let path = ProcessInfo.processInfo.environment["FRIDGE_ROOT"] {
+                store = try FridgeStore(root: URL(fileURLWithPath: path, isDirectory: true))
+            } else {
+                store = try FridgeStore()
+            }
         } catch {
             let alert = NSAlert()
             alert.messageText = "Desktop Fridge could not create ~/Fridge"
