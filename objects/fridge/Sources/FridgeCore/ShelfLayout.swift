@@ -60,13 +60,13 @@ public enum ShelfLayout {
 /// so shelves, walls and item scale agree. Coordinates are in the door opening, origin bottom left.
 public enum InteriorGeometry {
     public static let openingWidth = 252.0
-    public static let openingHeight = 492.0
+    public static let openingHeight = 535.0
     public static let vanishingX = 126.0
-    public static let vanishingY = 520.0
+    public static let vanishingY = 563.0
     /// Scale of the back wall relative to the opening.
     public static let backScale = 0.74
     /// Heights of the shelf front edges on the front plane.
-    public static let shelfFrontY: [Double] = [120, 250, 380]
+    public static let shelfFrontY: [Double] = [130, 272, 414]
     /// Horizontal extent of a shelf on the front plane.
     public static let shelfMinX = 8.0
     public static let shelfMaxX = 244.0

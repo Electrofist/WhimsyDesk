@@ -7,25 +7,37 @@ import FridgeCore
 /// Scene coordinates: origin at the bottom left of the cabinet body, y up.
 /// View coordinates: scene origin plus `Geo.bodyOrigin`.
 enum Geo {
-    static let windowSize = CGSize(width: 520, height: 730)
+    /// Room above the cabinet too: a deep door swung toward the viewer looms larger than the body.
+    static let windowSize = CGSize(width: 520, height: 844)
 
     static let bodyOrigin = CGPoint(x: 190, y: 150)
-    static let bodySize = CGSize(width: 280, height: 520)
+    /// Proportions follow the door artwork (Assets/Door/door_front.png, 872 x 1780 px).
+    static let bodySize = CGSize(width: 280, height: 563)
 
     /// The door sits 4 pt inside the cabinet on every side.
     static let doorInset: CGFloat = 4
-    static let doorSize = CGSize(width: 272, height: 512)
+    static let doorSize = CGSize(width: 272, height: 555)
     /// Hinge is on the left edge of the door, at mid height.
-    static let hinge = CGPoint(x: 4, y: 260)
+    static let hinge = CGPoint(x: 4, y: 4 + 555.0 / 2)
+    /// Hinge plates on the cabinet (scene y of their bottom edge), near the top and bottom of the door.
+    static let hingePlateY: [CGFloat] = [470, 50]
     /// Half the door thickness; front face sits at +z, back face at -z.
-    static let doorHalfThickness: CGFloat = 6
+    /// A real fridge door is deep: insulation plus the liner. 30 pt in all.
+    static let doorHalfThickness: CGFloat = 15
     static let doorCornerRadius: CGFloat = 24
+
+    /// Door bins on the liner (door space, y up): bottom edge of each tray, how far it stands out
+    /// of the liner, the height of its front lip, and the inset from the door's sides.
+    static let binY: [CGFloat] = [76, 205, 330, 455]
+    static let binDepth: CGFloat = 30
+    static let binLipHeight: CGFloat = 22
+    static let binInset: CGFloat = 26
 
     /// The opening into the cabinet, in scene coordinates.
     static let opening = CGRect(x: 14, y: 14, width: InteriorGeometry.openingWidth, height: InteriorGeometry.openingHeight)
 
     /// Perspective: m34 = -1 / distance. Larger is flatter.
-    static let eyeDistance: CGFloat = 1800
+    static let eyeDistance: CGFloat = 1150
     /// Vanishing point of the scene, which is the center of the body.
     static let vanishing = CGPoint(x: bodySize.width / 2, y: bodySize.height / 2)
 

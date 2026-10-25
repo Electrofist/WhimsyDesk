@@ -11,11 +11,12 @@ A skeuomorphic fridge that lives on your macOS desktop. Drag files in, shut the 
 
 ## Use it
 
-- Grab the door by its right edge (the recessed handle) and pull left to open
-- Open it past about 40 degrees, then drag a file or folder from the desktop onto a shelf
+- Grab the door anywhere and pull sideways to swing it. It stays where you leave it, and only drifts shut when barely open
+- Double-click the door to swing it open or shut
+- Drag a file or folder from the desktop onto the fridge. The door swings open by itself; drop it on a shelf
 - It moves into `~/Fridge`. Position and timestamp are kept in `~/Fridge/.fridge-index.json`
-- Take an item out by dragging it onto the desktop or any folder, or double-click it to put it back where it came from
-- Drag anywhere on the body to move the fridge
+- Double-click an item to open it. Take it out by dragging it onto the desktop or any folder, or right-click it and choose Put Back to return it where it came from
+- Drag the door up or down, or drag the cabinet, to move the fridge
 - Right-click for Quit and Open Fridge Folder
 - First time you store a file from the Desktop, macOS asks for Automation access to Finder. Say no and everything still works, only the exact icon position is not restored
 

@@ -20,7 +20,8 @@ enum FridgeArt {
             }
 
             // Painted steel, lighter on the left where the window light hits.
-            let paint = Art.gradient([(0, Art.hex(0xE4F1EA)), (0.55, Art.hex(0xCBE3D8)), (1, Art.hex(0xA3C6B8))])
+            // Glossy lime enamel, matching the door artwork.
+            let paint = Art.gradient([(0, Art.hex(0xC9CF3A)), (0.5, Art.hex(0x9DA716)), (1, Art.hex(0x6E7303))])
             Art.fill(ctx, path: bodyPath, gradient: paint, from: CGPoint(x: 0, y: 0), to: CGPoint(x: body.width, y: 0))
 
             // Right side shows the slight thickness of the cabinet.
@@ -38,10 +39,15 @@ enum FridgeArt {
             ctx.restoreGState()
 
             // Chrome rim around the opening, only visible when the door is open.
-            let rim = Art.roundedPath(CGRect(x: 11, y: 11, width: 258, height: 498), 10)
-            Art.fill(ctx, path: rim, color: Art.hex(0x5C7469))
-            Art.stroke(ctx, path: Art.roundedPath(CGRect(x: 11.5, y: 11.5, width: 257, height: 497), 10),
-                       color: Art.color(1, 1, 1, 0.55), width: 1.2)
+            // White moulded liner frame around the opening, only visible when the door is open.
+            let rimRect = CGRect(x: 7, y: 15, width: Geo.bodySize.width - 14, height: Geo.bodySize.height - 22)
+            Art.fill(ctx, path: Art.roundedPath(rimRect, 14),
+                     gradient: Art.gradient([(0, Art.hex(0xDDE2E2)), (0.5, Art.hex(0xF6F8F7)), (1, Art.hex(0xD2D8D9))]),
+                     from: CGPoint(x: rimRect.minX, y: 0), to: CGPoint(x: rimRect.maxX, y: 0))
+            Art.stroke(ctx, path: Art.roundedPath(rimRect.insetBy(dx: 0.5, dy: 0.5), 14),
+                       color: Art.color(0, 0, 0, 0.18), width: 1)
+            Art.stroke(ctx, path: Art.roundedPath(Geo.opening.insetBy(dx: -1.5, dy: -1.5), 6),
+                       color: Art.color(0.3, 0.36, 0.38, 0.35), width: 1.2)
 
             // Outer bevel.
             Art.stroke(ctx, path: bodyPath, color: Art.color(0, 0, 0, 0.22), width: 1)
@@ -51,7 +57,32 @@ enum FridgeArt {
 
     // MARK: Door
 
+    /// The retro door artwork (lime enamel, chrome levers and trim), bundled as door_front.png.
+    private static let doorArtwork: CGImage? = {
+        guard let url = Bundle.main.url(forResource: "door_front", withExtension: "png"),
+              let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+        return CGImageSourceCreateImageAtIndex(source, 0, nil)
+    }()
+
     static func doorFront(scale: CGFloat) -> CGImage? {
+        guard let artwork = doorArtwork else { return drawnDoorFront(scale: scale) }
+        return Art.render(size: Geo.doorSize, scale: scale) { ctx in
+            let rect = CGRect(origin: .zero, size: Geo.doorSize)
+            let path = Art.roundedPath(rect, Geo.doorCornerRadius)
+            ctx.saveGState()
+            ctx.addPath(path)
+            ctx.clip()
+            ctx.draw(artwork, in: rect)
+            ctx.restoreGState()
+            // Thin bevels so the enamel edge reads against any wallpaper.
+            Art.stroke(ctx, path: path, color: Art.color(0, 0, 0, 0.35), width: 1)
+            Art.stroke(ctx, path: Art.roundedPath(rect.insetBy(dx: 1.3, dy: 1.3), Geo.doorCornerRadius - 1),
+                       color: Art.color(1, 1, 0.8, 0.30), width: 1)
+        }
+    }
+
+    /// Fallback when the artwork is missing from the bundle: the painted door drawn in code.
+    private static func drawnDoorFront(scale: CGFloat) -> CGImage? {
         return Art.render(size: Geo.doorSize, scale: scale) { ctx in
             let rect = CGRect(origin: .zero, size: Geo.doorSize)
             let path = Art.roundedPath(rect, 24)
@@ -182,17 +213,18 @@ enum FridgeArt {
             Art.fill(ctx, path: path, gradient: Art.gradient([(0, Art.hex(0xDCE8EE)), (1, Art.hex(0xF3F8FA))]),
                      from: .zero, to: CGPoint(x: 0, y: rect.height))
 
-            // Door bins: clear plastic trays with a visible lip.
-            for y in [CGFloat(96), CGFloat(206), CGFloat(316)] {
-                let tray = CGRect(x: 24, y: y, width: rect.width - 48, height: 62)
-                let trayPath = Art.roundedPath(tray, 9)
-                ctx.saveGState()
-                ctx.setShadow(offset: CGSize(width: 0, height: -3), blur: 5, color: Art.color(0, 0.15, 0.2, 0.30))
-                Art.fill(ctx, path: trayPath, color: Art.color(0.80, 0.93, 0.98, 0.55))
-                ctx.restoreGState()
-                Art.stroke(ctx, path: trayPath, color: Art.color(1, 1, 1, 0.85), width: 1.4)
-                let lip = Art.roundedPath(CGRect(x: tray.minX, y: tray.minY, width: tray.width, height: 8), 4)
-                Art.fill(ctx, path: lip, color: Art.color(0.55, 0.78, 0.88, 0.55))
+            // Moulded liner panel, recessed inside the gasket. The bins are real 3D layers in front of it.
+            let panel = Art.roundedPath(rect.insetBy(dx: 18, dy: 18), 12)
+            Art.fill(ctx, path: panel, gradient: Art.gradient([(0, Art.hex(0xC9D8E0)), (1, Art.hex(0xE6EFF3))]),
+                     from: CGPoint(x: 0, y: 0), to: CGPoint(x: rect.width, y: 0))
+            Art.stroke(ctx, path: panel, color: Art.color(0.2, 0.3, 0.36, 0.25), width: 1.2)
+            Art.stroke(ctx, path: Art.roundedPath(rect.insetBy(dx: 19.5, dy: 19.5), 11), color: Art.color(1, 1, 1, 0.6), width: 1)
+            // Shadows the bins throw onto the liner below them.
+            for y in Geo.binY {
+                let shade = CGRect(x: Geo.binInset, y: y - 18, width: rect.width - 2 * Geo.binInset, height: 18)
+                Art.fill(ctx, path: CGPath(rect: shade, transform: nil),
+                         gradient: Art.gradient([(0, Art.color(0, 0.1, 0.15, 0)), (1, Art.color(0, 0.1, 0.15, 0.22))]),
+                         from: CGPoint(x: 0, y: shade.minY), to: CGPoint(x: 0, y: shade.maxY))
             }
 
             // Magnetic gasket frame.

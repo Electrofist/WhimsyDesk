@@ -17,6 +17,7 @@ mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 cp "$BIN" "$CONTENTS/MacOS/DesktopFridge"
 cp Support/Info.plist "$CONTENTS/Info.plist"
 cp Assets/Sounds/*.wav "$CONTENTS/Resources/"
+cp Assets/Door/*.png "$CONTENTS/Resources/"
 
 echo "==> assets"
 if xcrun --find actool >/dev/null 2>&1; then

@@ -167,21 +167,28 @@ final class FridgeView: NSView, NSDraggingSource {
         doorRoot.addSublayer(doorBack)
 
         // The free edge is inset by the corner radius so it never pokes past the rounded corners.
-        doorEdge.bounds = CGRect(x: 0, y: 0, width: Geo.doorHalfThickness * 2, height: Geo.doorSize.height - 2 * Geo.doorCornerRadius)
-        doorEdge.position = CGPoint(x: Geo.doorSize.width - 1, y: Geo.doorSize.height / 2)
-        doorEdge.transform = CATransform3DMakeRotation(-.pi / 2, 0, 1, 0)
-        doorEdge.colors = [Art.hex(0x9DBDB0), Art.hex(0xC9E0D6), Art.hex(0x6F8C81)]
-        doorEdge.locations = [0, 0.35, 1]
+        // The free edge is the door's thickness, seen face-on once the door stands open. Its ends are
+        // rounded so it follows the rounded corners of the faces.
+        doorEdge.bounds = CGRect(x: 0, y: 0, width: Geo.doorHalfThickness * 2, height: Geo.doorSize.height - Geo.doorCornerRadius)
+        doorEdge.position = CGPoint(x: Geo.doorSize.width - 2, y: Geo.doorSize.height / 2)
+        doorEdge.transform = CATransform3DMakeRotation(.pi / 2, 0, 1, 0)
+        doorEdge.cornerRadius = Geo.doorHalfThickness * 0.8
+        doorEdge.masksToBounds = true
+        // Painted steel rounding over from the front face, then the dark magnetic gasket on the liner side.
+        doorEdge.colors = [Art.hex(0x505006), Art.hex(0x9DA716), Art.hex(0xE4E57A), Art.hex(0xB6BD21),
+                           Art.hex(0x7D8202), Art.hex(0x2B2E2A), Art.hex(0x3A3D38)]
+        doorEdge.locations = [0, 0.10, 0.28, 0.55, 0.72, 0.76, 1]
         doorEdge.startPoint = CGPoint(x: 0, y: 0.5)
         doorEdge.endPoint = CGPoint(x: 1, y: 0.5)
-        // Single sided: the edge shows while the door swings toward the viewer and disappears
-        // once the door passes 90 degrees and the edge faces away.
+        // Single sided, facing out of the free edge: it shows whenever the door is open, because the
+        // edge faces the viewer at any angle up to the open stop.
         doorEdge.isDoubleSided = false
         doorRoot.addSublayer(doorEdge)
+        buildDoorBins()
 
         for shade in [frontShade, backShade] {
             shade.frame = doorBounds
-            shade.cornerRadius = 24
+            shade.cornerRadius = Geo.doorCornerRadius
             shade.backgroundColor = CGColor(gray: 0, alpha: 1)
             shade.opacity = 0
         }
@@ -195,10 +202,12 @@ final class FridgeView: NSView, NSDraggingSource {
         led.foregroundColor = Art.hex(0x6BF2E0)
         led.string = "4.0°C"
         doorFront.insertSublayer(led, below: frontShade)
+        // The retro door artwork has no display, so the optional readout stays off.
+        led.isHidden = true
 
         // Hinge plates straddle the door's left edge and stay put when the door swings.
-        hingeTop.frame = CGRect(x: Geo.hinge.x - 8, y: 396, width: FridgeArt.hingeSize.width, height: FridgeArt.hingeSize.height)
-        hingeBottom.frame = CGRect(x: Geo.hinge.x - 8, y: 56, width: FridgeArt.hingeSize.width, height: FridgeArt.hingeSize.height)
+        hingeTop.frame = CGRect(x: Geo.hinge.x - 8, y: Geo.hingePlateY[0], width: FridgeArt.hingeSize.width, height: FridgeArt.hingeSize.height)
+        hingeBottom.frame = CGRect(x: Geo.hinge.x - 8, y: Geo.hingePlateY[1], width: FridgeArt.hingeSize.width, height: FridgeArt.hingeSize.height)
         // Hinges sit in front of the door's front face so the depth test never hides them.
         for hinge in [hingeTop, hingeBottom] {
             hinge.zPosition = Geo.doorHalfThickness * 2 + 2
@@ -207,6 +216,55 @@ final class FridgeView: NSView, NSDraggingSource {
 
         fogHost.frame = CGRect(origin: .zero, size: Geo.windowSize)
         root.addSublayer(fogHost)
+    }
+
+    /// Door bins as real 3D trays standing out of the liner: a floor that sticks out toward the
+    /// cabinet and a clear front lip. They live in the door's transform layer, so they swing with it
+    /// and the depth test tucks them inside the cabinet when the door is shut.
+    private func buildDoorBins() {
+        let linerZ = -Geo.doorHalfThickness
+        let width = Geo.doorSize.width - 2 * Geo.binInset
+        let midX = Geo.doorSize.width / 2
+        for (index, y) in Geo.binY.enumerated() {
+            let depth = Geo.binDepth
+            let lipHeight = index == 0 ? Geo.binLipHeight + 8 : Geo.binLipHeight   // the bottom bin is the bottle rack
+
+            let floor = CALayer()
+            floor.bounds = CGRect(x: 0, y: 0, width: width, height: depth)
+            floor.position = CGPoint(x: midX, y: y)
+            floor.zPosition = linerZ - depth / 2
+            floor.transform = CATransform3DMakeRotation(.pi / 2, 1, 0, 0)
+            floor.backgroundColor = Art.color(0.86, 0.93, 0.96, 0.95)
+            floor.borderColor = Art.color(1, 1, 1, 0.8)
+            floor.borderWidth = 1
+            floor.isDoubleSided = true
+            doorRoot.addSublayer(floor)
+
+            let lip = CAGradientLayer()
+            lip.bounds = CGRect(x: 0, y: 0, width: width, height: lipHeight)
+            lip.position = CGPoint(x: midX, y: y + lipHeight / 2)
+            lip.zPosition = linerZ - depth
+            lip.transform = CATransform3DMakeRotation(.pi, 0, 1, 0)
+            lip.colors = [Art.color(0.97, 0.99, 1, 0.96), Art.color(0.80, 0.90, 0.95, 0.90), Art.color(0.66, 0.80, 0.88, 0.92)]
+            lip.locations = [0, 0.55, 1]
+            lip.cornerRadius = 3
+            lip.borderColor = Art.color(1, 1, 1, 0.9)
+            lip.borderWidth = 1
+            lip.isDoubleSided = true
+            doorRoot.addSublayer(lip)
+
+            // Side cheeks close the tray at both ends.
+            for x in [Geo.binInset, Geo.doorSize.width - Geo.binInset] {
+                let cheek = CALayer()
+                cheek.bounds = CGRect(x: 0, y: 0, width: depth, height: lipHeight)
+                cheek.position = CGPoint(x: x, y: y + lipHeight / 2)
+                cheek.zPosition = linerZ - depth / 2
+                cheek.transform = CATransform3DMakeRotation(.pi / 2, 0, 1, 0)
+                cheek.backgroundColor = Art.color(0.78, 0.88, 0.93, 0.92)
+                cheek.isDoubleSided = true
+                doorRoot.addSublayer(cheek)
+            }
+        }
     }
 
     private func renderArt(scale: CGFloat) {
@@ -359,7 +417,8 @@ final class FridgeView: NSView, NSDraggingSource {
         }
         if items.interactive, let entry = items.hit(at: openingPoint(s)) {
             if event.clickCount == 2 {
-                putBack(entry)
+                // Double-click opens it, like Finder. Taking it out is Put Back in the right-click menu.
+                NSWorkspace.shared.open(store.url(for: entry))
                 interaction = .none
             } else {
                 interaction = .item(entry: entry, start: event.locationInWindow)
@@ -474,6 +533,10 @@ final class FridgeView: NSView, NSDraggingSource {
         let s = scenePoint(event)
         let menu = NSMenu()
         if items.interactive, let entry = items.hit(at: openingPoint(s)) {
+            menu.addItem(ActionMenuItem("Open") { [weak self] in
+                guard let self = self else { return }
+                NSWorkspace.shared.open(self.store.url(for: entry))
+            })
             menu.addItem(ActionMenuItem("Put Back") { [weak self] in self?.putBack(entry) })
             menu.addItem(ActionMenuItem("Show in Finder") { [weak self] in
                 guard let self = self else { return }
