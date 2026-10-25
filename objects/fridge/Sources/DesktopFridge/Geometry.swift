@@ -14,21 +14,35 @@ enum Geo {
     /// Proportions follow the door artwork (Assets/Door/door_front.png, 872 x 1780 px).
     static let bodySize = CGSize(width: 280, height: 563)
 
-    /// The door sits 4 pt inside the cabinet on every side.
+    /// The doors sit 4 pt inside the cabinet on every side and are hinged on the left.
     static let doorInset: CGFloat = 4
-    static let doorSize = CGSize(width: 272, height: 555)
-    /// Hinge is on the left edge of the door, at mid height.
-    static let hinge = CGPoint(x: 4, y: 4 + 555.0 / 2)
-    /// Hinge plates on the cabinet (scene y of their bottom edge), near the top and bottom of the door.
-    static let hingePlateY: [CGFloat] = [490, 40]
+    /// Where the freezer door meets the fridge door (scene y). The artwork splits at row 610 of 1780.
+    static let doorSplitY: CGFloat = 369
+
+    /// The fridge door (below) and the freezer door (above). Each swings on its own.
+    static let fridgeDoor = DoorSpec(name: "fridge",
+                                     frame: CGRect(x: 4, y: 4, width: 272, height: doorSplitY - 4),
+                                     artwork: "door_fridge",
+                                     shelves: [0, 1],
+                                     binY: [36, 146, 256],
+                                     roundTop: false, roundBottom: true)
+    static let freezerDoor = DoorSpec(name: "freezer",
+                                      frame: CGRect(x: 4, y: doorSplitY, width: 272, height: 559 - doorSplitY),
+                                      artwork: "door_freezer",
+                                      shelves: [2],
+                                      binY: [46],
+                                      roundTop: true, roundBottom: false)
+    static let doors = [fridgeDoor, freezerDoor]
+
+    /// Hinge plates on the cabinet (scene y of their bottom edge): top, middle (shared by both doors), bottom.
+    static let hingePlateY: [CGFloat] = [505, doorSplitY - 20, 30]
     /// Half the door thickness; front face sits at +z, back face at -z.
     /// A fridge door has some depth (insulation plus the liner), but reads slim at this scale. 18 pt in all.
     static let doorHalfThickness: CGFloat = 9
     static let doorCornerRadius: CGFloat = 24
 
-    /// Door bins on the liner (door space, y up): bottom edge of each tray, how far it stands out
-    /// of the liner, the height of its front lip, and the inset from the door's sides.
-    static let binY: [CGFloat] = [76, 205, 330, 455]
+    /// Door bins: how far each tray stands out of the liner, the height of its front lip, and the
+    /// inset from the door's sides. Their heights are per door (`DoorSpec.binY`).
     static let binDepth: CGFloat = 22
     static let binLipHeight: CGFloat = 22
     static let binInset: CGFloat = 26
@@ -40,11 +54,6 @@ enum Geo {
     static let eyeDistance: CGFloat = 1150
     /// Vanishing point of the scene, which is the center of the body.
     static let vanishing = CGPoint(x: bodySize.width / 2, y: bodySize.height / 2)
-
-    /// The handle sits on the right of the door, recessed.
-    static let handleRect = CGRect(x: 226, y: 160, width: 34, height: 200)
-    /// Width of the grabbable strip along the door's free edge, in door space.
-    static let edgeGrabWidth: CGFloat = 30
 
     /// Items become interactive past this angle, with hysteresis so they do not flicker.
     static let interactiveOnAngle = 40.0 * Double.pi / 180
@@ -63,94 +72,60 @@ enum Geo {
 
     // MARK: Door projection (used only for hit testing, matches what Core Animation draws)
 
-    /// Projects a point on the door (door space, origin at the door's bottom left) at `angle`
+    /// Projects a point on a door (door space, origin at the door's bottom left) at `angle`
     /// into scene coordinates.
-    static func project(doorPoint p: CGPoint, angle: Double) -> CGPoint {
+    static func project(doorPoint p: CGPoint, angle: Double, door: DoorSpec) -> CGPoint {
         let a = CGFloat(angle)
         // Rotation about the vertical axis through the hinge. Positive angle swings the free edge
         // toward the viewer (positive z).
         let x = p.x * cos(a)
         let z = p.x * sin(a)
-        let sceneX = hinge.x + x
-        let sceneY = doorInset + p.y
+        let sceneX = door.frame.minX + x
+        let sceneY = door.frame.minY + p.y
         let w = 1 - z / eyeDistance
         return CGPoint(x: vanishing.x + (sceneX - vanishing.x) / w,
                        y: vanishing.y + (sceneY - vanishing.y) / w)
     }
 
-    /// The part of the door a hand can grab: a strip along the free edge (which also covers the handle).
-    static func grabQuad(angle: Double) -> [CGPoint] {
-        let x0 = doorSize.width - edgeGrabWidth
-        let x1 = doorSize.width
+    /// A whole door as a polygon in scene coordinates.
+    static func doorQuad(angle: Double, door: DoorSpec) -> [CGPoint] {
+        let s = door.size
         return [
-            project(doorPoint: CGPoint(x: x0, y: 0), angle: angle),
-            project(doorPoint: CGPoint(x: x1, y: 0), angle: angle),
-            project(doorPoint: CGPoint(x: x1, y: doorSize.height), angle: angle),
-            project(doorPoint: CGPoint(x: x0, y: doorSize.height), angle: angle)
+            project(doorPoint: CGPoint(x: 0, y: 0), angle: angle, door: door),
+            project(doorPoint: CGPoint(x: s.width, y: 0), angle: angle, door: door),
+            project(doorPoint: CGPoint(x: s.width, y: s.height), angle: angle, door: door),
+            project(doorPoint: CGPoint(x: 0, y: s.height), angle: angle, door: door)
         ]
     }
 
-    /// The whole door as a polygon in scene coordinates.
-    static func doorQuad(angle: Double) -> [CGPoint] {
-        return [
-            project(doorPoint: CGPoint(x: 0, y: 0), angle: angle),
-            project(doorPoint: CGPoint(x: doorSize.width, y: 0), angle: angle),
-            project(doorPoint: CGPoint(x: doorSize.width, y: doorSize.height), angle: angle),
-            project(doorPoint: CGPoint(x: 0, y: doorSize.height), angle: angle)
-        ]
+    /// Where a point `doorX` across a door (at its mid height) appears horizontally in the scene.
+    static func sceneX(ofDoorX doorX: CGFloat, angle: Double, door: DoorSpec) -> CGFloat {
+        return project(doorPoint: CGPoint(x: doorX, y: door.size.height / 2), angle: angle, door: door).x
     }
 
-    /// Where the free edge appears horizontally in scene coordinates, used to keep a grab offset.
-    static func freeEdgeX(angle: Double) -> CGFloat {
-        return project(doorPoint: CGPoint(x: doorSize.width, y: doorSize.height / 2), angle: angle).x
-    }
-
-    /// Inverse of `freeEdgeX`: the door angle whose free edge appears at scene x. The projection is
-    /// monotonic in angle, so a bisection is exact enough and costs a few dozen multiplications.
-    static func angle(forFreeEdgeX x: CGFloat, maxAngle: Double) -> Double {
-        var lo = 0.0
-        var hi = maxAngle
-        if x >= freeEdgeX(angle: lo) { return lo }
-        if x <= freeEdgeX(angle: hi) { return hi }
-        for _ in 0..<28 {
-            let mid = (lo + hi) / 2
-            if freeEdgeX(angle: mid) > x {
-                lo = mid
-            } else {
-                hi = mid
-            }
-        }
-        return (lo + hi) / 2
-    }
-
-    /// Where a point `doorX` across the door (at mid height) appears horizontally in the scene.
-    static func sceneX(ofDoorX doorX: CGFloat, angle: Double) -> CGFloat {
-        return project(doorPoint: CGPoint(x: doorX, y: doorSize.height / 2), angle: angle).x
-    }
-
-    /// Which point across the door is under scene x, at the current angle. Used once on mouse down
+    /// Which point across a door is under scene x, at the current angle. Used once on mouse down
     /// so the hand keeps hold of the same spot on the door wherever it was grabbed.
-    static func doorX(underSceneX x: CGFloat, angle: Double) -> CGFloat {
+    static func doorX(underSceneX x: CGFloat, angle: Double, door: DoorSpec) -> CGFloat {
         var lo: CGFloat = 0
-        var hi = doorSize.width
-        let increasing = sceneX(ofDoorX: hi, angle: angle) >= sceneX(ofDoorX: lo, angle: angle)
+        var hi = door.size.width
+        let increasing = sceneX(ofDoorX: hi, angle: angle, door: door) >= sceneX(ofDoorX: lo, angle: angle, door: door)
         for _ in 0..<24 {
             let mid = (lo + hi) / 2
-            if (sceneX(ofDoorX: mid, angle: angle) < x) == increasing { lo = mid } else { hi = mid }
+            if (sceneX(ofDoorX: mid, angle: angle, door: door) < x) == increasing { lo = mid } else { hi = mid }
         }
         return (lo + hi) / 2
     }
 
     /// The door angle that puts the grabbed point `doorX` under scene x. Monotonic in angle,
     /// so a bisection is exact enough and costs a few dozen multiplications.
-    static func angle(forDoorX doorX: CGFloat, atSceneX x: CGFloat, maxAngle: Double) -> Double {
+    static func angle(forDoorX doorX: CGFloat, atSceneX x: CGFloat, maxAngle: Double, door: DoorSpec) -> Double {
         var lo = 0.0
         var hi = maxAngle
-        if x >= sceneX(ofDoorX: doorX, angle: lo) { return lo }
-        if x <= sceneX(ofDoorX: doorX, angle: hi) { return hi }
+        if x >= sceneX(ofDoorX: doorX, angle: lo, door: door) { return lo }
+        if x <= sceneX(ofDoorX: doorX, angle: hi, door: door) { return hi }
         for _ in 0..<28 {
             let mid = (lo + hi) / 2
-            if sceneX(ofDoorX: doorX, angle: mid) > x { lo = mid } else { hi = mid }
+            if sceneX(ofDoorX: doorX, angle: mid, door: door) > x { lo = mid } else { hi = mid }
         }
         return (lo + hi) / 2
     }
@@ -181,5 +156,48 @@ enum Geo {
 
     static var bodyRectInView: CGRect {
         return CGRect(origin: bodyOrigin, size: bodySize)
+    }
+}
+
+/// One of the two doors. Everything else about a door (layers, physics, lighting) lives in `DoorRig`.
+struct DoorSpec {
+    let name: String
+    /// The door's rectangle in scene coordinates when shut. The hinge runs up its left edge.
+    let frame: CGRect
+    /// Bundled PNG used for the door's front.
+    let artwork: String
+    /// Shelves (ShelfLayout indexes) behind this door. They are usable only while it is open.
+    let shelves: [Int]
+    /// Door bins on the liner: bottom edge of each tray, door space.
+    let binY: [CGFloat]
+    /// Which ends of the door have rounded corners (the outer ends, not where the doors meet).
+    let roundTop: Bool
+    let roundBottom: Bool
+
+    var size: CGSize { return frame.size }
+
+    /// The part of the opening behind this door, in opening coordinates.
+    var openingSlice: CGRect {
+        let o = Geo.opening
+        let lo = max(frame.minY, o.minY), hi = min(frame.maxY, o.maxY)
+        return CGRect(x: 0, y: lo - o.minY, width: o.width, height: hi - lo)
+    }
+
+    /// A rounded rectangle with only the outer corners rounded.
+    func outline(in rect: CGRect, radius: CGFloat) -> CGPath {
+        let r = min(radius, rect.height / 2)
+        let top = roundTop ? r : 0, bottom = roundBottom ? r : 0
+        let p = CGMutablePath()
+        p.move(to: CGPoint(x: rect.minX, y: rect.minY + bottom))
+        p.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - top))
+        p.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.maxY), tangent2End: CGPoint(x: rect.minX + top, y: rect.maxY), radius: top)
+        p.addLine(to: CGPoint(x: rect.maxX - top, y: rect.maxY))
+        p.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.maxY), tangent2End: CGPoint(x: rect.maxX, y: rect.maxY - top), radius: top)
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + bottom))
+        p.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.minY), tangent2End: CGPoint(x: rect.maxX - bottom, y: rect.minY), radius: bottom)
+        p.addLine(to: CGPoint(x: rect.minX + bottom, y: rect.minY))
+        p.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.minY), tangent2End: CGPoint(x: rect.minX, y: rect.minY + bottom), radius: bottom)
+        p.closeSubpath()
+        return p
     }
 }

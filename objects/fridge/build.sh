@@ -43,3 +43,49 @@ echo "Built $APP"
 if [[ "${1:-}" == "run" ]]; then
     open "$APP"
 fi
+
+# install: copies the app to ~/Applications and starts it at every login with a LaunchAgent.
+# launchd also restarts it if it ever crashes. Choosing Quit from its menu exits cleanly and
+# leaves it quit until the next login.
+if [[ "${1:-}" == "install" ]]; then
+    LABEL="in.krisby.desktopfridge"
+    DEST="$HOME/Applications/DesktopFridge.app"
+    AGENT="$HOME/Library/LaunchAgents/$LABEL.plist"
+    DOMAIN="gui/$(id -u)"
+
+    echo "==> installing to $DEST"
+    launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+    pkill -x DesktopFridge 2>/dev/null || true
+    mkdir -p "$HOME/Applications" "$HOME/Library/LaunchAgents"
+    rm -rf "$DEST"
+    cp -R "$APP" "$DEST"
+
+    echo "==> login agent $AGENT"
+    cat > "$AGENT" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>$LABEL</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>$DEST/Contents/MacOS/DesktopFridge</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+</dict>
+</plist>
+PLIST
+    launchctl bootstrap "$DOMAIN" "$AGENT"
+    echo "Installed. Desktop Fridge now starts at every login."
+fi

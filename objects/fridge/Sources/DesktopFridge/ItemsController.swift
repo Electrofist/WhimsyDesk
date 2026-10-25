@@ -21,7 +21,8 @@ final class ItemNode {
 final class ItemsController {
     let layer = CALayer()
     /// Set by the view once the door is past the open-angle threshold.
-    var interactive = false
+    /// Shelves whose door is open past the threshold. Items elsewhere ignore the mouse.
+    var openShelves: Set<Int> = []
 
     private let store: FridgeStore
     private var nodes: [UUID: ItemNode] = [:]
@@ -92,7 +93,7 @@ final class ItemsController {
 
     /// Front-most item under a point in opening coordinates.
     func hit(at point: CGPoint) -> FridgeEntry? {
-        for node in drawOrder.reversed() where node.nominal.contains(point) {
+        for node in drawOrder.reversed() where openShelves.contains(node.entry.shelf) && node.nominal.contains(point) {
             return node.entry
         }
         return nil

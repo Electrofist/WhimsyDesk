@@ -66,7 +66,9 @@ public enum InteriorGeometry {
     /// Scale of the back wall relative to the opening.
     public static let backScale = 0.74
     /// Heights of the shelf front edges on the front plane.
-    public static let shelfFrontY: [Double] = [130, 272, 414]
+    /// Shelves 0 and 1 are in the fridge compartment, shelf 2 in the freezer (split at 355).
+    /// Shelf 1 sits low enough that its back row stays under the crossbar.
+    public static let shelfFrontY: [Double] = [118, 238, 414]
     /// Horizontal extent of a shelf on the front plane.
     public static let shelfMinX = 8.0
     public static let shelfMaxX = 244.0

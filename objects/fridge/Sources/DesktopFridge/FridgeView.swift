@@ -10,7 +10,8 @@ final class FridgeView: NSView, NSDraggingSource {
     let store: FridgeStore
     private let finder = FinderBridge()
     private let sounds = SoundPlayer()
-    private var driver: DoorDriver!
+    /// Fridge door (index 0, below) and freezer door (index 1, above).
+    private var doors: [DoorRig] = []
     private var items: ItemsController!
     private var fog: FogPlayer!
 
@@ -27,31 +28,22 @@ final class FridgeView: NSView, NSDraggingSource {
     private let cabinet = CALayer()
     private let interior = CALayer()
     private let frost = CALayer()
-    private let darkness = CALayer()
-    private let glow = CAGradientLayer()
-    private let doorRoot = CATransformLayer()
-    private let doorFront = CALayer()
-    private let doorBack = CALayer()
-    private let doorEdge = CAGradientLayer()
-    private let frontShade = CALayer()
-    private let backShade = CALayer()
-    private let led = CATextLayer()
-    private let hingeTop = CALayer()
-    private let hingeBottom = CALayer()
+    /// The white crossbar in the cabinet between the freezer and the fridge compartment.
+    private let divider = CAGradientLayer()
+    private let hinges = [CALayer(), CALayer(), CALayer()]
     private let fogHost = CALayer()
 
     private var artScale: CGFloat = 0
-    private var glowPeak: Float = 1
     private var darknessPeak: Float = 0.6
 
     // MARK: State
 
     private enum Interaction {
         case none
-        /// Pressed on the door, direction not decided yet: sideways swings it, up or down moves the fridge.
-        case doorPress(doorX: CGFloat, start: NSPoint)
-        /// Holding the door at `doorX` (door space), so that spot stays under the pointer.
-        case door(doorX: CGFloat)
+        /// Pressed on a door, not dragged yet.
+        case doorPress(door: Int, doorX: CGFloat, start: NSPoint)
+        /// Holding a door at `doorX` (door space), so that spot stays under the pointer.
+        case door(door: Int, doorX: CGFloat)
         /// ⌥ drag: resizing the whole fridge.
         case resize(startMouse: NSPoint, startScale: CGFloat)
         case window(startMouse: NSPoint, startOrigin: NSPoint)
@@ -59,8 +51,6 @@ final class FridgeView: NSView, NSDraggingSource {
     }
 
     private var interaction = Interaction.none
-    private var hasOpened = false
-    private var itemsInteractive = false
     private var draggingEntry: FridgeEntry?
 
     private var timeScale: Double {
@@ -79,22 +69,28 @@ final class FridgeView: NSView, NSDraggingSource {
 
         let scale = (NSScreen.main?.backingScaleFactor ?? 2) * userScale
         items = ItemsController(store: store, scale: scale)
+        doors = Geo.doors.map { DoorRig(spec: $0, view: self) }
+        for (index, rig) in doors.enumerated() {
+            rig.driver.onFrame = { [weak self] angle in self?.applyDoor(index, angle: angle) }
+        }
         buildLayers()
-        driver = DoorDriver(view: self)
-        driver.onFrame = { [weak self] angle in self?.applyDoor(angle: angle) }
-        driver.onRest = { [weak self] in self?.doorDidRest() }
         fog = FogPlayer(host: fogHost)
 
         updateLighting()
         renderArt(scale: scale)
-        applyDoor(angle: 0)
+        for index in doors.indices { applyDoor(index, angle: 0) }
         registerForDraggedTypes([.fileURL])
 
-        if let raw = ProcessInfo.processInfo.environment["FRIDGE_DEBUG_ANGLE"], let degrees = Double(raw) {
-            let angle = degrees * Double.pi / 180
-            driver.debugPin(angle: angle)
-            applyDoor(angle: angle)
-        }    }
+        // Development aid: FRIDGE_DEBUG_ANGLE="fridge,freezer" in degrees pins the doors open.
+        if let raw = ProcessInfo.processInfo.environment["FRIDGE_DEBUG_ANGLE"] {
+            for (index, part) in raw.split(separator: ",").prefix(doors.count).enumerated() {
+                guard let degrees = Double(part) else { continue }
+                let angle = degrees * Double.pi / 180
+                doors[index].driver.debugPin(angle: angle)
+                applyDoor(index, angle: angle)
+            }
+        }
+    }
 
     required init?(coder: NSCoder) {
         fatalError("not used")
@@ -138,81 +134,21 @@ final class FridgeView: NSView, NSDraggingSource {
         body.addSublayer(frost)
         body.addSublayer(items.layer)
 
-        darkness.frame = Geo.opening
-        darkness.backgroundColor = CGColor(gray: 0, alpha: 1)
-        body.addSublayer(darkness)
+        // Each door brings its own compartment darkness and glow, then its 3D door layers.
+        for rig in doors { rig.build(scene: scene, body: body) }
 
-        glow.frame = Geo.opening
-        glow.type = .radial
-        glow.startPoint = CGPoint(x: 0.5, y: 0.78)
-        glow.endPoint = CGPoint(x: 1.15, y: 0.02)
-        body.addSublayer(glow)
+        // Crossbar between the compartments, part of the white cabinet liner.
+        divider.frame = CGRect(x: Geo.opening.minX - 2, y: Geo.doorSplitY - 6, width: Geo.opening.width + 4, height: 12)
+        divider.colors = [Art.hex(0xC9D0D2), Art.hex(0xF4F7F7), Art.hex(0xDDE3E4), Art.hex(0xA9B2B5)]
+        divider.locations = [0, 0.35, 0.7, 1]
+        divider.cornerRadius = 3
+        body.addSublayer(divider)
 
-        // Door: a transform layer so its faces and edge keep their own 3D positions.
-        doorRoot.bounds = CGRect(origin: .zero, size: Geo.doorSize)
-        doorRoot.anchorPoint = CGPoint(x: 0, y: 0.5)
-        doorRoot.position = Geo.hinge
-        // Lift the whole door so its back face sits just in front of the cabinet plane.
-        doorRoot.zPosition = Geo.doorHalfThickness + 0.5
-        scene.addSublayer(doorRoot)
-
-        let doorBounds = CGRect(origin: .zero, size: Geo.doorSize)
-        doorFront.frame = doorBounds
-        doorFront.zPosition = Geo.doorHalfThickness
-        doorFront.isDoubleSided = false
-        doorRoot.addSublayer(doorFront)
-
-        doorBack.frame = doorBounds
-        doorBack.zPosition = -Geo.doorHalfThickness
-        doorBack.transform = CATransform3DMakeRotation(.pi, 0, 1, 0)
-        doorBack.isDoubleSided = false
-        doorRoot.addSublayer(doorBack)
-
-        // The free edge is inset by the corner radius so it never pokes past the rounded corners.
-        // The free edge is the door's thickness, seen face-on once the door stands open. Its ends are
-        // rounded so it follows the rounded corners of the faces.
-        doorEdge.bounds = CGRect(x: 0, y: 0, width: Geo.doorHalfThickness * 2, height: Geo.doorSize.height - Geo.doorCornerRadius)
-        doorEdge.position = CGPoint(x: Geo.doorSize.width - 2, y: Geo.doorSize.height / 2)
-        doorEdge.transform = CATransform3DMakeRotation(.pi / 2, 0, 1, 0)
-        doorEdge.cornerRadius = Geo.doorHalfThickness * 0.8
-        doorEdge.masksToBounds = true
-        // Painted steel rounding over from the front face, then the dark magnetic gasket on the liner side.
-        doorEdge.colors = [Art.hex(0x505006), Art.hex(0x9DA716), Art.hex(0xE4E57A), Art.hex(0xB6BD21),
-                           Art.hex(0x7D8202), Art.hex(0x2B2E2A), Art.hex(0x3A3D38)]
-        doorEdge.locations = [0, 0.10, 0.28, 0.55, 0.72, 0.76, 1]
-        doorEdge.startPoint = CGPoint(x: 0, y: 0.5)
-        doorEdge.endPoint = CGPoint(x: 1, y: 0.5)
-        // Single sided, facing out of the free edge: it shows whenever the door is open, because the
-        // edge faces the viewer at any angle up to the open stop.
-        doorEdge.isDoubleSided = false
-        doorRoot.addSublayer(doorEdge)
-        buildDoorBins()
-
-        for shade in [frontShade, backShade] {
-            shade.frame = doorBounds
-            shade.cornerRadius = Geo.doorCornerRadius
-            shade.backgroundColor = CGColor(gray: 0, alpha: 1)
-            shade.opacity = 0
-        }
-        doorFront.addSublayer(frontShade)
-        doorBack.addSublayer(backShade)
-
-        led.frame = CGRect(x: FridgeArt.ledRect.minX, y: FridgeArt.ledRect.midY - 11, width: FridgeArt.ledRect.width, height: 22)
-        led.alignmentMode = .center
-        led.font = "Menlo-Bold" as CFString
-        led.fontSize = 17
-        led.foregroundColor = Art.hex(0x6BF2E0)
-        led.string = "4.0°C"
-        doorFront.insertSublayer(led, below: frontShade)
-        // The retro door artwork has no display, so the optional readout stays off.
-        led.isHidden = true
-
-        // Hinge plates straddle the door's left edge and stay put when the door swings.
-        let hingeX = Geo.hinge.x - FridgeArt.hingeSize.width * 0.4
-        hingeTop.frame = CGRect(x: hingeX, y: Geo.hingePlateY[0], width: FridgeArt.hingeSize.width, height: FridgeArt.hingeSize.height)
-        hingeBottom.frame = CGRect(x: hingeX, y: Geo.hingePlateY[1], width: FridgeArt.hingeSize.width, height: FridgeArt.hingeSize.height)
-        // Hinges sit in front of the door's front face so the depth test never hides them.
-        for hinge in [hingeTop, hingeBottom] {
+        // Hinge plates straddle the doors' left edge and stay put when the doors swing.
+        let hingeX = Geo.doorInset - FridgeArt.hingeSize.width * 0.4
+        for (hinge, y) in zip(hinges, Geo.hingePlateY) {
+            hinge.frame = CGRect(x: hingeX, y: y, width: FridgeArt.hingeSize.width, height: FridgeArt.hingeSize.height)
+            // In front of the doors' front faces so the depth test never hides them.
             hinge.zPosition = Geo.doorHalfThickness * 2 + 2
             scene.addSublayer(hinge)
         }
@@ -221,71 +157,19 @@ final class FridgeView: NSView, NSDraggingSource {
         root.addSublayer(fogHost)
     }
 
-    /// Door bins as real 3D trays standing out of the liner: a floor that sticks out toward the
-    /// cabinet and a clear front lip. They live in the door's transform layer, so they swing with it
-    /// and the depth test tucks them inside the cabinet when the door is shut.
-    private func buildDoorBins() {
-        let linerZ = -Geo.doorHalfThickness
-        let width = Geo.doorSize.width - 2 * Geo.binInset
-        let midX = Geo.doorSize.width / 2
-        for (index, y) in Geo.binY.enumerated() {
-            let depth = Geo.binDepth
-            let lipHeight = index == 0 ? Geo.binLipHeight + 8 : Geo.binLipHeight   // the bottom bin is the bottle rack
-
-            let floor = CALayer()
-            floor.bounds = CGRect(x: 0, y: 0, width: width, height: depth)
-            floor.position = CGPoint(x: midX, y: y)
-            floor.zPosition = linerZ - depth / 2
-            floor.transform = CATransform3DMakeRotation(.pi / 2, 1, 0, 0)
-            floor.backgroundColor = Art.color(0.86, 0.93, 0.96, 0.95)
-            floor.borderColor = Art.color(1, 1, 1, 0.8)
-            floor.borderWidth = 1
-            floor.isDoubleSided = true
-            doorRoot.addSublayer(floor)
-
-            let lip = CAGradientLayer()
-            lip.bounds = CGRect(x: 0, y: 0, width: width, height: lipHeight)
-            lip.position = CGPoint(x: midX, y: y + lipHeight / 2)
-            lip.zPosition = linerZ - depth
-            lip.transform = CATransform3DMakeRotation(.pi, 0, 1, 0)
-            lip.colors = [Art.color(0.97, 0.99, 1, 0.96), Art.color(0.80, 0.90, 0.95, 0.90), Art.color(0.66, 0.80, 0.88, 0.92)]
-            lip.locations = [0, 0.55, 1]
-            lip.cornerRadius = 3
-            lip.borderColor = Art.color(1, 1, 1, 0.9)
-            lip.borderWidth = 1
-            lip.isDoubleSided = true
-            doorRoot.addSublayer(lip)
-
-            // Side cheeks close the tray at both ends.
-            for x in [Geo.binInset, Geo.doorSize.width - Geo.binInset] {
-                let cheek = CALayer()
-                cheek.bounds = CGRect(x: 0, y: 0, width: depth, height: lipHeight)
-                cheek.position = CGPoint(x: x, y: y + lipHeight / 2)
-                cheek.zPosition = linerZ - depth / 2
-                cheek.transform = CATransform3DMakeRotation(.pi / 2, 0, 1, 0)
-                cheek.backgroundColor = Art.color(0.78, 0.88, 0.93, 0.92)
-                cheek.isDoubleSided = true
-                doorRoot.addSublayer(cheek)
-            }
-        }
-    }
-
     private func renderArt(scale: CGFloat) {
         guard scale != artScale else { return }
         artScale = scale
         cabinet.contents = FridgeArt.cabinet(scale: scale)
         interior.contents = InteriorArt.interior(scale: scale)
         frost.contents = InteriorArt.frost(scale: scale)
-        doorFront.contents = FridgeArt.doorFront(scale: scale)
-        doorBack.contents = FridgeArt.doorBack(scale: scale)
+        for rig in doors { rig.render(scale: scale) }
         let hingeImage = FridgeArt.hinge(scale: scale)
-        hingeTop.contents = hingeImage
-        hingeBottom.contents = hingeImage
+        for hinge in hinges { hinge.contents = hingeImage }
         contactShadow.contents = FridgeArt.contactShadow(scale: scale)
         liftShadow.contents = FridgeArt.liftShadow(scale: scale)
 
-        let all: [CALayer] = [cabinet, interior, frost, doorFront, doorBack, hingeTop, hingeBottom,
-                              contactShadow, liftShadow, led, items.layer]
+        let all: [CALayer] = [cabinet, interior, frost, contactShadow, liftShadow, items.layer] + hinges
         for l in all { l.contentsScale = scale }
         items.setScale(scale)
     }
@@ -298,64 +182,55 @@ final class FridgeView: NSView, NSDraggingSource {
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
         updateLighting()
-        applyDoor(angle: driver.angle)
+        for (index, rig) in doors.enumerated() { applyDoor(index, angle: rig.angle) }
     }
 
     /// Dark mode: brighter inside, deeper cyan. Light mode: softer, less saturated.
     private func updateLighting() {
         let dark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let colors: [CGColor]
         if dark {
-            glow.colors = [Art.color(0.08, 0.80, 1.0, 0.46), Art.color(0.08, 0.80, 1.0, 0)]
+            colors = [Art.color(0.08, 0.80, 1.0, 0.46), Art.color(0.08, 0.80, 1.0, 0)]
             darknessPeak = 0.48
             frost.opacity = 0.95
         } else {
-            glow.colors = [Art.color(0.55, 0.85, 0.96, 0.28), Art.color(0.55, 0.85, 0.96, 0)]
+            colors = [Art.color(0.55, 0.85, 0.96, 0.28), Art.color(0.55, 0.85, 0.96, 0)]
             darknessPeak = 0.60
             frost.opacity = 0.80
         }
+        for rig in doors { rig.setLighting(glowColors: colors) }
     }
 
     // MARK: Door rendering and events
 
-    private func smoothstep(_ a: Double, _ b: Double, _ x: Double) -> Double {
-        let t = min(max((x - a) / (b - a), 0), 1)
-        return t * t * (3 - 2 * t)
-    }
-
-    private func applyDoor(angle: Double) {
-        let c = cos(angle)
-        let light = smoothstep(3 * Double.pi / 180, 28 * Double.pi / 180, angle)
-
+    private func applyDoor(_ index: Int, angle: Double) {
+        let rig = doors[index]
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        doorRoot.transform = CATransform3DMakeRotation(-CGFloat(angle), 0, 1, 0)
-        frontShade.opacity = Float(max(0, 1 - c) * 0.40)
-        // The liner faces the lit interior, so it only darkens a little while it is edge-on.
-        backShade.opacity = Float(max(0, 1 + c) * 0.12)
-        darkness.opacity = Float(Double(darknessPeak) * (1 - light))
-        glow.opacity = Float(light)
+        rig.apply(angle: angle, darknessPeak: darknessPeak)
         CATransaction.commit()
 
-        if !hasOpened && angle > Geo.openedAngle {
-            hasOpened = true
-            doorOpened()
-        } else if hasOpened && angle < Geo.sealedAngle {
-            hasOpened = false
-            doorSealed()
+        if !rig.hasOpened && angle > Geo.openedAngle {
+            rig.hasOpened = true
+            doorOpened(rig)
+        } else if rig.hasOpened && angle < Geo.sealedAngle {
+            rig.hasOpened = false
+            sounds.playSeal()
         }
 
-        if !itemsInteractive && angle >= Geo.interactiveOnAngle {
-            itemsInteractive = true
-            items.interactive = true
-        } else if itemsInteractive && angle < Geo.interactiveOffAngle {
-            itemsInteractive = false
-            items.interactive = false
+        let wasInteractive = rig.interactive
+        if !rig.interactive && angle >= Geo.interactiveOnAngle {
+            rig.interactive = true
+        } else if rig.interactive && angle < Geo.interactiveOffAngle {
+            rig.interactive = false
+        }
+        if rig.interactive != wasInteractive {
+            items.openShelves = Set(doors.filter { $0.interactive }.flatMap { $0.spec.shelves })
         }
     }
 
-    private func doorOpened() {
+    private func doorOpened(_ rig: DoorRig) {
         sounds.playOpen()
-        led.string = String(format: "%.1f°C", Double(Int.random(in: 28...46)) / 10)
         items.applyFrost(now: Date(), timeScale: timeScale)
         // The plume is a short frame swap run by the render server, so it stays on in Low Power
         // Mode at half the frame count. Reduce Motion turns it off.
@@ -364,24 +239,35 @@ final class FridgeView: NSView, NSDraggingSource {
         }
     }
 
-    private func doorSealed() {
-        sounds.playSeal()
-    }
-
-    private func doorDidRest() {
-        // The display link is already gone. Nothing runs until the next input event.
-    }
-
     // MARK: Pause and resume (lock, sleep)
 
     func pauseEverything() {
-        driver.suspend()
+        for rig in doors { rig.driver.suspend() }
         fog.cancel()
         sounds.stopAll()
     }
 
     func resumeEverything() {
-        driver.resume()
+        for rig in doors { rig.driver.resume() }
+    }
+
+    /// The door under a scene point. An open door stands in front of the other, so it wins.
+    private func doorIndex(at s: CGPoint) -> Int? {
+        let hits = doors.indices.filter { Geo.contains(doors[$0].quad, s) }
+        return hits.max { doors[$0].angle < doors[$1].angle }
+    }
+
+    /// While a file is dragged in or out, no open door may close on the user's hand. Shut doors are
+    /// left alone (the drag lock would otherwise push them ajar). `alsoDoor` covers a door that is
+    /// only now swinging open for a hovering file.
+    private func setItemDrag(_ active: Bool, alsoDoor: Int? = nil) {
+        for (index, rig) in doors.enumerated() {
+            if !active {
+                rig.driver.setItemDrag(false)
+            } else if rig.hasOpened || index == alsoDoor {
+                rig.driver.setItemDrag(true)
+            }
+        }
     }
 
     // MARK: Mouse
@@ -413,13 +299,11 @@ final class FridgeView: NSView, NSDraggingSource {
     }
 
     private func isOnFridge(_ s: CGPoint) -> Bool {
-        return Geo.contains(Geo.doorQuad(angle: driver.angle), s)
-            || CGRect(origin: .zero, size: Geo.bodySize).contains(s)
+        return doorIndex(at: s) != nil || CGRect(origin: .zero, size: Geo.bodySize).contains(s)
     }
 
     override func mouseDown(with event: NSEvent) {
         let s = scenePoint(event)
-        let angle = driver.angle
 
         switch gesture(for: event.modifierFlags) {
         case .move where isOnFridge(s):
@@ -433,19 +317,20 @@ final class FridgeView: NSView, NSDraggingSource {
             break
         }
 
-        if Geo.contains(Geo.doorQuad(angle: angle), s) {
+        if let index = doorIndex(at: s) {
             if event.clickCount == 2 {
-                toggleDoor()
+                toggleDoor(index)
                 interaction = .none
                 return
             }
             // Grabbing right by the hinge would give absurd leverage; hold no closer than this.
-            let doorX = max(70, Geo.doorX(underSceneX: s.x, angle: angle))
-            interaction = .doorPress(doorX: doorX, start: NSEvent.mouseLocation)
+            let rig = doors[index]
+            let doorX = max(70, Geo.doorX(underSceneX: s.x, angle: rig.angle, door: rig.spec))
+            interaction = .doorPress(door: index, doorX: doorX, start: NSEvent.mouseLocation)
             NSCursor.closedHand.set()
             return
         }
-        if items.interactive, let entry = items.hit(at: openingPoint(s)) {
+        if let entry = items.hit(at: openingPoint(s)) {
             if event.clickCount == 2 {
                 // Double-click opens it, like Finder. Taking it out is Put Back in the right-click menu.
                 NSWorkspace.shared.open(store.url(for: entry))
@@ -459,11 +344,11 @@ final class FridgeView: NSView, NSDraggingSource {
 
     override func mouseDragged(with event: NSEvent) {
         switch interaction {
-        case .doorPress(let doorX, let start):
+        case .doorPress(let index, let doorX, let start):
             let m = NSEvent.mouseLocation
             guard hypot(m.x - start.x, m.y - start.y) > 3 else { return }
-            interaction = .door(doorX: doorX)
-            driver.hold(at: driver.angle)
+            interaction = .door(door: index, doorX: doorX)
+            doors[index].driver.hold(at: doors[index].angle)
             mouseDragged(with: event)
 
         case .resize(let startMouse, let startScale):
@@ -472,10 +357,11 @@ final class FridgeView: NSView, NSDraggingSource {
             let d = (m.y - startMouse.y) + (m.x - startMouse.x) * 0.5
             setUserScale(startScale * exp(d / 320), rerender: false)
 
-        case .door(let doorX):
+        case .door(let index, let doorX):
+            let rig = doors[index]
             let s = scenePoint(event)
-            let target = Geo.angle(forDoorX: doorX, atSceneX: s.x, maxAngle: driver.maxAngle)
-            driver.hold(at: target)
+            let target = Geo.angle(forDoorX: doorX, atSceneX: s.x, maxAngle: rig.driver.maxAngle, door: rig.spec)
+            rig.driver.hold(at: target)
 
         case .window(let startMouse, let startOrigin):
             guard let window = window else { return }
@@ -497,8 +383,8 @@ final class FridgeView: NSView, NSDraggingSource {
 
     override func mouseUp(with event: NSEvent) {
         switch interaction {
-        case .door:
-            driver.release()   // the door keeps the momentum the hand gave it
+        case .door(let index, _):
+            doors[index].driver.release()   // the door keeps the momentum the hand gave it
             NSCursor.openHand.set()
         case .doorPress:
             NSCursor.openHand.set()
@@ -519,8 +405,9 @@ final class FridgeView: NSView, NSDraggingSource {
         interaction = .none
     }
 
-    private func toggleDoor() {
-        driver.swing(to: driver.angle > 30 * Double.pi / 180 ? 0 : FridgeView.swingOpenAngle)
+    private func toggleDoor(_ index: Int) {
+        let rig = doors[index]
+        rig.driver.swing(to: rig.angle > 30 * Double.pi / 180 ? 0 : FridgeView.swingOpenAngle)
     }
 
     // MARK: Cursor: an open hand over the door says "you can pull this"
@@ -541,8 +428,7 @@ final class FridgeView: NSView, NSDraggingSource {
         case .resize where isOnFridge(s):
             resizeCursor.set()
         default:
-            let overDoor = Geo.contains(Geo.doorQuad(angle: driver.angle), s)
-            (overDoor ? NSCursor.openHand : NSCursor.arrow).set()
+            (doorIndex(at: s) != nil ? NSCursor.openHand : NSCursor.arrow).set()
         }
     }
 
@@ -613,7 +499,7 @@ final class FridgeView: NSView, NSDraggingSource {
     override func rightMouseDown(with event: NSEvent) {
         let s = scenePoint(event)
         let menu = NSMenu()
-        if items.interactive, let entry = items.hit(at: openingPoint(s)) {
+        if let entry = items.hit(at: openingPoint(s)) {
             menu.addItem(ActionMenuItem("Open") { [weak self] in
                 guard let self = self else { return }
                 NSWorkspace.shared.open(self.store.url(for: entry))
@@ -672,11 +558,11 @@ final class FridgeView: NSView, NSDraggingSource {
     func draggingSession(_ session: NSDraggingSession, willBeginAt screenPoint: NSPoint) {
         guard let entry = draggingEntry else { return }
         items.setDragging(entry.id, true)
-        driver.setItemDrag(true)   // the door now refuses to close
+        setItemDrag(true)   // the open doors now refuse to close
     }
 
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
-        driver.setItemDrag(false)
+        setItemDrag(false)
         guard let entry = draggingEntry else { return }
         draggingEntry = nil
         items.setDragging(entry.id, false)
@@ -699,34 +585,53 @@ final class FridgeView: NSView, NSDraggingSource {
 
     // MARK: Putting items in
 
+    /// Which door's compartment a scene point is in, by height. Outside the cabinet it is the door under it.
+    private func compartment(at s: CGPoint) -> Int? {
+        if Geo.opening.contains(s) {
+            return doors.firstIndex { $0.spec.frame.minY <= s.y && s.y < $0.spec.frame.maxY }
+        }
+        return doorIndex(at: s)
+    }
+
     private func dropShelf(for sender: NSDraggingInfo) -> Int? {
         let s = Geo.scenePoint(fromView: convert(sender.draggingLocation, from: nil))
-        guard items.interactive, !store.isFull, Geo.opening.contains(s) else { return nil }
-        return ShelfLayout.shelfNearest(toY: Double(s.y - Geo.opening.minY))
+        guard !store.isFull, Geo.opening.contains(s), let index = compartment(at: s), doors[index].interactive else { return nil }
+        // The nearest shelf behind the open door at that height.
+        let y = Double(s.y - Geo.opening.minY)
+        return doors[index].spec.shelves.min {
+            abs(InteriorGeometry.shelfFrontY[$0] - y) < abs(InteriorGeometry.shelfFrontY[$1] - y)
+        }
+    }
+
+    /// Like a spring-loaded folder: a file hovering over a shut door swings it open, and it will not
+    /// close on the user's hand while the file is over it.
+    private func springOpen(for sender: NSDraggingInfo) {
+        let s = Geo.scenePoint(fromView: convert(sender.draggingLocation, from: nil))
+        guard !store.isFull, let index = compartment(at: s) else { return }
+        if !doors[index].interactive && !doors[index].driver.isHeld {
+            doors[index].driver.swing(to: FridgeView.swingOpenAngle)
+        }
+        setItemDrag(true, alsoDoor: index)
     }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         if (sender.draggingSource as AnyObject?) === self { return [] }
-        // Like a spring-loaded folder: a file hovering over the fridge swings the door open,
-        // and the door will not close on the user's hand while the file is over it.
-        if !items.interactive && !store.isFull {
-            driver.swing(to: FridgeView.swingOpenAngle)
-        }
-        driver.setItemDrag(true)
+        springOpen(for: sender)
         return dropShelf(for: sender) == nil ? [] : .move
     }
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
         if (sender.draggingSource as AnyObject?) === self { return [] }
+        springOpen(for: sender)
         return dropShelf(for: sender) == nil ? [] : .move
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
-        driver.setItemDrag(false)
+        setItemDrag(false)
     }
 
     override func concludeDragOperation(_ sender: NSDraggingInfo?) {
-        driver.setItemDrag(false)
+        setItemDrag(false)
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
