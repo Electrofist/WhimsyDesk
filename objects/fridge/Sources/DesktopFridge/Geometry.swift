@@ -22,14 +22,14 @@ enum Geo {
     /// Hinge plates on the cabinet (scene y of their bottom edge), near the top and bottom of the door.
     static let hingePlateY: [CGFloat] = [470, 50]
     /// Half the door thickness; front face sits at +z, back face at -z.
-    /// A real fridge door is deep: insulation plus the liner. 30 pt in all.
-    static let doorHalfThickness: CGFloat = 15
+    /// A fridge door has some depth (insulation plus the liner), but reads slim at this scale. 18 pt in all.
+    static let doorHalfThickness: CGFloat = 9
     static let doorCornerRadius: CGFloat = 24
 
     /// Door bins on the liner (door space, y up): bottom edge of each tray, how far it stands out
     /// of the liner, the height of its front lip, and the inset from the door's sides.
     static let binY: [CGFloat] = [76, 205, 330, 455]
-    static let binDepth: CGFloat = 30
+    static let binDepth: CGFloat = 22
     static let binLipHeight: CGFloat = 22
     static let binInset: CGFloat = 26
 
