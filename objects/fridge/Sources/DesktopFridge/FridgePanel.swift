@@ -1,0 +1,31 @@
+import AppKit
+
+/// Borderless, transparent, non-activating panel that sits just above Finder's desktop icons.
+final class FridgePanel: NSPanel {
+    init(contentView view: NSView, origin: NSPoint) {
+        super.init(contentRect: NSRect(origin: origin, size: Geo.windowSize),
+                   styleMask: [.borderless, .nonactivatingPanel],
+                   backing: .buffered,
+                   defer: false)
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = false                       // the fridge draws its own contact shadow
+        // One step above the desktop icon layer, so clicks reach it and Finder icons stay underneath.
+        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)
+        // Present on every Space and not moved around by Mission Control.
+        collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        hidesOnDeactivate = false
+        isReleasedWhenClosed = false
+        isMovableByWindowBackground = false     // the view moves the window itself, to show the lift shadow
+        becomesKeyOnlyIfNeeded = true
+        contentView = view
+    }
+
+    override var canBecomeKey: Bool { return false }
+    override var canBecomeMain: Bool { return false }
+
+    /// Borderless windows are allowed to hang off the screen edge.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        return frameRect
+    }
+}
