@@ -48,7 +48,10 @@ final class FridgeView: NSView, NSDraggingSource {
 
     private enum Interaction {
         case none
-        case door(grabOffset: CGFloat)
+        /// Pressed on the door, direction not decided yet: sideways swings it, up or down moves the fridge.
+        case doorPress(doorX: CGFloat, start: NSPoint)
+        /// Holding the door at `doorX` (door space), so that spot stays under the pointer.
+        case door(doorX: CGFloat)
         case window(startMouse: NSPoint, startOrigin: NSPoint)
         case item(entry: FridgeEntry, start: NSPoint)
     }
@@ -293,8 +296,10 @@ final class FridgeView: NSView, NSDraggingSource {
         sounds.playOpen()
         led.string = String(format: "%.1f°C", Double(Int.random(in: 28...46)) / 10)
         items.applyFrost(now: Date(), timeScale: timeScale)
-        if !lowPowerMode && !reduceMotion {
-            fog.play(scale: artScale)
+        // The plume is a short frame swap run by the render server, so it stays on in Low Power
+        // Mode at half the frame count. Reduce Motion turns it off.
+        if !reduceMotion {
+            fog.play(scale: artScale, lite: lowPowerMode)
         }
     }
 
@@ -333,17 +338,23 @@ final class FridgeView: NSView, NSDraggingSource {
         return CGPoint(x: scenePoint.x - Geo.opening.minX, y: scenePoint.y - Geo.opening.minY)
     }
 
+    /// Swing-open angle used by double-click and by files hovering over a closed fridge.
+    private static let swingOpenAngle = 96.0 * Double.pi / 180
+
     override func mouseDown(with event: NSEvent) {
         let s = scenePoint(event)
         let angle = driver.angle
 
-        if Geo.contains(Geo.grabQuad(angle: angle), s) {
-            interaction = .door(grabOffset: Geo.freeEdgeX(angle: angle) - s.x)
-            driver.hold(at: angle)
-            return
-        }
         if Geo.contains(Geo.doorQuad(angle: angle), s) {
-            beginWindowDrag()
+            if event.clickCount == 2 {
+                toggleDoor()
+                interaction = .none
+                return
+            }
+            // Grabbing right by the hinge would give absurd leverage; hold no closer than this.
+            let doorX = max(70, Geo.doorX(underSceneX: s.x, angle: angle))
+            interaction = .doorPress(doorX: doorX, start: NSEvent.mouseLocation)
+            NSCursor.closedHand.set()
             return
         }
         if items.interactive, let entry = items.hit(at: openingPoint(s)) {
@@ -362,9 +373,25 @@ final class FridgeView: NSView, NSDraggingSource {
 
     override func mouseDragged(with event: NSEvent) {
         switch interaction {
-        case .door(let grabOffset):
+        case .doorPress(let doorX, let start):
+            let m = NSEvent.mouseLocation
+            let dx = m.x - start.x, dy = m.y - start.y
+            guard hypot(dx, dy) > 4 else { return }
+            if abs(dy) > abs(dx) * 1.6 {
+                // Lifting or lowering the fridge rather than pulling the door.
+                guard let window = window else { return }
+                interaction = .window(startMouse: start, startOrigin: window.frame.origin)
+                setLifted(true)
+                mouseDragged(with: event)
+            } else {
+                interaction = .door(doorX: doorX)
+                driver.hold(at: driver.angle)
+                mouseDragged(with: event)
+            }
+
+        case .door(let doorX):
             let s = scenePoint(event)
-            let target = Geo.angle(forFreeEdgeX: s.x + grabOffset, maxAngle: driver.maxAngle)
+            let target = Geo.angle(forDoorX: doorX, atSceneX: s.x, maxAngle: driver.maxAngle)
             driver.hold(at: target)
 
         case .window(let startMouse, let startOrigin):
@@ -388,7 +415,10 @@ final class FridgeView: NSView, NSDraggingSource {
     override func mouseUp(with event: NSEvent) {
         switch interaction {
         case .door:
-            driver.release()
+            driver.release()   // the door keeps the momentum the hand gave it
+            NSCursor.openHand.set()
+        case .doorPress:
+            NSCursor.openHand.set()
         case .window:
             setLifted(false)
             if let origin = window?.frame.origin {
@@ -398,6 +428,29 @@ final class FridgeView: NSView, NSDraggingSource {
             break
         }
         interaction = .none
+    }
+
+    private func toggleDoor() {
+        driver.swing(to: driver.angle > 30 * Double.pi / 180 ? 0 : FridgeView.swingOpenAngle)
+    }
+
+    // MARK: Cursor: an open hand over the door says "you can pull this"
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways],
+                                       owner: self, userInfo: nil))
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        guard case .none = interaction else { return }
+        let overDoor = Geo.contains(Geo.doorQuad(angle: driver.angle), scenePoint(event))
+        (overDoor ? NSCursor.openHand : NSCursor.arrow).set()
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        if case .none = interaction { NSCursor.arrow.set() }
     }
 
     private func beginWindowDrag() {
@@ -510,11 +563,26 @@ final class FridgeView: NSView, NSDraggingSource {
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         if (sender.draggingSource as AnyObject?) === self { return [] }
+        // Like a spring-loaded folder: a file hovering over the fridge swings the door open,
+        // and the door will not close on the user's hand while the file is over it.
+        if !items.interactive && !store.isFull {
+            driver.swing(to: FridgeView.swingOpenAngle)
+        }
+        driver.setItemDrag(true)
         return dropShelf(for: sender) == nil ? [] : .move
     }
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
-        return draggingEntered(sender)
+        if (sender.draggingSource as AnyObject?) === self { return [] }
+        return dropShelf(for: sender) == nil ? [] : .move
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        driver.setItemDrag(false)
+    }
+
+    override func concludeDragOperation(_ sender: NSDraggingInfo?) {
+        driver.setItemDrag(false)
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {

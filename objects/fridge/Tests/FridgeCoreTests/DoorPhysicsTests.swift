@@ -15,14 +15,31 @@ final class DoorPhysicsTests: XCTestCase {
         return nil
     }
 
-    func testAjarDoorDriftsShutWithinFourToEightSecondsFromWideAngles() {
-        for start in [45.0, 60.0, 90.0, 105.0] {
+    func testAjarDoorDriftsShutWithinFourToEightSeconds() {
+        for start in [10.0, 15.0, 20.0] {
             var door = DoorPhysics(angle: start * deg)
             guard let t = timeToRest(&door) else { return XCTFail("never rested from \(start)") }
             XCTAssertGreaterThanOrEqual(t, 4.0, "closed too fast from \(start)")
             XCTAssertLessThanOrEqual(t, 8.0, "closed too slow from \(start)")
             XCTAssertLessThan(door.visualAngle, 0.5 * deg)
         }
+    }
+
+    func testWideOpenDoorStaysWhereItWasLeft() {
+        for start in [30.0, 60.0, 90.0, 105.0] {
+            var door = DoorPhysics(angle: start * deg)
+            for _ in 0..<(240 * 10) { door.stepOnce() }
+            XCTAssertEqual(door.angle, start * deg, accuracy: 0.01 * deg, "moved from \(start)")
+            XCTAssertTrue(door.isAtRest)
+        }
+    }
+
+    func testReleasedSwingCoastsAndParks() {
+        var door = DoorPhysics(angle: 40 * deg, velocity: 1.5)
+        guard let t = timeToRest(&door, limit: 5) else { return XCTFail("never parked") }
+        XCTAssertLessThan(t, 2.5)
+        XCTAssertGreaterThan(door.angle, 50 * deg)
+        XCTAssertLessThanOrEqual(door.angle, door.parameters.maxAngle + 1 * deg)
     }
 
     func testSealCompressionIsSmall() {

@@ -12,12 +12,15 @@ final class FridgePanel: NSPanel {
         hasShadow = false                       // the fridge draws its own contact shadow
         // One step above the desktop icon layer, so clicks reach it and Finder icons stay underneath.
         level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)
+        // Development aid: float above other windows so the fridge can be driven while they cover the desktop.
+        if ProcessInfo.processInfo.environment["FRIDGE_DEBUG_FLOAT"] != nil { level = .floating }
         // Present on every Space and not moved around by Mission Control.
         collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
         isMovableByWindowBackground = false     // the view moves the window itself, to show the lift shadow
         becomesKeyOnlyIfNeeded = true
+        acceptsMouseMovedEvents = true          // for the open-hand cursor over the door
         contentView = view
     }
 

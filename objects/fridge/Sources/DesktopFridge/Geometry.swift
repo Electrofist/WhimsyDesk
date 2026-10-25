@@ -43,9 +43,11 @@ enum Geo {
     static let sealedAngle = 0.6 * Double.pi / 180
 
     static let fogFrameCount = 40
-    static let fogDuration: CFTimeInterval = 1.5
+    static let fogDuration: CFTimeInterval = 1.7
     /// The plume starts about 15% below the top of this frame, which lands in the lower part of the opening.
     static let fogFrame = CGRect(x: 90, y: -60, width: 480, height: 360)
+    /// A second plume that starts mid-opening and rolls out over the bottom shelf (view coordinates).
+    static let fogSpillFrame = CGRect(x: 120, y: 110, width: 420, height: 315)
 
     // MARK: Door projection (used only for hit testing, matches what Core Animation draws)
 
@@ -105,6 +107,38 @@ enum Geo {
             } else {
                 hi = mid
             }
+        }
+        return (lo + hi) / 2
+    }
+
+    /// Where a point `doorX` across the door (at mid height) appears horizontally in the scene.
+    static func sceneX(ofDoorX doorX: CGFloat, angle: Double) -> CGFloat {
+        return project(doorPoint: CGPoint(x: doorX, y: doorSize.height / 2), angle: angle).x
+    }
+
+    /// Which point across the door is under scene x, at the current angle. Used once on mouse down
+    /// so the hand keeps hold of the same spot on the door wherever it was grabbed.
+    static func doorX(underSceneX x: CGFloat, angle: Double) -> CGFloat {
+        var lo: CGFloat = 0
+        var hi = doorSize.width
+        let increasing = sceneX(ofDoorX: hi, angle: angle) >= sceneX(ofDoorX: lo, angle: angle)
+        for _ in 0..<24 {
+            let mid = (lo + hi) / 2
+            if (sceneX(ofDoorX: mid, angle: angle) < x) == increasing { lo = mid } else { hi = mid }
+        }
+        return (lo + hi) / 2
+    }
+
+    /// The door angle that puts the grabbed point `doorX` under scene x. Monotonic in angle,
+    /// so a bisection is exact enough and costs a few dozen multiplications.
+    static func angle(forDoorX doorX: CGFloat, atSceneX x: CGFloat, maxAngle: Double) -> Double {
+        var lo = 0.0
+        var hi = maxAngle
+        if x >= sceneX(ofDoorX: doorX, angle: lo) { return lo }
+        if x <= sceneX(ofDoorX: doorX, angle: hi) { return hi }
+        for _ in 0..<28 {
+            let mid = (lo + hi) / 2
+            if sceneX(ofDoorX: doorX, angle: mid) > x { lo = mid } else { hi = mid }
         }
         return (lo + hi) / 2
     }

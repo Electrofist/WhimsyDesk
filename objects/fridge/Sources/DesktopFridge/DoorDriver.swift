@@ -23,17 +23,29 @@ final class DoorDriver: NSObject {
 
     var angle: Double { return physics.visualAngle }
     var maxAngle: Double { return physics.parameters.maxAngle }
-    var isHeld: Bool { return physics.handTarget != nil }
+    var isHeld: Bool { return physics.handTarget != nil && !autoSwing }
 
     // MARK: Input
 
+    /// True while the door is swinging itself to a target (double-click, or a file hovering over it).
+    private var autoSwing = false
+
     func hold(at target: Double) {
+        autoSwing = false
         physics.handTarget = target
         wake()
     }
 
     func release() {
+        autoSwing = false
         physics.handTarget = nil
+        wake()
+    }
+
+    /// Swings the door to `target` as if pulled by an invisible hand, then lets go.
+    func swing(to target: Double) {
+        physics.handTarget = target
+        autoSwing = true
         wake()
     }
 
@@ -94,6 +106,12 @@ final class DoorDriver: NSObject {
         }
 
         onFrame?(physics.visualAngle)
+
+        if autoSwing, let target = physics.handTarget, abs(physics.angle - target) < 1.5 * Double.pi / 180 {
+            // Close enough: let go and let the hinges (or the magnet) take it from here.
+            autoSwing = false
+            physics.handTarget = nil
+        }
 
         if physics.isAtRest {
             stopLink()

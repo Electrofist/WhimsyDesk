@@ -7,7 +7,7 @@ import AppKit
 /// off the main thread and released as soon as the plume ends.
 final class FogPlayer {
     private weak var host: CALayer?
-    private var fogLayer: CALayer?
+    private var fogLayers: [CALayer] = []
     private var generation = 0
     private(set) var isActive = false
 
@@ -15,28 +15,32 @@ final class FogPlayer {
         self.host = host
     }
 
-    func play(scale: CGFloat) {
+    /// `lite` (Low Power Mode) plays every other frame, at 1x, without the contrast shadow.
+    func play(scale: CGFloat, lite: Bool = false) {
         guard !isActive else { return }
         isActive = true
         generation &+= 1
         let ticket = generation
 
         // Looking images up by name is cheap and stays on the main thread. Decoding is not.
-        let images: [NSImage] = (0..<Geo.fogFrameCount).compactMap { NSImage(named: String(format: "fog_%02d", $0)) }
-        guard images.count == Geo.fogFrameCount else {
+        let stride = lite ? 2 : 1
+        let names = Swift.stride(from: 0, to: Geo.fogFrameCount, by: stride).map { String(format: "fog_%02d", $0) }
+        let images: [NSImage] = names.compactMap { NSImage(named: $0) }
+        guard images.count == names.count else {
             isActive = false
             return
         }
+        let decodeScale = lite ? 1 : scale
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let frames = images.compactMap { FogPlayer.bitmap(from: $0, scale: scale) }
+            let frames = images.compactMap { FogPlayer.bitmap(from: $0, scale: decodeScale) }
             DispatchQueue.main.async {
                 guard let self = self, self.isActive, self.generation == ticket else { return }
-                guard frames.count == Geo.fogFrameCount else {
+                guard frames.count == names.count else {
                     self.isActive = false
                     return
                 }
-                self.start(frames: frames, scale: scale)
+                self.start(frames: frames, scale: decodeScale, lite: lite)
             }
         }
     }
@@ -44,41 +48,73 @@ final class FogPlayer {
     /// Stops immediately and removes everything (used on lock, sleep and Low Power Mode changes).
     func cancel() {
         generation &+= 1
-        fogLayer?.removeAllAnimations()
-        fogLayer?.removeFromSuperlayer()
-        fogLayer = nil
+        for layer in fogLayers {
+            layer.removeAllAnimations()
+            layer.removeFromSuperlayer()
+        }
+        fogLayers = []
         isActive = false
     }
 
-    private func start(frames: [CGImage], scale: CGFloat) {
+    private func start(frames: [CGImage], scale: CGFloat, lite: Bool) {
         guard let host = host else {
             isActive = false
             return
         }
-        let layer = CALayer()
-        layer.frame = Geo.fogFrame
-        layer.contentsScale = scale
-        layer.contentsGravity = .resize
-        layer.contents = frames.last
-        layer.isOpaque = false
-        host.addSublayer(layer)
-        fogLayer = layer
+        // Two plumes from the same frames: one spills out of the lower half of the opening and
+        // sinks, the other pools on the floor in front of the feet a beat later.
+        let plumes: [(frame: CGRect, delay: CFTimeInterval, flip: Bool)] = [
+            (Geo.fogSpillFrame, 0, false),
+            (Geo.fogFrame, 0.18, true)
+        ]
+        let now = CACurrentMediaTime()
+        let ticket = generation
+        var remaining = plumes.count
 
-        let animation = CAKeyframeAnimation(keyPath: "contents")
-        animation.values = frames
-        animation.calculationMode = .discrete
-        animation.duration = Geo.fogDuration
-        animation.isRemovedOnCompletion = true
+        for plume in plumes {
+            let layer = CALayer()
+            layer.frame = plume.frame
+            layer.contentsScale = scale
+            layer.contentsGravity = .resize
+            layer.isOpaque = false
+            layer.opacity = 0           // invisible until its animation starts
+            if plume.flip { layer.transform = CATransform3DMakeScale(-1, 1, 1) }   // so the two never look alike
+            if !lite {
+                // A faint cool shadow under the vapour so it reads on light wallpapers too.
+                layer.shadowColor = Art.color(0.10, 0.20, 0.30, 1)
+                layer.shadowOpacity = 0.22
+                layer.shadowRadius = 9
+                layer.shadowOffset = CGSize(width: 0, height: -5)
+            }
+            host.addSublayer(layer)
+            fogLayers.append(layer)
 
-        CATransaction.begin()
-        CATransaction.setCompletionBlock { [weak self, weak layer] in
-            guard let self = self, let layer = layer, self.fogLayer === layer else { return }
-            layer.removeFromSuperlayer()
-            self.fogLayer = nil
-            self.isActive = false
+            let swap = CAKeyframeAnimation(keyPath: "contents")
+            swap.values = frames
+            swap.calculationMode = .discrete
+            let show = CABasicAnimation(keyPath: "opacity")
+            show.fromValue = 1
+            show.toValue = 1
+            let group = CAAnimationGroup()
+            group.animations = [swap, show]
+            group.duration = Geo.fogDuration
+            group.beginTime = now + plume.delay
+            group.fillMode = .backwards
+            group.isRemovedOnCompletion = true
+
+            CATransaction.begin()
+            CATransaction.setCompletionBlock { [weak self, weak layer] in
+                layer?.removeFromSuperlayer()
+                guard let self = self, self.generation == ticket else { return }
+                remaining -= 1
+                if remaining == 0 {
+                    self.fogLayers = []
+                    self.isActive = false
+                }
+            }
+            layer.add(group, forKey: "fog")
+            CATransaction.commit()
         }
-        layer.add(animation, forKey: "fog")
-        CATransaction.commit()
     }
 
     /// Picks the representation closest to the screen's pixel density.
