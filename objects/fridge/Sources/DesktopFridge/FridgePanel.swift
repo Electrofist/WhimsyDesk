@@ -24,7 +24,11 @@ final class FridgePanel: NSPanel {
         contentView = view
     }
 
-    override var canBecomeKey: Bool { return false }
+    /// Only while a sticky note is being written. The panel is non-activating, so typing into it
+    /// leaves the app in front where it is.
+    var allowsKey = false
+
+    override var canBecomeKey: Bool { return allowsKey }
     override var canBecomeMain: Bool { return false }
 
     /// Borderless windows are allowed to hang off the screen edge.

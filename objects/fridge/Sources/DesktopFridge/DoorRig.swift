@@ -16,6 +16,8 @@ final class DoorRig {
     /// Darkness and light for the compartment behind this door. They live in the flat body layer.
     let darkness = CALayer()
     let glow = CAGradientLayer()
+    /// Holds what is stuck on the outside of the door (door space, origin bottom left).
+    let notesHost = CALayer()
 
     /// True once the door has passed the "opened" angle, until it seals again.
     var hasOpened = false
@@ -85,6 +87,10 @@ final class DoorRig {
         root.addSublayer(edge)
 
         buildBins()
+
+        // Sticky notes and photo magnets ride on the front face, under its swing shading.
+        notesHost.frame = bounds
+        front.addSublayer(notesHost)
 
         for (shade, face) in [(frontShade, front), (backShade, back)] {
             shade.frame = bounds
