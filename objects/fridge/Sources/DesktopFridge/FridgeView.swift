@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 import FridgeCore
 
 /// The whole fridge: layer rig, door interaction and file drag and drop.
@@ -13,6 +14,7 @@ final class FridgeView: NSView, NSDraggingSource {
     /// Fridge door (index 0, below) and freezer door (index 1, above).
     private var doors: [DoorRig] = []
     private var items: ItemsController!
+    private var notes: NotesController!
     private var fog: FogPlayer!
 
     /// Set by `SystemEvents`.
@@ -48,6 +50,9 @@ final class FridgeView: NSView, NSDraggingSource {
         case resize(startMouse: NSPoint, startScale: CGFloat)
         case window(startMouse: NSPoint, startOrigin: NSPoint)
         case item(entry: FridgeEntry, start: NSPoint)
+        /// ⇧ press on a sticky note or photo: a click changes its color, a drag moves it.
+        /// `grab` is where on the note it was picked up, relative to its center.
+        case notePress(id: UUID, door: Int, grab: CGPoint, start: NSPoint, moved: Bool)
     }
 
     private var interaction = Interaction.none
@@ -76,10 +81,24 @@ final class FridgeView: NSView, NSDraggingSource {
         buildLayers()
         fog = FogPlayer(host: fogHost)
 
+        notes = NotesController(store: DoorNotesStore(root: store.root), scale: scale)
+        notes.view = self
+        notes.viewPoint = { [weak self] name, p in
+            guard let spec = self?.doors.first(where: { $0.spec.name == name })?.spec else { return p }
+            let s = Geo.sceneFrontPoint(ofDoorPoint: p, door: spec)
+            return CGPoint(x: s.x + Geo.bodyOrigin.x, y: s.y + Geo.bodyOrigin.y)
+        }
+        notes.setKeyboard = { [weak self] on in
+            guard let window = self?.window as? FridgePanel else { return }
+            window.allowsKey = on
+            if on { window.makeKey() } else { window.makeFirstResponder(self) }
+        }
+        for rig in doors { notes.attach(host: rig.notesHost, door: rig.spec.name) }
+
         updateLighting()
         renderArt(scale: scale)
         for index in doors.indices { applyDoor(index, angle: 0) }
-        registerForDraggedTypes([.fileURL])
+        registerForDraggedTypes([.fileURL, .string])
 
         // Development aid: FRIDGE_DEBUG_ANGLE="fridge,freezer" in degrees pins the doors open.
         if let raw = ProcessInfo.processInfo.environment["FRIDGE_DEBUG_ANGLE"] {
@@ -177,6 +196,7 @@ final class FridgeView: NSView, NSDraggingSource {
         let all: [CALayer] = [cabinet, interior, frost, contactShadow, liftShadow, items.layer] + hinges
         for l in all { l.contentsScale = scale }
         items.setScale(scale)
+        notes?.setScale(scale)
     }
 
     override func viewDidChangeBackingProperties() {
@@ -247,6 +267,7 @@ final class FridgeView: NSView, NSDraggingSource {
     // MARK: Pause and resume (lock, sleep)
 
     func pauseEverything() {
+        notes.endEditing()
         for rig in doors { rig.driver.suspend() }
         fog.cancel()
         sounds.stopAll()
@@ -309,6 +330,8 @@ final class FridgeView: NSView, NSDraggingSource {
 
     override func mouseDown(with event: NSEvent) {
         let s = scenePoint(event)
+        // A click anywhere else on the fridge finishes the note being written.
+        if notes.isEditing { notes.endEditing() }
 
         switch gesture(for: event.modifierFlags) {
         case .move where isOnFridge(s):
@@ -321,6 +344,8 @@ final class FridgeView: NSView, NSDraggingSource {
         default:
             break
         }
+
+        if notesMouseDown(event, at: s) { return }
 
         if let index = doorIndex(at: s) {
             if event.clickCount == 2 {
@@ -381,6 +406,16 @@ final class FridgeView: NSView, NSDraggingSource {
                 beginItemDrag(entry, event: event)
             }
 
+        case .notePress(let id, let index, let grab, let start, let moved):
+            let m = NSEvent.mouseLocation
+            if !moved {
+                guard hypot(m.x - start.x, m.y - start.y) > 3 else { return }
+                notes.liftForMove(id)
+                interaction = .notePress(id: id, door: index, grab: grab, start: start, moved: true)
+            }
+            let p = Geo.doorPoint(underScene: scenePoint(event), door: doors[index].spec)
+            notes.move(id, to: CGPoint(x: p.x - grab.x, y: p.y - grab.y))
+
         case .none:
             break
         }
@@ -399,6 +434,13 @@ final class FridgeView: NSView, NSDraggingSource {
             if let origin = window?.frame.origin {
                 UserDefaults.standard.set(NSStringFromPoint(origin), forKey: "windowOrigin")
             }
+        case .notePress(let id, let index, _, _, let moved):
+            if moved {
+                notes.finishMove(id, door: doors[index].spec)
+            } else {
+                notes.cycleColor(id)
+            }
+            NSCursor.arrow.set()
         case .window:
             setLifted(false)
             if let origin = window?.frame.origin {
@@ -504,7 +546,10 @@ final class FridgeView: NSView, NSDraggingSource {
     override func rightMouseDown(with event: NSEvent) {
         let s = scenePoint(event)
         let menu = NSMenu()
-        if let entry = items.hit(at: openingPoint(s)) {
+        if let (_, note) = noteHit(at: s) {
+            addNoteMenuItems(note, to: menu)
+            menu.addItem(.separator())
+        } else if let entry = items.hit(at: openingPoint(s)) {
             menu.addItem(ActionMenuItem("Open") { [weak self] in
                 guard let self = self else { return }
                 NSWorkspace.shared.open(self.store.url(for: entry))
@@ -612,7 +657,9 @@ final class FridgeView: NSView, NSDraggingSource {
     /// close on the user's hand while the file is over it.
     private func springOpen(for sender: NSDraggingInfo) {
         let s = Geo.scenePoint(fromView: convert(sender.draggingLocation, from: nil))
-        guard !store.isFull, let index = compartment(at: s) else { return }
+        // Only files go inside. Text can only be stuck on the door (with ⇧).
+        guard sender.draggingPasteboard.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]),
+              !store.isFull, let index = compartment(at: s) else { return }
         if !doors[index].interactive && !doors[index].driver.isHeld {
             doors[index].driver.swing(to: FridgeView.swingOpenAngle)
         }
@@ -621,12 +668,14 @@ final class FridgeView: NSView, NSDraggingSource {
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         if (sender.draggingSource as AnyObject?) === self { return [] }
+        if NSEvent.modifierFlags.contains(.shift) { return stickTarget(for: sender) == nil ? [] : .copy }
         springOpen(for: sender)
         return dropShelf(for: sender) == nil ? [] : .move
     }
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
         if (sender.draggingSource as AnyObject?) === self { return [] }
+        if NSEvent.modifierFlags.contains(.shift) { return stickTarget(for: sender) == nil ? [] : .copy }
         springOpen(for: sender)
         return dropShelf(for: sender) == nil ? [] : .move
     }
@@ -641,6 +690,7 @@ final class FridgeView: NSView, NSDraggingSource {
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         if (sender.draggingSource as AnyObject?) === self { return false }
+        if NSEvent.modifierFlags.contains(.shift) { return stickOnDoor(sender) }
         guard let shelf = dropShelf(for: sender),
               let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self],
                                                                 options: [.urlReadingFileURLsOnly: true]) as? [URL],
@@ -658,6 +708,112 @@ final class FridgeView: NSView, NSDraggingSource {
             }
         }
         return true
+    }
+
+    // MARK: Sticky notes and photo magnets (⇧)
+
+    /// A shut door under a scene point. Notes are on the front face, which only faces the user
+    /// while the door is (nearly) closed.
+    private func shutDoor(at s: CGPoint) -> Int? {
+        guard let index = doorIndex(at: s), doors[index].angle < Geo.openedAngle else { return nil }
+        return index
+    }
+
+    private func noteHit(at s: CGPoint) -> (door: Int, note: DoorNote)? {
+        guard let index = shutDoor(at: s) else { return nil }
+        let spec = doors[index].spec
+        guard let note = notes.hit(door: spec.name, point: Geo.doorPoint(underScene: s, door: spec)) else { return nil }
+        return (index, note)
+    }
+
+    /// ⇧-click a shut door for a new note, ⇧-click a note to change its color, ⇧-drag to move it,
+    /// double-click a note to write on it. Returns true when the click was about notes.
+    private func notesMouseDown(_ event: NSEvent, at s: CGPoint) -> Bool {
+        guard let index = shutDoor(at: s) else { return false }
+        let spec = doors[index].spec
+        let p = Geo.doorPoint(underScene: s, door: spec)
+        let shift = event.modifierFlags.contains(.shift)
+        if let note = notes.hit(door: spec.name, point: p) {
+            if shift {
+                let grab = CGPoint(x: p.x - CGFloat(note.x), y: p.y - CGFloat(note.y))
+                interaction = .notePress(id: note.id, door: index, grab: grab, start: NSEvent.mouseLocation, moved: false)
+                NSCursor.closedHand.set()
+                return true
+            }
+            if event.clickCount == 2 && note.kind == .note {
+                notes.beginEditing(note.id)
+                interaction = .none
+                return true
+            }
+            return false   // a plain grab on a note still works the door
+        }
+        if shift && event.clickCount == 1 {
+            notes.addNote(on: spec, at: p)
+            interaction = .none
+            return true
+        }
+        return false
+    }
+
+    private func addNoteMenuItems(_ note: DoorNote, to menu: NSMenu) {
+        let id = note.id
+        if note.kind == .note {
+            menu.addItem(ActionMenuItem("Edit Note") { [weak self] in self?.notes.beginEditing(id) })
+            let colors = NSMenuItem(title: "Color", action: nil, keyEquivalent: "")
+            let sub = NSMenu()
+            for (index, c) in NoteArt.palette.enumerated() {
+                let item = ActionMenuItem(c.name) { [weak self] in self?.notes.setColor(id, index) }
+                item.state = index == note.color ? .on : .off
+                sub.addItem(item)
+            }
+            colors.submenu = sub
+            menu.addItem(colors)
+            menu.addItem(ActionMenuItem("Peel Off Note") { [weak self] in self?.notes.remove(id) })
+        } else {
+            if let path = note.originalPath, FileManager.default.fileExists(atPath: path) {
+                menu.addItem(ActionMenuItem("Open Original") { NSWorkspace.shared.open(URL(fileURLWithPath: path)) })
+            }
+            menu.addItem(ActionMenuItem("Take Photo Down") { [weak self] in self?.notes.remove(id) })
+        }
+    }
+
+    private static func isImage(_ url: URL) -> Bool {
+        guard let type = UTType(filenameExtension: url.pathExtension) else { return false }
+        return type.conforms(to: .image)
+    }
+
+    /// With ⇧ held, pictures and text dragged onto a shut door get stuck on it instead of going inside.
+    private func stickTarget(for sender: NSDraggingInfo) -> (door: Int, point: CGPoint)? {
+        let s = Geo.scenePoint(fromView: convert(sender.draggingLocation, from: nil))
+        guard let index = shutDoor(at: s), !notes.store.isFull(door: doors[index].spec.name) else { return nil }
+        let pb = sender.draggingPasteboard
+        let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+        let hasImage = urls.contains(where: FridgeView.isImage)
+        let hasText = urls.isEmpty && !(pb.string(forType: .string) ?? "").isEmpty
+        guard hasImage || hasText else { return nil }
+        return (index, Geo.doorPoint(underScene: s, door: doors[index].spec))
+    }
+
+    private func stickOnDoor(_ sender: NSDraggingInfo) -> Bool {
+        guard let target = stickTarget(for: sender) else { return false }
+        let spec = doors[target.door].spec
+        let pb = sender.draggingPasteboard
+        let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+        let images = urls.filter(FridgeView.isImage)
+        if !images.isEmpty {
+            var placed = false
+            for (offset, url) in images.prefix(4).enumerated() {
+                // Several at once fan out a little instead of stacking exactly.
+                let p = CGPoint(x: target.point.x + CGFloat(offset) * 14, y: target.point.y - CGFloat(offset) * 10)
+                placed = notes.addPhoto(from: url, on: spec, at: p) || placed
+            }
+            return placed
+        }
+        if let text = pb.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
+            notes.addNote(on: spec, at: target.point, text: text, edit: false)
+            return true
+        }
+        return false
     }
 }
 

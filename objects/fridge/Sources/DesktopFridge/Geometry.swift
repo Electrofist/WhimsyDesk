@@ -136,6 +136,26 @@ enum Geo {
         return (lo + hi) / 2
     }
 
+    // MARK: The front face of a shut door (sticky notes)
+
+    /// Depth of a shut door's front face: the door is lifted by half its thickness plus a hair,
+    /// and the front face sits another half thickness forward.
+    static let frontFaceZ = doorHalfThickness * 2 + 0.5
+
+    /// Where a point on a shut door's front face appears in the scene.
+    static func sceneFrontPoint(ofDoorPoint p: CGPoint, door: DoorSpec) -> CGPoint {
+        let w = 1 - frontFaceZ / eyeDistance
+        return CGPoint(x: vanishing.x + (door.frame.minX + p.x - vanishing.x) / w,
+                       y: vanishing.y + (door.frame.minY + p.y - vanishing.y) / w)
+    }
+
+    /// The point on a shut door's front face under a scene point (door space).
+    static func doorPoint(underScene s: CGPoint, door: DoorSpec) -> CGPoint {
+        let w = 1 - frontFaceZ / eyeDistance
+        return CGPoint(x: vanishing.x + (s.x - vanishing.x) * w - door.frame.minX,
+                       y: vanishing.y + (s.y - vanishing.y) * w - door.frame.minY)
+    }
+
     /// Convex polygon containment (works for either winding).
     static func contains(_ polygon: [CGPoint], _ point: CGPoint) -> Bool {
         guard polygon.count >= 3 else { return false }

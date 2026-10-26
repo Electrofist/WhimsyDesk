@@ -19,6 +19,18 @@ A skeuomorphic fridge that lives on your macOS desktop. Drag files in, shut the 
 - Hold ⌥ (Option) and drag to resize the fridge: up or right grows it, down or left shrinks it. The feet stay put
 - Hold ⌥⌘ (Option-Command) and drag to move the fridge. Size and position are remembered
 - Right-click for Quit and Open Fridge Folder
+
+### Sticky notes and photo magnets
+
+Shift is the "stick it on the door" key. It works on a shut door.
+
+- ⇧-click the door: a new sticky note, ready to type on. Return finishes it, ⌥Return adds a line, Esc throws a new note away
+- Double-click a note to rewrite it
+- ⇧-click a note to change its color. ⇧-drag to move it. ⇧-drag it off the door to peel it off
+- Hold ⇧ while dragging a picture from Finder onto the door: it is pinned under a magnet. The original stays where it was; a small copy goes in `~/Fridge/.magnets`
+- Hold ⇧ while dragging text onto the door: it becomes a note
+- Right-click a note or photo for Edit, Color, Peel Off, Open Original and Take Photo Down
+- Notes live in `~/Fridge/.fridge-notes.json`, up to 16 per door
 - First time you store a file from the Desktop, macOS asks for Automation access to Finder. Say no and everything still works, only the exact icon position is not restored
 
 ## Check the frost
