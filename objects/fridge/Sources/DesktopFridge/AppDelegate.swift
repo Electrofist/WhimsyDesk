@@ -54,7 +54,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func initialOrigin() -> (point: NSPoint, saved: Bool) {
         let scale = view?.userScale ?? CGFloat(max(UserDefaults.standard.double(forKey: "fridgeScale"), 0))
         if let saved = UserDefaults.standard.string(forKey: "windowOrigin") {
-            let p = NSPointFromString(saved)
+            var p = NSPointFromString(saved)
+            // Saved by a build whose body sat lower in the window: keep the feet where they were.
+            let savedBodyY = UserDefaults.standard.object(forKey: "bodyOriginY") as? Double ?? Double(Geo.legacyBodyOriginY)
+            if CGFloat(savedBodyY) != Geo.bodyOrigin.y {
+                p.y -= (Geo.bodyOrigin.y - CGFloat(savedBodyY)) * (scale > 0 ? scale : 1)
+                UserDefaults.standard.set(NSStringFromPoint(p), forKey: "windowOrigin")
+            }
+            UserDefaults.standard.set(Double(Geo.bodyOrigin.y), forKey: "bodyOriginY")
             if bodyIsVisible(windowOrigin: p, scale: scale > 0 ? scale : 1) { return (p, true) }
         }
         let visible = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)

@@ -8,9 +8,13 @@ import FridgeCore
 /// View coordinates: scene origin plus `Geo.bodyOrigin`.
 enum Geo {
     /// Room above the cabinet too: a deep door swung toward the viewer looms larger than the body.
-    static let windowSize = CGSize(width: 520, height: 844)
+    /// Seen from above, an open door's bottom corner hangs well below the feet, so most room is below.
+    static let windowSize = CGSize(width: 520, height: 800)
 
-    static let bodyOrigin = CGPoint(x: 190, y: 150)
+    static let bodyOrigin = CGPoint(x: 190, y: 170)
+    /// `bodyOrigin.y` in earlier builds. Saved window origins are shifted by the difference so the
+    /// fridge stays put on the desktop after the update.
+    static let legacyBodyOriginY: CGFloat = 150
     /// Proportions follow the door artwork (Assets/Door/door_front.png, 872 x 1780 px).
     static let bodySize = CGSize(width: 280, height: 563)
 
@@ -51,9 +55,11 @@ enum Geo {
     static let opening = CGRect(x: 14, y: 14, width: InteriorGeometry.openingWidth, height: InteriorGeometry.openingHeight)
 
     /// Perspective: m34 = -1 / distance. Larger is flatter.
-    static let eyeDistance: CGFloat = 1150
-    /// Vanishing point of the scene, which is the center of the body.
-    static let vanishing = CGPoint(x: bodySize.width / 2, y: bodySize.height / 2)
+    static let eyeDistance = CGFloat(InteriorGeometry.eyeDistance)
+    /// Vanishing point of the scene: the interior's eye, so the doors and the shelves are seen from
+    /// the same spot (centered, a little below the top of the fridge).
+    static let vanishing = CGPoint(x: opening.minX + CGFloat(InteriorGeometry.vanishingX),
+                                   y: opening.minY + CGFloat(InteriorGeometry.vanishingY))
 
     /// Items become interactive past this angle, with hysteresis so they do not flicker.
     static let interactiveOnAngle = 40.0 * Double.pi / 180
@@ -66,9 +72,9 @@ enum Geo {
     static let fogFrameCount = 40
     static let fogDuration: CFTimeInterval = 1.7
     /// The plume starts about 15% below the top of this frame, which lands in the lower part of the opening.
-    static let fogFrame = CGRect(x: 90, y: -60, width: 480, height: 360)
+    static let fogFrame = CGRect(x: 90, y: -40, width: 480, height: 360)
     /// A second plume that starts mid-opening and rolls out over the bottom shelf (view coordinates).
-    static let fogSpillFrame = CGRect(x: 120, y: 110, width: 420, height: 315)
+    static let fogSpillFrame = CGRect(x: 120, y: 130, width: 420, height: 315)
 
     // MARK: Door projection (used only for hit testing, matches what Core Animation draws)
 

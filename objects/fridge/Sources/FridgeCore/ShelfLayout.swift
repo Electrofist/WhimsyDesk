@@ -56,15 +56,22 @@ public enum ShelfLayout {
     }
 }
 
-/// The interior is a box seen from slightly above. Everything shares one vanishing point,
-/// so shelves, walls and item scale agree. Coordinates are in the door opening, origin bottom left.
+/// The interior is a box seen from slightly above. It shares one eye with the doors (the scene's
+/// Core Animation perspective), so shelves, walls, door bins and item scale all agree.
+/// Coordinates are in the door opening, origin bottom left.
 public enum InteriorGeometry {
     public static let openingWidth = 252.0
     public static let openingHeight = 535.0
+    /// The eye: centered, a little below the top of the fridge, like an adult standing in front of it.
+    /// The doors use the same point (see `Geo.vanishing`), so this must not drift from it.
     public static let vanishingX = 126.0
-    public static let vanishingY = 563.0
+    public static let vanishingY = 486.0
+    /// Distance from the eye to the front plane, in points. Same as the door perspective's m34.
+    public static let eyeDistance = 1150.0
+    /// How deep the cabinet is, front plane to back wall.
+    public static let cabinetDepth = 404.0
     /// Scale of the back wall relative to the opening.
-    public static let backScale = 0.74
+    public static let backScale = eyeDistance / (eyeDistance + cabinetDepth)
     /// Heights of the shelf front edges on the front plane.
     /// Shelves 0 and 1 are in the fridge compartment, shelf 2 in the freezer (split at 355).
     /// Shelf 1 sits low enough that its back row stays under the crossbar.
@@ -79,7 +86,8 @@ public enum InteriorGeometry {
 
     /// Moves a front-plane point back by `depth` (0...1) toward the back wall.
     public static func project(x: Double, y: Double, depth: Double) -> (x: Double, y: Double, scale: Double) {
-        let s = 1.0 - depth * (1.0 - backScale)
+        // True perspective, the same divide Core Animation does for the doors.
+        let s = eyeDistance / (eyeDistance + depth * cabinetDepth)
         return (vanishingX + (x - vanishingX) * s, vanishingY + (y - vanishingY) * s, s)
     }
 

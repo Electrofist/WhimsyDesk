@@ -114,9 +114,14 @@ final class FridgeView: NSView, NSDraggingSource {
 
         // Scene: everything that belongs to the cabinet and door, with one shared perspective.
         scene.frame = Geo.bodyRectInView
+        // Core Animation projects about the layer's center; shift so the vanishing point is the
+        // interior's eye instead, and the doors and shelves are seen from one spot.
         var perspective = CATransform3DIdentity
         perspective.m34 = -1 / Geo.eyeDistance
-        scene.sublayerTransform = perspective
+        let dx = Geo.vanishing.x - Geo.bodySize.width / 2
+        let dy = Geo.vanishing.y - Geo.bodySize.height / 2
+        scene.sublayerTransform = CATransform3DConcat(CATransform3DConcat(CATransform3DMakeTranslation(-dx, -dy, 0), perspective),
+                                                      CATransform3DMakeTranslation(dx, dy, 0))
         root.addSublayer(scene)
 
         // The scene holds a 3D door, so Core Animation depth-tests its direct children. Everything
