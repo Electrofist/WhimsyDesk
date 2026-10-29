@@ -1,0 +1,18 @@
+# Build output (each object builds inside its own folder)
+.build/
+build/
+.swiftpm/
+DerivedData/
+*.xcodeproj/xcuserdata/
+
+# Release artifacts
+*.zip
+*.dmg
+
+# macOS
+.DS_Store
+
+# Tool caches
+__pycache__/
+*.pyc
+node_modules/
