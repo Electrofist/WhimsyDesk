@@ -11,8 +11,14 @@ Each object keeps its own version in its `object.json`. Entries are grouped by o
 - Added an FAQ, a banner and screenshots.
 - Added downloads: `scripts/release.sh` and a release workflow that publishes a DMG and zip per object when a tag like `fridge-v1.0` is pushed. Signs and notarizes once Apple Developer secrets are added.
 
+### Desktop Fridge 1.1
+- New app icon. Builds for Apple silicon and Intel.
+
 ### Desktop Fridge 1.0
 - Joined the library with its full history. No changes to the app.
+
+### Desktop Drawer 1.1
+- New app icon. Now runs on Intel Macs too.
 
 ### Desktop Drawer 1.0
 - Joined the library with its full history. No changes to the app.
