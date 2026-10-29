@@ -16,6 +16,7 @@ rm -rf "$APP"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 cp "$BIN" "$CONTENTS/MacOS/DesktopFridge"
 cp Support/Info.plist "$CONTENTS/Info.plist"
+cp Assets/AppIcon.icns "$CONTENTS/Resources/"
 cp Assets/Sounds/*.wav "$CONTENTS/Resources/"
 cp Assets/Door/*.png "$CONTENTS/Resources/"
 
