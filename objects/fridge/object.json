@@ -9,5 +9,5 @@
   "license": "MIT",
   "storesFilesIn": "~/Fridge",
   "build": { "command": "./build.sh", "app": "build/DesktopFridge.app" },
-  "screenshots": []
+  "screenshots": ["media/closed.png", "media/open.png"]
 }
