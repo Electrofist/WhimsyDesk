@@ -23,9 +23,10 @@ Thanks for helping build Desktop Objects. There are three ways in:
 3. Put your object's app inside, with a build script that produces a `.app`.
 4. Add an `object.json` card. Copy one from `objects/fridge/object.json` and fill in your own details.
 5. Add a short `README.md` in your folder: what it does, how to use it, where it stores files.
-6. Run `scripts/check-objects.sh` and fix anything it reports.
-7. Build and use your object for a day on your own desktop.
-8. Open a pull request using the "New object" checklist. Include a screen recording or GIF.
+6. Add a line for your folder to `.github/CODEOWNERS` with your GitHub username, so you are asked to review future changes to your object.
+7. Run `scripts/check-objects.sh` and fix anything it reports.
+8. Build and use your object for a day on your own desktop.
+9. Open a pull request using the "New object" checklist. Include a screen recording or GIF.
 
 A full step-by-step guide, a template object and a tutorial are on the way.
 

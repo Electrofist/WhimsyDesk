@@ -24,14 +24,14 @@ macOS 14 or later. Mac only.
 You need macOS 14 or later and Apple's Command Line Tools (`xcode-select --install`).
 
 ```sh
-git clone <this repo>
+git clone https://github.com/Electrofist/desktop-objects.git
 cd desktop-objects/objects/fridge
 ./build.sh run
 ```
 
 For the drawer: `cd objects/drawer && bash build_app.sh`, then open `build/Desktop Drawer.app`.
 
-Each object's own README covers its controls and details.
+Each object's own README covers its controls and details. Questions about files, permissions or the "cannot be opened" warning are answered in the [FAQ](docs/faq.md).
 
 ## What every object promises
 

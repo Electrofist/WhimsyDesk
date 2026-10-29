@@ -16,6 +16,7 @@ Skip this section if you are not adding an object.
 - [ ] `scripts/check-objects.sh` passes
 - [ ] The build command in `object.json` produces the app on a clean checkout
 - [ ] Has a `README.md`: what it does, controls, where files are stored
+- [ ] Added my folder and GitHub username to `.github/CODEOWNERS`
 - [ ] Files are moved, never copied or deleted, into one folder the user can open
 - [ ] Put Back returns files to where they came from
 - [ ] Nothing runs while the object is at rest: no timers or polling
