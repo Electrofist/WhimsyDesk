@@ -8,6 +8,7 @@ DerivedData/
 # Release artifacts (scripts/release.sh)
 dist/
 dist-notes.md
+dist-meta.env
 *.zip
 *.dmg
 
