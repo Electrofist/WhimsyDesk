@@ -26,6 +26,13 @@ for dir in objects/*/; do
     [[ "$(get .version)" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]] || err "version must look like 1.0 or 1.0.0"
     [[ "$(get .minMacOS)" =~ ^1[4-9](\.[0-9]+)?$|^[2-9][0-9](\.[0-9]+)?$ ]] || err "minMacOS must be 14.0 or later"
     [[ "$(get .tagline | wc -c)" -le 101 ]] || err "tagline must be 100 characters or fewer"
+    [[ "$(get .tagline)" != "Write one line about your object here." ]] || err "write your own tagline"
+    [[ "$(get .description)" != Write\ a\ few\ sentences* ]] || err "write your own description"
+
+    if [[ "$(jq 'has("look") and (.look | has("itemsArea"))' "$manifest")" == "true" ]]; then
+        jq -e '.look.itemsArea | type == "array" and length == 4 and all(.[]; type == "number" and . >= 0 and . <= 1)' \
+            "$manifest" >/dev/null || err "look.itemsArea must be four numbers from 0 to 1"
+    fi
 
     script="$(get .build.command | awk '{print $NF}')"
     [[ -f "$dir/$script" ]] || err "build script \"$script\" not found"
