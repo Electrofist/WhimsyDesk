@@ -1,0 +1,17 @@
+{
+  "id": "__ID__",
+  "name": "__APP_NAME__",
+  "tagline": "Write one line about your object here.",
+  "description": "Write a few sentences: what it looks like, how it opens, what makes it fun.",
+  "author": { "name": "__AUTHOR__", "github": "__GITHUB__" },
+  "version": "0.1",
+  "minMacOS": "14.0",
+  "license": "MIT",
+  "storesFilesIn": "~/Desktop Objects/__FOLDER__",
+  "build": { "command": "./build.sh", "app": "build/__APP_NAME__.app" },
+  "screenshots": [],
+  "look": {
+    "itemsArea": [0.121, 0.121, 0.757, 0.7375],
+    "iconSize": 48
+  }
+}
