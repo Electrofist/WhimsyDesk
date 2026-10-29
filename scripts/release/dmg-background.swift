@@ -108,15 +108,12 @@ func draw(scale: CGFloat) {
                    from: .zero, operation: .sourceOver, fraction: alpha)
     }
 
-    // A friendly line on top, a hint and a signature at the bottom.
+    // A friendly line on top and a first-launch hint at the bottom.
     let serif = NSFont.systemFont(ofSize: 19, weight: .semibold).fontDescriptor.withDesign(.serif)!
     centered("Drag me into Applications", y: size.height - 56,
              [.font: NSFont(descriptor: serif, size: 19)!, .foregroundColor: color(0x2B2118)])
-    centered("First time? System Settings → Privacy & Security → Open Anyway", y: 42,
+    centered("First time? System Settings → Privacy & Security → Open Anyway", y: 30,
              [.font: NSFont.systemFont(ofSize: 10.5), .foregroundColor: color(0x8A7A66)])
-    centered("\(objectName.uppercased())  ·  DESKTOP OBJECTS  ·  FREE AND OPEN SOURCE", y: 22,
-             [.font: NSFont.monospacedSystemFont(ofSize: 9, weight: .medium), .kern: 1.2,
-              .foregroundColor: color(0xA89A88)])
 }
 
 func bitmap(scale: CGFloat) -> NSBitmapImageRep {
