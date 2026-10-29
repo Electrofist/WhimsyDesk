@@ -27,7 +27,14 @@ for card in objects/*/object.json; do
     echo "### $name"
     echo
     if [[ -n "$shot" ]]; then
-        echo "<img src=\"$RAW/$dir/$shot\" alt=\"$name\" height=\"180\">"
+        # Wide pictures (like the drawer front) get a width; tall ones a height.
+        size_attr='height="180"'
+        if [[ -f "$dir/$shot" ]]; then
+            w="$(sips -g pixelWidth "$dir/$shot" | awk '/pixelWidth/ {print $2}')"
+            h="$(sips -g pixelHeight "$dir/$shot" | awk '/pixelHeight/ {print $2}')"
+            if (( w > h * 2 )); then size_attr='width="480"'; fi
+        fi
+        echo "<img src=\"$RAW/$dir/$shot\" alt=\"$name\" $size_attr>"
         echo
     fi
     echo "$(jq -r .tagline "$card")"
