@@ -18,17 +18,17 @@ Thanks for helping build Desktop Objects. There are three ways in:
 
 ## Add a new object
 
-1. Fork this repo and create a branch.
-2. Make a folder `objects/<id>/`. The id is lowercase with hyphens, for example `air-fryer`.
-3. Put your object's app inside, with a build script that produces a `.app`.
-4. Add an `object.json` card. Copy one from `objects/fridge/object.json` and fill in your own details.
-5. Add a short `README.md` in your folder: what it does, how to use it, where it stores files.
-6. Add a line for your folder to `.github/CODEOWNERS` with your GitHub username, so you are asked to review future changes to your object.
-7. Run `scripts/check-objects.sh` and fix anything it reports.
-8. Build and use your object for a day on your own desktop.
-9. Open a pull request using the "New object" checklist. Include a screen recording or GIF.
+The full walkthrough, written for designers with no Swift experience, is in [docs/make-your-own.md](docs/make-your-own.md). In short:
 
-A full step-by-step guide, a template object and a tutorial are on the way.
+1. Fork this repo.
+2. `scripts/new-object.sh "Air Fryer" your-github-username` creates `objects/air-fryer/` from the template and adds you to `.github/CODEOWNERS`.
+3. `cd objects/air-fryer && ./build.sh run` to see it on your desktop.
+4. Replace `Art/closed.png` and `Art/open.png`, and fill in `object.json` and `README.md`.
+5. Run `scripts/check-objects.sh` and fix anything it reports.
+6. Use your object for a day on your own desktop.
+7. Open a pull request using the "New object" checklist. Include a screen recording or GIF.
+
+You can also start from scratch instead of the template, as the fridge and drawer did. Your object still needs its own folder, an `object.json`, a README, a CODEOWNERS line and a build script that produces a `.app`.
 
 ## object.json fields
 
@@ -45,7 +45,9 @@ A full step-by-step guide, a template object and a tutorial are on the way.
 | `storesFilesIn` | yes | `"~/Fridge"` |
 | `build.command` | yes | `"./build.sh"`, run from the object's folder |
 | `build.app` | yes | `"build/DesktopFridge.app"`, the app the command produces |
-| `screenshots` | no | Paths inside the object's folder |
+| `screenshots` | no | Paths inside the object's folder, for example `"media/hero.gif"` |
+| `look.itemsArea` | template only | Where files appear when open: x, y, width, height as fractions from the bottom left |
+| `look.iconSize` | template only | File icon size in points, 24 to 128 |
 
 ## Improve an existing object
 
