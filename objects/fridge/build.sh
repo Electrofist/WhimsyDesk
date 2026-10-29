@@ -8,8 +8,8 @@ APP="build/DesktopFridge.app"
 CONTENTS="$APP/Contents"
 
 echo "==> swift build (release)"
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)/DesktopFridge"
+swift build -c release --arch arm64 --arch x86_64
+BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/DesktopFridge"
 
 echo "==> assembling $APP"
 rm -rf "$APP"
