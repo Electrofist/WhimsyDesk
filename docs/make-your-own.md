@@ -20,7 +20,7 @@ You can use any editor, but [Phoenix Code](https://phcode.dev) with the [Desktop
 - Mistakes in `object.json` are marked as you type, with the same rules GitHub checks.
 - File, New Desktop Object… does step 2 for you.
 
-Until the extension is listed in the Phoenix Code extension store, install it from its repo: download it, open the folder in Phoenix Code, and choose Debug, Load Project As Extension.
+To install it, open the Extension Manager in Phoenix Code (the puzzle piece in the right-hand toolbar), search for **Desktop Objects Studio**, and click Install. Then click the fridge icon in the same toolbar to open the panel.
 
 ## 1. Get your own copy
 
