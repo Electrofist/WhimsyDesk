@@ -4,7 +4,7 @@
   "tagline": "Drag files in, shut the door, forget about them.",
   "description": "A retro olive fridge with a freezer on top, a door with real weight, cold fog when it opens, frost on things left too long, sticky notes and photo magnets.",
   "author": { "name": "Krrish Parmar", "github": "Electrofist" },
-  "version": "1.1",
+  "version": "1.2",
   "minMacOS": "14.0",
   "license": "MIT",
   "storesFilesIn": "~/Fridge",
