@@ -1,0 +1,18 @@
+{
+  "images": [
+    {
+      "filename": "fog_27.png",
+      "idiom": "universal",
+      "scale": "1x"
+    },
+    {
+      "filename": "fog_27@2x.png",
+      "idiom": "universal",
+      "scale": "2x"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}
