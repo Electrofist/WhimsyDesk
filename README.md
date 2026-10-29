@@ -31,46 +31,61 @@
 
 ## The objects
 
-Each object is a small, standalone macOS app. Free, open source and made to be remixed.
+Each object is a small, standalone Mac app. Free, open source and made to be remixed.
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="objects/fridge/media/icon.png" alt="Desktop Fridge icon" width="112"><br>
+      <b>Desktop Fridge</b><br>
+      <sub>A retro fridge with a heavy door, cold fog and frost.</sub><br><br>
+      <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Fridge.dmg"><b>Download</b></a> &nbsp;·&nbsp; <a href="#desktop-fridge">Details</a>
+    </td>
+    <td align="center" width="33%">
+      <img src="objects/drawer/media/icon.png" alt="Desktop Drawer icon" width="112"><br>
+      <b>Desktop Drawer</b><br>
+      <sub>A wooden drawer tucked along the bottom of your screen.</sub><br><br>
+      <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Drawer.dmg"><b>Download</b></a> &nbsp;·&nbsp; <a href="#desktop-drawer">Details</a>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/make-your-own.md"><img src=".github/assets/your-object.png" alt="An empty spot for your object" width="112"></a><br>
+      <b>Your object</b><br>
+      <sub>An oven, a toolbox, a mailbox. Bring the art; the template does the rest.</sub><br><br>
+      <a href="docs/make-your-own.md"><b>Make your own</b></a> &nbsp;·&nbsp; <a href="#in-phoenix-code-recommended">In Phoenix Code</a>
+    </td>
+  </tr>
+</table>
 
 ### Desktop Fridge
 
 <p align="center">
-  <img src="objects/fridge/media/closed.png" alt="Desktop Fridge with its doors shut" height="360">
-  &nbsp;&nbsp;&nbsp;
-  <img src="objects/fridge/media/open.png" alt="Desktop Fridge with both doors open, files frosting on the shelves" height="360">
+  <img src="objects/fridge/media/closed.png" alt="Desktop Fridge with its doors shut" height="320">
+  &nbsp;&nbsp;
+  <img src="objects/fridge/media/open.png" alt="Desktop Fridge with both doors open, files frosting on the shelves" height="320">
 </p>
 
-A retro olive fridge with a freezer on top.
+Drag files in, shut the door, forget about them. Open it again and they are right where you left them, maybe a little frostier.
 
-- **A door with weight.** Grab it anywhere and swing it. Hinge friction holds it open; it only drifts shut when barely open.
-- **Cold.** Fog spills out when it opens, and frost slowly builds on files you leave inside for days.
-- **Notes and magnets.** ⌘-click the door for a sticky note. Drop a photo on it to pin it under a magnet.
-- **Put Back.** Every file can go back where it came from, icon position included.
+- **A heavy door.** Grab it anywhere and swing it. It stays where you leave it and only drifts shut when it is barely open.
+- **Cold inside.** Fog spills out as it opens. Files left for days slowly frost over.
+- **Notes and magnets.** ⌘-click the door for a sticky note, or drop a photo on it to pin it under a magnet.
+- **Put Back.** Any file goes back where it came from, even to its old spot on your desktop.
 
-Files live in `~/Fridge`. &nbsp;[How to use it →](objects/fridge/README.md)
+<sub>Stores files in <code>~/Fridge</code> &nbsp;·&nbsp; <a href="objects/fridge/README.md">How to use it</a> &nbsp;·&nbsp; <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Fridge.dmg">Download</a></sub>
 
 ### Desktop Drawer
 
 <p align="center">
-  <img src="objects/drawer/media/closed.png" alt="Desktop Drawer: a worn wooden drawer front with a brass cup pull" width="640">
+  <img src="objects/drawer/media/closed.png" alt="Desktop Drawer: a worn wooden drawer front with a brass cup pull, along the bottom of the screen" width="560">
 </p>
 
-A worn wooden drawer that slides out from the bottom of your screen.
+A worn wooden drawer that lives along the bottom of your screen. Slide it out, drop files in, push it shut.
 
-- **Weight and feel.** Friction, soft bumpers and a little rebound at the stop.
+- **Weight.** Friction, soft bumpers and a little bounce when it hits the stop.
 - **Sound.** Wooden knocks and a sliding rumble that follows your hand.
-- **Put Back.** Files return to where they were on your desktop.
+- **Put Back.** Files go back to their exact spot on your desktop.
 
-Files live in `~/Desktop Drawer`.
-
-### Your object here
-
-<p align="center">
-  <img src="templates/object/Art/closed.png" alt="The starter template: a wooden crate" height="160">
-</p>
-
-An oven for projects you are still cooking. A toolbox. A mailbox. Something that is not in a house at all. The template gives you a working object in one command, so you only bring the art. [Make your own →](docs/make-your-own.md)
+<sub>Stores files in <code>~/Desktop Drawer</code> &nbsp;·&nbsp; <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Drawer.dmg">Download</a></sub>
 
 ## Get started
 
