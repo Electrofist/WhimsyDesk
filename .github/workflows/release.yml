@@ -3,6 +3,11 @@ name: Release
 # Push a tag named <object id>-v<version>, for example fridge-v1.0.
 # The version must match the object's object.json.
 #
+# Each run:
+#   1. publishes a versioned release for that object (history, checksums, zip for developers)
+#   2. updates the "downloads" release: one friendly page with a permanent link per object
+#      (.../releases/download/downloads/Desktop-Fridge.dmg always gives the newest version)
+#
 # Signing and notarization switch on by themselves when these repository secrets exist:
 #   MACOS_CERTIFICATE           Developer ID Application certificate (.p12), base64 encoded
 #   MACOS_CERTIFICATE_PASSWORD  password of that .p12
@@ -17,6 +22,10 @@ on:
 
 permissions:
   contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -41,8 +50,6 @@ jobs:
             exit 1
           fi
           echo "id=$ID" >> "$GITHUB_OUTPUT"
-          echo "name=$(jq -r .name "objects/$ID/object.json")" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Import the signing certificate (if set up)
         env:
@@ -77,10 +84,27 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: scripts/release.sh "${{ steps.tag.outputs.id }}"
 
-      - name: Publish the release
+      - name: Publish the versioned release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          source dist-meta.env
           gh release create "$GITHUB_REF_NAME" dist/* \
-            --title "${{ steps.tag.outputs.name }} ${{ steps.tag.outputs.version }}" \
-            --notes-file dist-notes.md
+            --title "$NAME $VERSION" \
+            --notes-file dist-notes.md \
+            --latest=false
+
+      - name: Update the Downloads page
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source dist-meta.env
+          STABLE="$RUNNER_TEMP/$(echo "$NAME" | tr ' ' '-').dmg"
+          cp "dist/$BASE.dmg" "$STABLE"
+          if ! gh release view downloads > /dev/null 2>&1; then
+            gh release create downloads --target "$GITHUB_SHA" \
+              --title "Download Desktop Objects" --notes "Getting the downloads ready." --latest
+          fi
+          gh release upload downloads "$STABLE#version $VERSION, for $RUNS_ON" --clobber
+          NOTARIZED="$NOTARIZED" scripts/release/downloads-page.sh > "$RUNNER_TEMP/downloads.md"
+          gh release edit downloads --title "Download Desktop Objects" --notes-file "$RUNNER_TEMP/downloads.md" --latest
