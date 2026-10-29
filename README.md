@@ -1,5 +1,7 @@
+<h1 align="center">Desktop Objects</h1>
+
 <p align="center">
-  <img src=".github/assets/banner.png" alt="Desktop Objects: a wooden drawer and a retro olive fridge, closed and open, on a warm floor" width="100%">
+  <img src=".github/assets/hero.gif" alt="Desktop Fridge on a Mac desktop: the door swings open, fog rolls out, and files are dragged inside" width="100%">
 </p>
 
 <p align="center">
@@ -59,7 +61,7 @@ Each object is a small, standalone Mac app. Free, open source and made to be rem
 ### Desktop Fridge
 
 <p align="center">
-  <img src="objects/fridge/media/hero.gif" alt="Desktop Fridge on a Mac desktop: the door swings open, fog rolls out, and files are dragged in" height="400">
+  <img src="objects/fridge/media/open.png" alt="Desktop Fridge with both doors open, files frosting on the shelves" height="400">
   &nbsp;
   <img src="objects/fridge/media/notes.gif" alt="A sticky note being written on the fridge door, then a photo pinned under a magnet" height="400">
 </p>
