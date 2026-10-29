@@ -1,34 +1,56 @@
 # Releasing
 
-How to turn an object into a download people can run without building it. Not automated yet. One decision is open: whether to sign and notarize.
+Each object is released on its own, as a DMG and a zip on the [Releases](https://github.com/Electrofist/desktop-objects/releases) page.
 
-## Option A: ad-hoc signed zip (free)
+## Release an object
 
-What the build scripts produce today.
+1. Set the new version in the object's `object.json` (and its `Info.plist` if it has its own version there).
+2. Add a line to `CHANGELOG.md`.
+3. Commit and push.
+4. Tag and push the tag. The tag is the object's id, `-v`, and the version:
 
-1. Build the object, for example `cd objects/fridge && ./build.sh`.
-2. `cd build && ditto -c -k --keepParent DesktopFridge.app DesktopFridge-1.0.zip`
-3. Attach the zip to a GitHub Release.
+```sh
+git tag fridge-v1.1
+git push origin fridge-v1.1
+```
 
-What people see: macOS blocks the first launch because the app is not notarized. On macOS 15 and later, right-click and Open no longer gets past this. They have to:
+GitHub then builds the object, packages it, and publishes the release with install notes. Watch it on the Actions tab. If the tag and `object.json` disagree on the version, the release stops and says so.
 
-1. Double-click the app once and close the warning.
+To try the packaging on your own Mac first: `scripts/release.sh fridge`. The files land in `dist/`.
+
+## Signed or not
+
+The workflow works in two modes and picks one by itself.
+
+### Without an Apple Developer account (now)
+
+The app keeps the free ad-hoc signature from its build script. People can use it, but macOS blocks the first launch. The release notes walk them through it:
+
+1. Try to open the app once and click Done on the warning.
 2. Open System Settings, then Privacy & Security.
 3. Click Open Anyway next to the app, then confirm.
 
-It works, but some people will stop at step 2.
+On macOS 15 and later, right-click and Open no longer gets past this; the steps above are the only way.
 
-## Option B: Developer ID and notarization (99 USD per year)
+### With an Apple Developer account (99 USD per year)
 
-Needs the Apple Developer Program. No warning on first launch. One membership covers every object.
+The app is signed with your Developer ID and notarized by Apple. It opens like any normal app, with no warning. One membership covers every object.
 
-1. Create a Developer ID Application certificate.
-2. Sign with the hardened runtime and an entitlements file that includes `com.apple.security.automation.apple-events`. Both objects ask Finder for icon positions, and the hardened runtime blocks that without it.
-3. Submit with `xcrun notarytool submit <zip> --wait`, then `xcrun stapler staple <app>`.
+To switch it on, add five secrets in the repo under Settings, Secrets and variables, Actions:
 
-In CI this needs four repository secrets: the certificate as base64, its password, an Apple ID app-specific password, and the Team ID. Without them the release would fall back to Option A.
+| Secret | What it is |
+|---|---|
+| `MACOS_CERTIFICATE` | Your Developer ID Application certificate exported as `.p12`, then base64 encoded: `base64 -i cert.p12 \| pbcopy` |
+| `MACOS_CERTIFICATE_PASSWORD` | The password you set when exporting the `.p12` |
+| `APPLE_ID` | Your Apple ID email |
+| `APPLE_APP_PASSWORD` | An app-specific password from [account.apple.com](https://account.apple.com), under Sign-In and Security |
+| `APPLE_TEAM_ID` | Your 10-character Team ID from [developer.apple.com/account](https://developer.apple.com/account) |
 
-## Before the first public release
+Getting the certificate: in Xcode, Settings, Accounts, Manage Certificates, add a Developer ID Application certificate, then export it from Keychain Access as `.p12`. Without Xcode, create it at developer.apple.com under Certificates.
 
-- Bundle IDs: the fridge uses `in.krisby.desktopfridge`, the drawer `app.desktopdrawer.DesktopDrawer`. Changing one later resets users' saved positions and Finder permission, so settle them first.
-- The fridge build is universal (Apple silicon and Intel). The drawer build is for the Mac it is built on only.
+The next tag you push is signed and notarized. Nothing else changes. The hardened runtime needs the Apple Events entitlement so Put Back can ask Finder for icon positions; it is in `scripts/release/entitlements.plist`.
+
+## Notes
+
+- Bundle IDs: the fridge uses `in.krisby.desktopfridge`, the drawer `app.desktopdrawer.DesktopDrawer`. Changing one later resets users' saved positions and Finder permission, so settle them before many people install.
+- The fridge build is universal (Apple silicon and Intel). The drawer's build script builds for the Mac it runs on, which on GitHub is Apple silicon, so its download runs on Apple silicon only. The release notes state which Macs each download supports.
