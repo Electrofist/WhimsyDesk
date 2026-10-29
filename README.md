@@ -113,6 +113,8 @@ cd objects/air-fryer && ./build.sh run
 
 That puts a working object on your desktop. Swap in your art, describe it, and open a pull request. The [step-by-step guide](docs/make-your-own.md) is written for designers who have never touched Swift.
 
+Designing in [Phoenix Code](https://phcode.dev)? The [Desktop Objects Studio](https://github.com/Electrofist/desktop-objects-phoenix) extension shows your object's art as you work, lets you drag the files area into place, and marks mistakes in `object.json` as you type.
+
 ## Repo layout
 
 ```
@@ -120,7 +122,7 @@ objects/            one folder per object, each a standalone app
   fridge/
   drawer/
 templates/object/   the starter object used by new-object.sh
-scripts/            new-object.sh, check-objects.sh
+scripts/            new-object.sh, check-objects.sh, make-icon.swift, release tools
 docs/               make-your-own guide, FAQ, releasing
 ```
 
@@ -136,4 +138,4 @@ docs/               make-your-own guide, FAQ, releasing
 
 <br>
 
-<p align="center"><sub>Started by <a href="https://github.com/Electrofist">Krrish Parmar</a> with a fridge. Built by everyone who adds an object.</sub></p>
+<p align="center"><sub>Started by <a href="https://github.com/Electrofist">Krrish Parmar</a> with a fridge. Built by everyone who adds an object. Made with <a href="https://phcode.dev">Phoenix Code</a>.</sub></p>

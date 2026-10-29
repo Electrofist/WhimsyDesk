@@ -11,6 +11,17 @@ You start from a template: a wooden crate that already opens, closes, stores fil
 - A free [GitHub](https://github.com) account.
 - Any image editor that exports PNG with transparency: Figma, Sketch, Photoshop, Pixelmator, Procreate.
 
+## Recommended: Phoenix Code
+
+You can use any editor, but [Phoenix Code](https://phcode.dev) with the [Desktop Objects Studio](https://github.com/Electrofist/desktop-objects-phoenix) extension makes the visual parts easier:
+
+- A side panel shows your object's art, icon, name and colour while you work.
+- The files area is drawn over your open art. Drag it into place instead of working out numbers (step 5).
+- Mistakes in `object.json` are marked as you type, with the same rules GitHub checks.
+- File, New Desktop Object… does step 2 for you.
+
+Until the extension is listed in the Phoenix Code extension store, install it from its repo: download it, open the folder in Phoenix Code, and choose Debug, Load Project As Extension.
+
 ## 1. Get your own copy
 
 1. Open [github.com/Electrofist/desktop-objects](https://github.com/Electrofist/desktop-objects) and click **Fork**. This makes your own copy on GitHub.
