@@ -29,20 +29,23 @@ card() { jq -r "$1" "$DIR/object.json"; }
 NAME="$(card .name)"
 VERSION="$(card .version)"
 TAGLINE="$(card .tagline)"
+ACCENT="$(jq -r '.accent // "#B7C23A"' "$DIR/object.json")"   # glow colour in the DMG window
 MIN_MACOS="$(card .minMacOS)"
 STORES="$(card .storesFilesIn)"
 BUILD_COMMAND="$(card .build.command)"
 APP_PATH="$DIR/$(card .build.app)"
 APP_NAME="$(basename "$APP_PATH")"
-PLIST="$APP_PATH/Contents/Info.plist"
-APP_FILE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$PLIST" 2>/dev/null ||
-            /usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$PLIST" 2>/dev/null ||
-            echo "${APP_NAME%.app}")"                    # friendly name people see, e.g. "Desktop Fridge"
 BASE="$(echo "$NAME" | tr ' ' '-')-$VERSION"            # Desktop-Fridge-1.0
 
 echo "==> building $NAME $VERSION"
 (cd "$DIR" && bash -c "$BUILD_COMMAND")
 [[ -d "$APP_PATH" ]] || { echo "Build did not produce $APP_PATH"; exit 1; }
+
+# The friendly name people see, e.g. "Desktop Fridge" rather than "DesktopFridge".
+PLIST="$APP_PATH/Contents/Info.plist"
+APP_FILE="$(plutil -extract CFBundleDisplayName raw -o - "$PLIST" 2>/dev/null ||
+            plutil -extract CFBundleName raw -o - "$PLIST" 2>/dev/null ||
+            echo "${APP_NAME%.app}")"
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -80,7 +83,7 @@ ditto -c -k --keepParent "$APP" "dist/$BASE.zip"
 styled=no
 if [[ "${PLAIN_DMG:-}" != "1" ]]; then
     # A writable image that Finder lays out, then compressed.
-    swift scripts/release/dmg-background.swift "$NAME" "$APP_FILE" "$WORK/background.tiff"
+    swift scripts/release/dmg-background.swift "$NAME" "$ACCENT" "$WORK/background.tiff"
     APP_MB="$(du -sm "$APP" | cut -f1)"
     hdiutil create -quiet -srcfolder "$WORK/app" -volname "$NAME" -fs HFS+ -format UDRW \
         -size "$((APP_MB + 20))m" "$WORK/rw.dmg"
@@ -101,14 +104,14 @@ tell application "Finder"
         try
             set pathbar visible of container window to false
         end try
-        set the bounds of container window to {200, 120, 860, 548}
+        set the bounds of container window to {200, 120, 640, 688}
         set viewOptions to the icon view options of container window
         set arrangement of viewOptions to not arranged
-        set icon size of viewOptions to 112
+        set icon size of viewOptions to 104
         set text size of viewOptions to 13
         set background picture of viewOptions to file ".background:background.tiff"
-        set position of item "$APP_NAME" of container window to {165, 190}
-        set position of item "Applications" of container window to {495, 190}
+        set position of item "$APP_NAME" of container window to {220, 150}
+        set position of item "Applications" of container window to {220, 390}
         set extension hidden of item "$APP_NAME" to true
         update without registering applications
         delay 2
