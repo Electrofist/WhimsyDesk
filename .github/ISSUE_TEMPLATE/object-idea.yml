@@ -1,0 +1,26 @@
+name: Object idea
+description: Suggest a new object for the library
+labels: ["object idea"]
+body:
+  - type: input
+    id: object
+    attributes:
+      label: Object
+      placeholder: An oven for projects you are still cooking
+    validations:
+      required: true
+  - type: textarea
+    id: behaviour
+    attributes:
+      label: How would it work?
+      description: How do files go in and come out? What does it do when you touch it?
+    validations:
+      required: true
+  - type: dropdown
+    id: build
+    attributes:
+      label: Would you like to build it?
+      options:
+        - Just an idea
+        - I would like to design it
+        - I would like to build it
