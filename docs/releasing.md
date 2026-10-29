@@ -53,4 +53,4 @@ The next tag you push is signed and notarized. Nothing else changes. The hardene
 ## Notes
 
 - Bundle IDs: the fridge uses `in.krisby.desktopfridge`, the drawer `app.desktopdrawer.DesktopDrawer`. Changing one later resets users' saved positions and Finder permission, so settle them before many people install.
-- The fridge build is universal (Apple silicon and Intel). The drawer's build script builds for the Mac it runs on, which on GitHub is Apple silicon, so its download runs on Apple silicon only. The release notes state which Macs each download supports.
+- The fridge and drawer builds are universal (Apple silicon and Intel). The release notes state which Macs each download supports, so a new object that builds for one kind only is still labelled correctly.

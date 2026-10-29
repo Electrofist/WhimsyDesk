@@ -15,7 +15,7 @@ An open source library of skeuomorphic macOS desktop objects that store files. E
 - Requirements: macOS 14+, Swift 5.9+. `swift test` needs full Xcode; with only the Command Line Tools XCTest is missing and tests fail to build. CI runs them.
 - Check cards: `scripts/check-objects.sh`
 - Fridge: `cd objects/fridge && ./build.sh` (or `./build.sh run`), tests with `swift test`.
-- Drawer: `cd objects/drawer && bash build_app.sh`. The script is not executable in its original repo; call it with `bash`.
+- Drawer: `cd objects/drawer && bash build_app.sh`.
 - Clean up afterwards: `rm -rf objects/*/.build objects/*/build`. They reach several hundred MB.
 
 ## Layout
