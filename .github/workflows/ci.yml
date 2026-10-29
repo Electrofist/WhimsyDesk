@@ -15,7 +15,7 @@ jobs:
     outputs:
       objects: ${{ steps.list.outputs.objects }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: scripts/check-objects.sh
       - id: list
         name: List objects
@@ -33,7 +33,7 @@ jobs:
       run:
         working-directory: objects/${{ matrix.object }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build
         run: bash -c "$(jq -r .build.command object.json)"
       - name: Check the app was produced
@@ -49,7 +49,7 @@ jobs:
     name: Template builds
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Create an object from the template
         run: scripts/new-object.sh "Test Crate" ci-bot
       - name: Build it
