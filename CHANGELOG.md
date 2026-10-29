@@ -9,6 +9,7 @@ Each object keeps its own version in its `object.json`. Entries are grouped by o
 - Added `object.json` cards and `scripts/check-objects.sh`.
 - Added a starter template object, `scripts/new-object.sh` and the [make-your-own guide](docs/make-your-own.md).
 - Added an FAQ, a banner and screenshots.
+- Added downloads: `scripts/release.sh` and a release workflow that publishes a DMG and zip per object when a tag like `fridge-v1.0` is pushed. Signs and notarizes once Apple Developer secrets are added.
 
 ### Desktop Fridge 1.0
 - Joined the library with its full history. No changes to the app.
