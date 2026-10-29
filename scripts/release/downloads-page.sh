@@ -26,7 +26,11 @@ for card in objects/*/object.json; do
 
     echo "### $name"
     echo
-    if [[ -n "$shot" ]]; then
+    # The app icon if there is one, otherwise the first screenshot.
+    if [[ -f "$dir/media/icon.png" ]]; then
+        echo "<img src=\"$RAW/$dir/media/icon.png\" alt=\"$name icon\" width=\"128\">"
+        echo
+    elif [[ -n "$shot" ]]; then
         # Wide pictures (like the drawer front) get a width; tall ones a height.
         size_attr='height="180"'
         if [[ -f "$dir/$shot" ]]; then
