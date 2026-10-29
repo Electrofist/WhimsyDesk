@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check object.json cards
+    runs-on: macos-latest
+    outputs:
+      objects: ${{ steps.list.outputs.objects }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/check-objects.sh
+      - id: list
+        name: List objects
+        run: echo "objects=$(ls -d objects/*/ | xargs -n1 basename | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.object }}
+    needs: check
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        object: ${{ fromJson(needs.check.outputs.objects) }}
+    defaults:
+      run:
+        working-directory: objects/${{ matrix.object }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: bash -c "$(jq -r .build.command object.json)"
+      - name: Check the app was produced
+        run: test -d "$(jq -r .build.app object.json)"
+      - name: Test
+        if: hashFiles(format('objects/{0}/Tests/**', matrix.object)) != ''
+        run: swift test
