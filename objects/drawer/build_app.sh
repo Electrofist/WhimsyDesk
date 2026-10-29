@@ -3,12 +3,14 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-swift build -c release
+# Universal binary: runs on Apple silicon and Intel Macs.
+swift build -c release --arch arm64 --arch x86_64
+BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/DesktopDrawer"
 
 APP="build/Desktop Drawer.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp .build/release/DesktopDrawer "$APP/Contents/MacOS/DesktopDrawer"
+cp "$BIN" "$APP/Contents/MacOS/DesktopDrawer"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 
 # Ad-hoc signature gives the app a stable identity for the Finder-automation permission prompt.
