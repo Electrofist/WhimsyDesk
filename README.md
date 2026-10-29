@@ -17,6 +17,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/Electrofist/desktop-objects/releases/latest"><b>Download</b></a> &nbsp;·&nbsp;
   <a href="#the-objects">Objects</a> &nbsp;·&nbsp;
   <a href="#get-started">Get started</a> &nbsp;·&nbsp;
   <a href="docs/make-your-own.md">Make your own</a> &nbsp;·&nbsp;
@@ -74,13 +75,13 @@ An oven for projects you are still cooking. A toolbox. A mailbox. Something that
 ### Download
 
 <p>
-  <a href="https://github.com/Electrofist/desktop-objects/releases?q=fridge&expanded=true"><img src="https://img.shields.io/badge/Download-Desktop%20Fridge-9DA716?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Fridge"></a>
-  <a href="https://github.com/Electrofist/desktop-objects/releases?q=drawer&expanded=true"><img src="https://img.shields.io/badge/Download-Desktop%20Drawer-5C3A1A?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Drawer"></a>
+  <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Fridge.dmg"><img src="https://img.shields.io/badge/Download-Desktop%20Fridge-9DA716?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Fridge"></a>
+  <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Drawer.dmg"><img src="https://img.shields.io/badge/Download-Desktop%20Drawer-5C3A1A?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Drawer"></a>
 </p>
 
-Open the DMG and drag the app into Applications. macOS 14 or later.
+Click a button and the download starts. Open the file, drag the app into **Applications**, and open it from there. Free, for macOS 14 or later.
 
-The apps are not notarized by Apple yet, so macOS blocks the first launch. Try to open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**. Each release page has the exact steps.
+The first time, macOS may say the app cannot be opened, because it is not registered with Apple yet. Click **Done**, open **System Settings → Privacy & Security**, and click **Open Anyway**. You only do this once. Step-by-step help with every object is on the [Downloads page](https://github.com/Electrofist/desktop-objects/releases/latest).
 
 ### Build from source
 
