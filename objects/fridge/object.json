@@ -10,5 +10,5 @@
   "storesFilesIn": "~/Fridge",
   "build": { "command": "./build.sh", "app": "build/DesktopFridge.app" },
   "accent": "#6CCBF0",
-  "screenshots": ["media/closed.png", "media/open.png"]
+  "screenshots": ["media/closed.png", "media/open.png", "media/hero.gif", "media/notes.gif"]
 }
