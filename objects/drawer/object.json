@@ -9,5 +9,6 @@
   "license": "MIT",
   "storesFilesIn": "~/Desktop Drawer",
   "build": { "command": "bash build_app.sh", "app": "build/Desktop Drawer.app" },
+  "accent": "#E0A94A",
   "screenshots": ["media/closed.png"]
 }

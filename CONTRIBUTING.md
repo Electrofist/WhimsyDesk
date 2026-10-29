@@ -46,6 +46,7 @@ You can also start from scratch instead of the template, as the fridge and drawe
 | `build.command` | yes | `"./build.sh"`, run from the object's folder |
 | `build.app` | yes | `"build/DesktopFridge.app"`, the app the command produces |
 | `screenshots` | no | Paths inside the object's folder, for example `"media/hero.gif"` |
+| `accent` | no | `"#6CCBF0"`, the glow colour in your download window |
 | `look.itemsArea` | template only | Where files appear when open: x, y, width, height as fractions from the bottom left |
 | `look.iconSize` | template only | File icon size in points, 24 to 128 |
 
