@@ -71,7 +71,18 @@ An oven for projects you are still cooking. A toolbox. A mailbox. Something that
 
 ## Get started
 
-Prebuilt downloads are not available yet, so for now each object is built from source. It takes about a minute.
+### Download
+
+<p>
+  <a href="https://github.com/Electrofist/desktop-objects/releases?q=fridge&expanded=true"><img src="https://img.shields.io/badge/Download-Desktop%20Fridge-9DA716?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Fridge"></a>
+  <a href="https://github.com/Electrofist/desktop-objects/releases?q=drawer&expanded=true"><img src="https://img.shields.io/badge/Download-Desktop%20Drawer-5C3A1A?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Drawer"></a>
+</p>
+
+Open the DMG and drag the app into Applications. macOS 14 or later.
+
+The apps are not notarized by Apple yet, so macOS blocks the first launch. Try to open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**. Each release page has the exact steps.
+
+### Build from source
 
 You need macOS 14 or later and Apple's Command Line Tools (`xcode-select --install`).
 
