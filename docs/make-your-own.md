@@ -81,17 +81,27 @@ Working it out from your design: if your image is 560 x 480 px and the inside of
 
 `iconSize` is the size of file icons in points, from 24 to 128.
 
-## 6. Add sounds (optional)
+## 6. Add an app icon (optional, but people love it)
+
+Design a square icon on a plain background (any colour) and save it as PNG or JPG. Then, from the top folder of the repo:
+
+```sh
+swift scripts/make-icon.swift ~/Desktop/my-icon.png objects/toaster/Art
+```
+
+It removes the background, places the icon on Apple's icon grid with a soft shadow, and writes `Art/AppIcon.icns`. The next `./build.sh run` uses it.
+
+## 7. Add sounds (optional)
 
 Put `open.wav` and `close.wav` in the `Sounds` folder. Keep them short and quiet. Leave them out for a silent object.
 
-## 7. Describe it
+## 8. Describe it
 
 In `object.json`, write your own `tagline` (one line) and `description` (a few sentences). In `README.md`, describe how to use it.
 
 Record a short clip: press **Shift + Command + 5**, choose **Record Selected Portion**, and capture your object opening and taking a file. Turn the video into a GIF with a free tool like [Gifski](https://gif.ski), save it as `media/hero.gif` in your object's folder, and add `"media/hero.gif"` to `screenshots` in `object.json`.
 
-## 8. Check it
+## 9. Check it
 
 From the top folder of the repo:
 
@@ -101,7 +111,7 @@ scripts/check-objects.sh
 
 Fix anything it lists. It catches missing details, template text you forgot to replace, and art or build files that are missing.
 
-## 9. Send it in
+## 10. Send it in
 
 ```sh
 git checkout -b add-toaster

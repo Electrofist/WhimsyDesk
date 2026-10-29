@@ -16,6 +16,9 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/$EXEC"
 cp Support/Info.plist "$APP/Contents/Info.plist"
 cp Art/*.png "$APP/Contents/Resources/"
+if [[ -f Art/AppIcon.icns ]]; then
+    cp Art/AppIcon.icns "$APP/Contents/Resources/"
+fi
 cp object.json "$APP/Contents/Resources/"
 if compgen -G "Sounds/*.wav" >/dev/null; then
     cp Sounds/*.wav "$APP/Contents/Resources/"
