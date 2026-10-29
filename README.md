@@ -59,9 +59,9 @@ Each object is a small, standalone Mac app. Free, open source and made to be rem
 ### Desktop Fridge
 
 <p align="center">
-  <img src="objects/fridge/media/closed.png" alt="Desktop Fridge with its doors shut" height="320">
-  &nbsp;&nbsp;
-  <img src="objects/fridge/media/open.png" alt="Desktop Fridge with both doors open, files frosting on the shelves" height="320">
+  <img src="objects/fridge/media/hero.gif" alt="Desktop Fridge on a Mac desktop: the door swings open, fog rolls out, and files are dragged in" height="400">
+  &nbsp;
+  <img src="objects/fridge/media/notes.gif" alt="A sticky note being written on the fridge door, then a photo pinned under a magnet" height="400">
 </p>
 
 Drag files in, shut the door, forget about them. Open it again and they are right where you left them, maybe a little frostier.
