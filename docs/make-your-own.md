@@ -19,13 +19,14 @@ You can use any editor, but [Phoenix Code](https://phcode.dev) with the [Desktop
 - The files area is drawn over your open art. Drag it into place instead of working out numbers (step 5).
 - Mistakes in `object.json` are marked as you type, with the same rules GitHub checks.
 - File, New Desktop Object… does step 2 for you.
+- Its Git panel and terminal panel cover steps 1, 3 and 10, so you never need to leave it.
 
 To install it, open the Extension Manager in Phoenix Code (the building-block icon in the right-hand toolbar), search for **Desktop Objects Studio**, and click Install. Then click the fridge icon in the same toolbar to open the panel.
 
 ## 1. Get your own copy
 
 1. Open [github.com/Electrofist/desktop-objects](https://github.com/Electrofist/desktop-objects) and click **Fork**. This makes your own copy on GitHub.
-2. In Terminal, download your copy (replace `your-username`):
+2. Download your copy. In Phoenix Code: **Start Project, Get from Git**, paste `https://github.com/your-username/desktop-objects.git` and pick a folder. Or in Terminal (replace `your-username`):
 
 ```sh
 git clone https://github.com/your-username/desktop-objects.git
@@ -42,11 +43,15 @@ scripts/new-object.sh "Toaster" your-username
 
 This creates `objects/toaster/` with everything inside, ready to build.
 
+In Phoenix Code with the extension, choose **File, New Desktop Object…** instead. It does the same thing.
+
 ## 3. See it on your desktop
+
+In Terminal, or Phoenix Code's terminal panel:
 
 ```sh
 cd objects/toaster
-./build.sh run
+bash build.sh run
 ```
 
 The first build takes a minute or two. A wooden crate appears at the lower left of your screen, behind your windows, just above the desktop icons.
@@ -123,6 +128,8 @@ scripts/check-objects.sh
 Fix anything it lists. It catches missing details, template text you forgot to replace, and art or build files that are missing.
 
 ## 10. Send it in
+
+In Phoenix Code, use the Git panel: make a new branch, commit `objects/toaster` and `.github/CODEOWNERS`, and push. Or in Terminal:
 
 ```sh
 git checkout -b add-toaster

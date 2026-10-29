@@ -18,7 +18,11 @@ Thanks for helping build Desktop Objects. There are three ways in:
 
 ## Add a new object
 
-The full walkthrough, written for designers with no Swift experience, is in [docs/make-your-own.md](docs/make-your-own.md). In short:
+The full walkthrough, written for designers with no Swift experience, is in [docs/make-your-own.md](docs/make-your-own.md).
+
+**Recommended:** use [Phoenix Code](https://phcode.dev) with the [Desktop Objects Studio](https://github.com/Electrofist/desktop-objects-phoenix) extension. It previews your art, lets you drag the files area into place, checks `object.json` as you type, and creates new objects from the template.
+
+In short:
 
 1. Fork this repo.
 2. `scripts/new-object.sh "Air Fryer" your-github-username` creates `objects/air-fryer/` from the template and adds you to `.github/CODEOWNERS`.
