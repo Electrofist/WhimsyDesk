@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.wav binary
+*.car binary
+
+# Keep generated asset catalogs out of language stats
+*.xcassets/** linguist-generated
