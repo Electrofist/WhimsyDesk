@@ -5,7 +5,9 @@ build/
 DerivedData/
 *.xcodeproj/xcuserdata/
 
-# Release artifacts
+# Release artifacts (scripts/release.sh)
+dist/
+dist-notes.md
 *.zip
 *.dmg
 
