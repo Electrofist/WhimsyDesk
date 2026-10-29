@@ -8,6 +8,8 @@
   <img src="https://img.shields.io/badge/Swift-5.9%2B-B07A3E?style=flat-square&logo=swift&logoColor=white" alt="Swift 5.9 or later">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-7C8410?style=flat-square" alt="MIT license"></a>
   <a href="docs/make-your-own.md"><img src="https://img.shields.io/badge/objects-make%20your%20own-5E4E3E?style=flat-square" alt="Make your own object"></a>
+  <a href="https://phcode.dev"><img src="https://img.shields.io/badge/made%20with-Phoenix%20Code-E8642C?style=flat-square" alt="Made with Phoenix Code"></a>
+  <a href="https://github.com/Electrofist/desktop-objects-phoenix"><img src="https://img.shields.io/badge/Phoenix%20extension-Desktop%20Objects%20Studio-E8642C?style=flat-square" alt="Desktop Objects Studio extension for Phoenix Code"></a>
 </p>
 
 <p align="center">
@@ -106,14 +108,31 @@ Questions about where files go, permissions or the "cannot be opened" warning ar
 
 ## Make your own
 
+### In Phoenix Code (recommended)
+
+<img src=".github/assets/phoenix-panel.png" alt="The Desktop Objects Studio panel in Phoenix Code: a crate's open art with the dashed files area to drag into place" width="320" align="right">
+
+[Phoenix Code](https://phcode.dev) is a free editor, and with the [Desktop Objects Studio](https://github.com/Electrofist/desktop-objects-phoenix) extension, making an object is visual. You can do the whole thing without leaving it.
+
+1. Install [Phoenix Code](https://phcode.dev). In its Extension Manager, install **Desktop Objects Studio**.
+2. Fork this repo on GitHub, then in Phoenix Code choose **Start Project, Get from Git** and paste your fork's URL.
+3. Choose **File, New Desktop Object…** and give it a name. Your object is ready to build.
+4. Open the Desktop Objects panel from the right-hand toolbar. Swap in your art and watch it update. Drag the dashed box to set where files sit. Problems in `object.json` are marked as you type.
+5. Open Phoenix Code's terminal panel and run `cd objects/your-object && bash build.sh run` to see it on your desktop.
+6. Commit and push with Phoenix Code's Git panel, then open a pull request.
+
+<br clear="right">
+
+### From Terminal
+
 ```sh
 scripts/new-object.sh "Air Fryer" your-github-username
 cd objects/air-fryer && ./build.sh run
 ```
 
-That puts a working object on your desktop. Swap in your art, describe it, and open a pull request. The [step-by-step guide](docs/make-your-own.md) is written for designers who have never touched Swift.
+That puts a working object on your desktop. Swap in your art, describe it, and open a pull request.
 
-Designing in [Phoenix Code](https://phcode.dev)? The [Desktop Objects Studio](https://github.com/Electrofist/desktop-objects-phoenix) extension shows your object's art as you work, lets you drag the files area into place, and marks mistakes in `object.json` as you type.
+Either way, the [step-by-step guide](docs/make-your-own.md) is written for designers who have never touched Swift.
 
 ## Repo layout
 
