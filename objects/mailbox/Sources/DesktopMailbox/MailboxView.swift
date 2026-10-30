@@ -61,7 +61,7 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     /// The letter sticking out of the slot, if any.
     private var waitingID: String?
 
-    private enum Grab { case none, door(fraction: CGFloat), item(Item, CGRect), peek, resize(start: CGPoint, scale: CGFloat), pole(start: CGPoint, extra: CGFloat) }
+    private enum Grab { case none, door(fraction: CGFloat), item(Item, CGRect), peek, resize(start: CGPoint, scale: CGFloat), pole(start: CGPoint, extra: CGFloat), move(start: CGPoint, origin: CGPoint) }
 
     // MARK: Size
 
@@ -87,6 +87,14 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     private func scene(_ p: CGPoint) -> CGPoint { CGPoint(x: p.x / userScale, y: p.y / userScale - poleExtra) }
     private func viewRect(_ r: CGRect) -> CGRect {
         CGRect(x: r.minX * userScale, y: (r.minY + poleExtra) * userScale, width: r.width * userScale, height: r.height * userScale)
+    }
+
+    /// Moves the window by hand. The system's window drag does not work for windows that sit
+    /// at desktop level, so the box follows the mouse itself.
+    private func beginMove() {
+        guard let window else { return }
+        grab = .move(start: NSEvent.mouseLocation, origin: window.frame.origin)
+        NSCursor.closedHand.set()
     }
 
     /// Places the layers for the current size and pole length.
@@ -548,7 +556,7 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     override func mouseDown(with event: NSEvent) {
         let p = scene(convert(event.locationInWindow, from: nil))
         if event.modifierFlags.contains([.option, .command]) {
-            window?.performDrag(with: event)
+            beginMove()
             return
         }
         if event.modifierFlags.contains(.shift) && (bodyHit(p) || doorHit(p)) {
@@ -569,14 +577,21 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         } else if doorHit(p) {
             let f = door.angle < 0.2 ? max(0.4, (p.x - Geo.hingeX) / Geo.door.width) : 0.85
             grab = .door(fraction: min(1, f))
+        } else if bodyHit(p) {
+            // The rest of the box does not open the door. Dragging it moves the box.
+            beginMove()
         } else {
-            // The rest of the box does nothing on click: only the door opens the door.
             grab = .none
         }
     }
 
     override func mouseDragged(with event: NSEvent) {
         let p = scene(convert(event.locationInWindow, from: nil))
+        if case .move(let start, let origin) = grab {
+            let m = NSEvent.mouseLocation
+            window?.setFrameOrigin(CGPoint(x: origin.x + m.x - start.x, y: origin.y + m.y - start.y))
+            return
+        }
         if case .pole(let start, let extra) = grab {
             // Up for a longer pole, down for a shorter one.
             applyPole(extra + (NSEvent.mouseLocation.y - start.y) / userScale)
@@ -631,6 +646,8 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
                     if event.clickCount >= 2 { NSWorkspace.shared.open(store.url(of: f)) } else { select(f.name) }
                 }
             }
+        case .move:
+            NSCursor.arrow.set()
         case .pole:
             UserDefaults.standard.set(Double(poleExtra), forKey: "poleExtra")
         case .resize:
