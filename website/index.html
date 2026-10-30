@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WhimsyDesk: little objects for your Mac desktop</title>
+  <meta name="description" content="Little objects for your Mac desktop that hold your files: a fridge, a drawer and soon a post box. Free and open source.">
+  <meta property="og:title" content="WhimsyDesk">
+  <meta property="og:description" content="Little objects for your Mac desktop that hold your files. Free and open source.">
+  <link rel="preload" href="fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/caveat.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="icon" href="media/icon.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="variants/library/library.css">
+</head>
+<body>
+  <a class="skip" href="#objects">Skip to the objects</a>
+
+  <header class="pill">
+    <a class="pill__mark" href="./" aria-label="WhimsyDesk, home">
+      <svg class="pill__spark" viewBox="0 0 7 7" aria-hidden="true"><path d="M3 0h1v2h-1zM3 5h1v2h-1zM0 3h2v1H0zM5 3h2v1H5zM2 2h3v3H2z" fill="currentColor"/></svg>
+      WhimsyDesk
+    </a>
+    <nav class="pill__links" aria-label="Main">
+      <a href="#objects">Library</a>
+      <a href="#make">Make your own</a>
+      <a href="https://github.com/Electrofist/whimsydesk">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Hero: a sheet of paper torn open onto a painted sky, with a small working Mac below. -->
+    <section class="hero" id="hero" aria-labelledby="hero-title">
+      <div class="paper" id="paper">
+        <div class="paper__rim" aria-hidden="true"></div>
+        <div class="paper__sheet">
+          <h1 id="hero-title">Your files deserve a nicer place to live.</h1>
+          <p class="lede">Little objects for your Mac desktop that hold your files, with doors and drawers that move like real ones. Free and open source.</p>
+          <div class="actions">
+            <a class="btn btn--primary" href="https://github.com/Electrofist/whimsydesk">View on GitHub</a>
+            <a class="btn btn--outline" href="https://github.com/Electrofist/whimsydesk/releases/download/downloads/Desktop-Fridge.dmg">Download Desktop Fridge</a>
+          </div>
+          <p class="small">For macOS 14 or later.</p>
+        </div>
+      </div>
+
+      <!-- Loose files at the edges of the page. They can be picked up and thrown. -->
+      <div class="loose" id="loose" aria-hidden="true" data-scale="0.6">
+        <div class="loose__item" data-name="folder">
+          <img src="media/loose/folder.png" alt="" draggable="false">
+        </div>
+        <div class="loose__item" data-name="photo">
+          <img src="media/loose/photo.png" alt="" draggable="false">
+        </div>
+        <div class="loose__item" data-name="pdf">
+          <img src="media/loose/pdf.png" alt="" draggable="false">
+        </div>
+        <div class="loose__item" data-name="tape">
+          <img src="media/loose/tape.png" alt="" draggable="false">
+        </div>
+      </div>
+
+      <div class="sky" id="sky" aria-hidden="true">
+        <img class="sky__paint" src="media/sky-1200.webp" srcset="media/sky-1200.webp 1200w, media/sky.webp 2400w" sizes="100vw" alt="">
+        <canvas class="sky__pixels" id="sky-pixels"></canvas>
+      </div>
+
+      <!-- A small working Mac desktop. Drag a file into the fridge. -->
+      <div class="screen-wrap" id="screen-wrap">
+        <div class="screen" id="screen" role="group" aria-label="A Mac desktop with a fridge. Move files into the fridge to tidy the desktop.">
+          <canvas class="wallpaper" id="wallpaper" aria-hidden="true"></canvas>
+          <div class="menubar" aria-hidden="true">
+            <svg class="menubar__apple" viewBox="0 0 7 7"><path d="M3 0h1v2h-1zM3 5h1v2h-1zM0 3h2v1H0zM5 3h2v1H5zM2 2h3v3H2z" fill="currentColor"/></svg>
+            <span class="menubar__app">Finder</span>
+            <span>File</span><span>Edit</span><span class="wide-only">View</span><span class="wide-only">Go</span><span class="wide-only">Window</span>
+            <span class="menubar__clock" id="clock"></span>
+          </div>
+          <div class="note" id="note">
+            <p id="note-text">Drag a file into the fridge.</p>
+          </div>
+          <div class="files" id="files"></div>
+          <button class="fridge" id="fridge" type="button" aria-label="Fridge. Closed. Press to open." aria-pressed="false">
+            <img class="fridge__closed" src="media/fridge.png" alt="" draggable="false">
+            <img class="fridge__open" src="media/fridge-open.png" alt="" draggable="false">
+            <span class="fridge__shelf" id="shelf"></span>
+          </button>
+        </div>
+      </div>
+      <p class="sr-only" aria-live="polite" id="status"></p>
+    </section>
+
+    <!-- The library: a spotlight on one object, then every object as a card. Both come from objects.js. -->
+    <section class="library" id="objects" aria-labelledby="objects-title">
+      <header class="library__head">
+        <h2 id="objects-title">The library</h2>
+        <p>Free objects for your Mac desktop. All open source, all made by people who like small things.</p>
+      </header>
+
+      <article class="spotlight" id="spotlight" aria-labelledby="spot-title"></article>
+
+      <div class="library__bar">
+        <label class="sr-only" for="lib-search">Search the library</label>
+        <input class="library__search" id="lib-search" type="search" placeholder="Search the library" autocomplete="off">
+        <div class="library__chips" role="group" aria-label="Show">
+          <button type="button" class="chip" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" class="chip" data-filter="ready" aria-pressed="false">Ready</button>
+          <button type="button" class="chip" data-filter="soon" aria-pressed="false">Coming soon</button>
+        </div>
+        <label class="library__sort"><span class="sr-only">Sort by</span>
+          <select id="lib-sort">
+            <option value="picked">Recommended</option>
+            <option value="new">Newest</option>
+            <option value="name">A to Z</option>
+          </select>
+        </label>
+      </div>
+      <p class="library__count" id="lib-count" aria-live="polite"></p>
+      <div class="library__grid" id="lib-grid"></div>
+      <div class="library__more"><button type="button" class="button button--ghost" id="lib-more" hidden>Show more</button></div>
+      <p class="library__empty" id="lib-empty" hidden>Nothing matches that yet. Maybe it is yours to make.</p>
+    </section>
+
+    <!-- The rules every object follows. Rows after Arc's Onboarding Checklist, the drawn tick after Bencho's Checklist,
+         the sliding hover after Motion Primitives' Animated Background. See CREDITS.md. -->
+    <section class="rules" aria-labelledby="rules-title">
+      <div class="rules__intro">
+        <p class="dot-label">House rules</p>
+        <h2 id="rules-title">Gentle with your files, every time.</h2>
+        <p>Every object in the library follows the same five rules. They are part of the guide, and each object is checked against them before it is added.</p>
+        <a class="rules__more" href="https://github.com/Electrofist/whimsydesk/blob/main/CONTRIBUTING.md">Read the rules</a>
+      </div>
+      <div class="rules__board" id="rules-board">
+        <span class="rules__hl" aria-hidden="true"></span>
+        <ol class="rules__list">
+          <li class="rule">
+            <span class="rule__no" aria-hidden="true">01</span>
+            <span class="rules__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2h8.5A1.5 1.5 0 0 1 21 9.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M12 10.5v5m-2.2-2.2L12 15.5l2.2-2.2"/></svg></span>
+            <div class="rule__text"><h3>Moved, never lost</h3><p>Files go into one plain folder you can open in Finder. Nothing is copied or deleted behind your back.</p></div>
+            <span class="rule__check" aria-hidden="true"><span class="rule__fill"></span><svg viewBox="0 0 16 16"><path pathLength="1" d="M3.8 8.4l2.9 2.9 5.6-6.4"/></svg></span>
+          </li>
+          <li class="rule">
+            <span class="rule__no" aria-hidden="true">02</span>
+            <span class="rules__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h8a4.5 4.5 0 0 1 0 9H7"/><path d="M11 5L8 8l3 3"/></svg></span>
+            <div class="rule__text"><h3>Put Back works</h3><p>Every file can go back to where it came from, even after a restart.</p></div>
+            <span class="rule__check" aria-hidden="true"><span class="rule__fill"></span><svg viewBox="0 0 16 16"><path pathLength="1" d="M3.8 8.4l2.9 2.9 5.6-6.4"/></svg></span>
+          </li>
+          <li class="rule">
+            <span class="rule__no" aria-hidden="true">03</span>
+            <span class="rules__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4.5a7.5 7.5 0 1 0 5 12.5 6.5 6.5 0 0 1-5-12.5z"/></svg></span>
+            <div class="rule__text"><h3>Quiet at rest</h3><p>No timers or animation while nobody is touching it. Easy on your battery.</p></div>
+            <span class="rule__check" aria-hidden="true"><span class="rule__fill"></span><svg viewBox="0 0 16 16"><path pathLength="1" d="M3.8 8.4l2.9 2.9 5.6-6.4"/></svg></span>
+          </li>
+          <li class="rule">
+            <span class="rule__no" aria-hidden="true">04</span>
+            <span class="rules__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5a11.5 11.5 0 0 1 16 0M7 13a7 7 0 0 1 10 0M10 16.5a3 3 0 0 1 4 0"/><path d="M4.5 4.5l15 15"/></svg></span>
+            <div class="rule__text"><h3>No network, no tracking</h3><p>No analytics, ads, accounts or paywalls. Ever.</p></div>
+            <span class="rule__check" aria-hidden="true"><span class="rule__fill"></span><svg viewBox="0 0 16 16"><path pathLength="1" d="M3.8 8.4l2.9 2.9 5.6-6.4"/></svg></span>
+          </li>
+          <li class="rule">
+            <span class="rule__no" aria-hidden="true">05</span>
+            <span class="rules__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 8L4.5 12l4 4M15.5 8l4 4-4 4M13.5 5.5l-3 13"/></svg></span>
+            <div class="rule__text"><h3>Free and open source</h3><p>MIT licence. Read it, change it, share it.</p></div>
+            <span class="rule__check" aria-hidden="true"><span class="rule__fill"></span><svg viewBox="0 0 16 16"><path pathLength="1" d="M3.8 8.4l2.9 2.9 5.6-6.4"/></svg></span>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Make your own: the real template, its real card, and four steps. -->
+    <section class="build" id="make" aria-labelledby="make-title">
+      <div class="build__inner">
+        <header class="build__head">
+          <div>
+            <p class="dot-label dot-label--dark">For makers</p>
+            <h2 id="make-title">Make your own object.</h2>
+            <p class="build__lede">Start from a template that already opens, closes, holds files and puts them back. Bring two pictures and the template does the rest. About 15 minutes, no Swift needed.</p>
+          </div>
+          <div class="build__cta">
+            <a class="btn btn--olive" href="https://github.com/Electrofist/whimsydesk/blob/main/docs/make-your-own.md">Read the guide</a>
+            <a class="btn btn--line" href="https://github.com/Electrofist/whimsydesk/tree/main/templates/object">Browse the template</a>
+          </div>
+        </header>
+
+        <!-- Stepper and code blocks after Arc's Stepper and Code Block, the drop target after Arc's File Dropzone.
+             Dropped pictures stay in the browser. See CREDITS.md. -->
+        <div class="bench">
+          <ol class="stepper" role="tablist" aria-label="Four steps" aria-orientation="vertical">
+            <li class="stepper__item" data-status="current">
+              <button class="stepper__head" type="button" role="tab" id="step-tab-1" aria-controls="step-panel-1" aria-selected="true">
+                <span class="stepper__marker" aria-hidden="true"><span class="stepper__ring"></span><span class="stepper__disc"><span class="stepper__no">1</span><svg class="stepper__check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span></span>
+                <span class="stepper__text"><span class="stepper__label">Copy the template</span><span class="stepper__desc">Fork the repo and make your object.</span></span>
+              </button>
+              <span class="stepper__line" aria-hidden="true"><span class="stepper__fill"></span></span>
+            </li>
+            <li class="stepper__item" data-status="upcoming">
+              <button class="stepper__head" type="button" role="tab" id="step-tab-2" aria-controls="step-panel-2" aria-selected="false" tabindex="-1">
+                <span class="stepper__marker" aria-hidden="true"><span class="stepper__ring"></span><span class="stepper__disc"><span class="stepper__no">2</span><svg class="stepper__check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span></span>
+                <span class="stepper__text"><span class="stepper__label">Draw two pictures</span><span class="stepper__desc">Try yours here before you build.</span></span>
+              </button>
+              <span class="stepper__line" aria-hidden="true"><span class="stepper__fill"></span></span>
+            </li>
+            <li class="stepper__item" data-status="upcoming">
+              <button class="stepper__head" type="button" role="tab" id="step-tab-3" aria-controls="step-panel-3" aria-selected="false" tabindex="-1">
+                <span class="stepper__marker" aria-hidden="true"><span class="stepper__ring"></span><span class="stepper__disc"><span class="stepper__no">3</span><svg class="stepper__check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span></span>
+                <span class="stepper__text"><span class="stepper__label">Put it on your desktop</span><span class="stepper__desc">Build it and run it.</span></span>
+              </button>
+              <span class="stepper__line" aria-hidden="true"><span class="stepper__fill"></span></span>
+            </li>
+            <li class="stepper__item" data-status="upcoming">
+              <button class="stepper__head" type="button" role="tab" id="step-tab-4" aria-controls="step-panel-4" aria-selected="false" tabindex="-1">
+                <span class="stepper__marker" aria-hidden="true"><span class="stepper__ring"></span><span class="stepper__disc"><span class="stepper__no">4</span><svg class="stepper__check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span></span>
+                <span class="stepper__text"><span class="stepper__label">Send it in</span><span class="stepper__desc">Open a pull request.</span></span>
+              </button>
+            </li>
+          </ol>
+
+          <div class="bench__main">
+            <figure class="stage" id="stage">
+              <canvas aria-hidden="true"></canvas>
+              <div class="stage__bar" aria-hidden="true"><b>Finder</b><span>File</span><span>Edit</span><span>View</span></div>
+              <button class="stage__obj" id="stage-obj" type="button" aria-pressed="false" aria-label="Your object. Closed. Press to open.">
+                <img class="stage__art stage__art--closed" id="art-closed" src="media/template/closed.png" alt="">
+                <img class="stage__art stage__art--open" id="art-open" src="media/template/open.png" alt="">
+              </button>
+              <figcaption class="stage__cap"><span class="stage__tag" id="stage-tag">The template crate</span><span class="stage__hint">Click it to open</span></figcaption>
+            </figure>
+
+            <div class="panels">
+              <div class="panel" role="tabpanel" id="step-panel-1" aria-labelledby="step-tab-1">
+                <div class="code">
+                  <div class="code__head"><span class="code__file"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z"/><path d="M5 6.5l2 1.5-2 1.5M8.5 10h2.5"/></svg>Terminal<span class="code__lang">sh</span></span><button class="copy" type="button"><span class="copy__label">Copy</span></button></div>
+<pre class="code__pre"><code><i># Fork github.com/Electrofist/whimsydesk, then:</i>
+git clone https://github.com/<s>your-username</s>/whimsydesk.git
+cd whimsydesk
+scripts/new-object.sh <s>"Toaster"</s> <s>your-username</s></code></pre>
+                </div>
+                <p class="panel__note">Using Phoenix Code? Choose <b>File, New Desktop Object</b> instead. It does the same thing.</p>
+              </div>
+
+              <div class="panel" role="tabpanel" id="step-panel-2" aria-labelledby="step-tab-2" hidden>
+                <div class="drop" id="drop">
+                  <svg class="drop__edge" aria-hidden="true"><rect x="0.5" y="0.5" rx="16" ry="16"/></svg>
+                  <span class="drop__wash" aria-hidden="true"></span>
+                  <label class="drop__trigger" for="drop-input">
+                    <span class="drop__sheets" aria-hidden="true"><span class="drop__sheet" data-sheet="back"></span><span class="drop__sheet" data-sheet="side"></span><span class="drop__sheet" data-sheet="front"><svg viewBox="0 0 16 16"><path d="M8 4.5v7M4.5 8h7"/></svg></span></span>
+                    <span class="drop__label">Drop your closed.png and open.png</span>
+                    <span class="drop__hint">or click to choose them. They stay in your browser.</span>
+                  </label>
+                  <input class="sr-only" id="drop-input" type="file" accept="image/png,image/*" multiple>
+                </div>
+                <ul class="drop__files" id="drop-files"></ul>
+                <p class="drop__error" id="drop-error" role="alert" hidden></p>
+                <p class="panel__note">Same size for both, transparent background, exported at 2x. <button class="link-btn" id="drop-reset" type="button" hidden>Back to the crate</button></p>
+              </div>
+
+              <div class="panel" role="tabpanel" id="step-panel-3" aria-labelledby="step-tab-3" hidden>
+                <div class="code">
+                  <div class="code__head"><span class="code__file"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z"/><path d="M5 6.5l2 1.5-2 1.5M8.5 10h2.5"/></svg>Terminal<span class="code__lang">sh</span></span><button class="copy" type="button"><span class="copy__label">Copy</span></button></div>
+<pre class="code__pre"><code>cd objects/<s>toaster</s>
+bash build.sh run</code></pre>
+                </div>
+                <p class="panel__note">The first build takes a minute or two. Your object appears at the lower left of your screen, behind your windows. Click it, drop a file on it, and right-click a file inside for Put Back.</p>
+              </div>
+
+              <div class="panel" role="tabpanel" id="step-panel-4" aria-labelledby="step-tab-4" hidden>
+                <div class="code">
+                  <div class="code__head"><span class="code__file"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z"/><path d="M5 6.5l2 1.5-2 1.5M8.5 10h2.5"/></svg>Terminal<span class="code__lang">sh</span></span><button class="copy" type="button"><span class="copy__label">Copy</span></button></div>
+<pre class="code__pre"><code>scripts/check-objects.sh
+git checkout -b <s>add-toaster</s>
+git add objects/<s>toaster</s> .github/CODEOWNERS
+git commit -m <s>"Add Toaster"</s>
+git push -u origin <s>add-toaster</s></code></pre>
+                </div>
+                <p class="panel__note">Then open your fork on GitHub and choose <b>Compare &amp; pull request</b>. GitHub checks and builds your object for you.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="studio">
+          <span class="studio__mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/></svg></span>
+          <p><b>Using Phoenix Code?</b> Desktop Objects Studio shows your art, icon and card while you work, and marks mistakes in object.json as you type.</p>
+          <a href="https://github.com/Electrofist/desktop-objects-phoenix">Get the extension</a>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot" aria-labelledby="foot-title">
+    <h2 id="foot-title">Give your files somewhere nice to live.</h2>
+    <div class="actions">
+      <a class="button" href="https://github.com/Electrofist/whimsydesk/releases/download/downloads/Desktop-Fridge.dmg">Download Desktop Fridge</a>
+      <a class="quiet" href="https://github.com/Electrofist/whimsydesk/releases/download/downloads/Desktop-Drawer.dmg">or the drawer</a>
+    </div>
+    <nav class="foot__links" aria-label="More">
+      <a href="https://github.com/Electrofist/whimsydesk">GitHub</a>
+      <a href="https://github.com/Electrofist/whimsydesk/blob/main/docs/faq.md">FAQ</a>
+      <a href="https://github.com/Electrofist/whimsydesk/blob/main/LICENSE">MIT licence</a>
+      <a href="#make">Make your own</a>
+    </nav>
+    <p class="foot__credits">WhimsyDesk is free and open source. Started by Krrish Parmar, made with Phoenix Code.<br>
+      Sky: John Constable, <i>Cloud Study</i>, 1822, Yale Center for British Art, Paul Mellon Collection. Public domain.<br>
+      Letters: public domain, via Project Gutenberg.</p>
+    <div class="meadow" aria-hidden="true">
+      <canvas id="meadow"></canvas>
+    </div>
+  </footer>
+
+  <script src="main.js" type="module"></script>
+  <script src="variants/library/library.js" type="module"></script>
+</body>
+</html>
