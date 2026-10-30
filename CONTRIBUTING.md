@@ -2,7 +2,7 @@
 
 Thanks for helping build Desktop Objects. There are three ways in:
 
-- **Add a new object** (an oven, a toolbox, a mailbox, anything).
+- **Add a new object** (an oven, a toolbox, a plant pot, anything).
 - **Improve an existing object** (a bug fix, a smoother animation, a better sound).
 - **Suggest an idea** by opening an issue with the "Object idea" template.
 
@@ -32,7 +32,7 @@ In short:
 6. Use your object for a day on your own desktop.
 7. Open a pull request using the "New object" checklist. Include a screen recording or GIF.
 
-You can also start from scratch instead of the template, as the fridge and drawer did. Your object still needs its own folder, an `object.json`, a README, a CODEOWNERS line and a build script that produces a `.app`.
+You can also start from scratch instead of the template, as the fridge, drawer and mailbox did. Your object still needs its own folder, an `object.json`, a README, a CODEOWNERS line and a build script that produces a `.app`.
 
 ## object.json fields
 

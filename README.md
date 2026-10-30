@@ -37,22 +37,28 @@ Each object is a small, standalone Mac app. Free, open source and made to be rem
 
 <table>
   <tr>
-    <td align="center" width="33%">
+    <td align="center" width="25%">
       <img src="objects/fridge/media/icon.png" alt="Desktop Fridge icon" width="112"><br>
       <b>Desktop Fridge</b><br>
       <sub>A retro fridge with a heavy door, cold fog and frost.</sub><br><br>
       <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Fridge.dmg"><b>Download</b></a> &nbsp;·&nbsp; <a href="#desktop-fridge">Details</a>
     </td>
-    <td align="center" width="33%">
+    <td align="center" width="25%">
       <img src="objects/drawer/media/icon.png" alt="Desktop Drawer icon" width="112"><br>
       <b>Desktop Drawer</b><br>
       <sub>A wooden drawer tucked along the bottom of your screen.</sub><br><br>
       <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Drawer.dmg"><b>Download</b></a> &nbsp;·&nbsp; <a href="#desktop-drawer">Details</a>
     </td>
-    <td align="center" width="33%">
+    <td align="center" width="25%">
+      <img src="objects/mailbox/media/icon.png" alt="Desktop Mailbox icon" width="112"><br>
+      <b>Desktop Mailbox</b><br>
+      <sub>A post box where a letter arrives every now and then.</sub><br><br>
+      <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Mailbox.dmg"><b>Download</b></a> &nbsp;·&nbsp; <a href="#desktop-mailbox">Details</a>
+    </td>
+    <td align="center" width="25%">
       <a href="docs/make-your-own.md"><img src=".github/assets/your-object.png" alt="An empty spot for your object" width="112"></a><br>
       <b>Your object</b><br>
-      <sub>An oven, a toolbox, a mailbox. Bring the art; the template does the rest.</sub><br><br>
+      <sub>An oven, a toolbox, a plant pot. Bring the art; the template does the rest.</sub><br><br>
       <a href="docs/make-your-own.md"><b>Make your own</b></a> &nbsp;·&nbsp; <a href="#in-phoenix-code-recommended">In Phoenix Code</a>
     </td>
   </tr>
@@ -89,6 +95,23 @@ A worn wooden drawer that lives along the bottom of your screen. Slide it out, d
 
 <sub>Stores files in <code>~/Desktop Drawer</code> &nbsp;·&nbsp; <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Drawer.dmg">Download</a></sub>
 
+### Desktop Mailbox
+
+<p align="center">
+  <img src="objects/mailbox/media/closed.png" alt="Desktop Mailbox: a red post box with a letter sticking out of its slot" height="320">
+  <img src="objects/mailbox/media/open.png" alt="The post box with its door open: files on the floor and the shelves" height="320">
+  <img src="objects/mailbox/media/letter-opening.png" alt="A letter sliding out of an opened envelope" height="320">
+</p>
+
+A red post box on a pole. Every now and then a letter arrives through the slot and waits there until you read it.
+
+- **Letters.** Handpicked notes, films, books and songs, plus short real letters from people long ago. Never ads, never paid for. Choose how often they come, or pause them.
+- **The envelope opens.** The wax seal pops, the flap folds back and the letter slides out. You can write back; replies stay on your Mac.
+- **Your letters.** Click the envelope on the front of the box to see every letter that has come.
+- **A hiding spot.** Drop up to 24 files in and close the door. Put Back returns each one to where it was.
+
+<sub>Stores files in <code>~/Mailbox</code> &nbsp;·&nbsp; <a href="objects/mailbox/README.md">How to use it</a> &nbsp;·&nbsp; <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Mailbox.dmg">Download</a></sub>
+
 ## Get started
 
 ### Download
@@ -96,6 +119,7 @@ A worn wooden drawer that lives along the bottom of your screen. Slide it out, d
 <p>
   <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Fridge.dmg"><img src="https://img.shields.io/badge/Download-Desktop%20Fridge-9DA716?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Fridge"></a>
   <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Drawer.dmg"><img src="https://img.shields.io/badge/Download-Desktop%20Drawer-5C3A1A?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Drawer"></a>
+  <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Mailbox.dmg"><img src="https://img.shields.io/badge/Download-Desktop%20Mailbox-D8432F?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Mailbox"></a>
 </p>
 
 Click a button and the download starts. Open the file, drag the app into **Applications**, and open it from there. Free, for macOS 14 or later.
@@ -112,7 +136,7 @@ cd desktop-objects/objects/fridge
 ./build.sh run
 ```
 
-For the drawer: `cd objects/drawer && bash build_app.sh`, then open `build/Desktop Drawer.app`.
+For the drawer: `cd objects/drawer && bash build_app.sh`, then open `build/Desktop Drawer.app`. For the mailbox: `cd objects/mailbox && ./build.sh run`.
 
 Questions about where files go, permissions or the "cannot be opened" warning are answered in the [FAQ](docs/faq.md).
 
@@ -157,6 +181,7 @@ Either way, the [step-by-step guide](docs/make-your-own.md) is written for desig
 objects/            one folder per object, each a standalone app
   fridge/
   drawer/
+  mailbox/
 templates/object/   the starter object used by new-object.sh
 scripts/            new-object.sh, check-objects.sh, make-icon.swift, release tools
 docs/               make-your-own guide, FAQ, releasing

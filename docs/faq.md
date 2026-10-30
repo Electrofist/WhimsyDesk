@@ -2,7 +2,7 @@
 
 ## Where do my files go?
 
-Into a normal folder in your home folder. The fridge uses `~/Fridge`, the drawer uses `~/Desktop Drawer`. Right-click the object and choose the "Open ... Folder" item to see them in Finder.
+Into a normal folder in your home folder. The fridge uses `~/Fridge`, the drawer uses `~/Desktop Drawer`, the mailbox uses `~/Mailbox`. Right-click the object and choose the "Open ... Folder" item to see them in Finder.
 
 ## Does it remember my files after a restart?
 
