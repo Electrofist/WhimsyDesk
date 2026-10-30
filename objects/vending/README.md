@@ -1,3 +1,5 @@
+<p align="center"><img src="media/logo.png" alt="Vending Machine" width="420"></p>
+
 # Desktop Vending Machine
 
 A little vending machine that stands on your desktop. Your files are the snacks, each standing on a shelf behind the glass with its name on a tag. Press the button under one and it is pushed off the shelf and drops into the bin.
