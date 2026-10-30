@@ -12,7 +12,7 @@ It is also a hiding spot. Drop files in, close the door, and your desktop is cle
 
 ## Using it
 
-- **Open the door:** click the box. Or grab the door and swing it. It slows on its hinges and bounces off its stop.
+- **Open the door:** click the door. Or grab it and swing it. It slows on its hinges and bounces off its stop.
 - **Close it:** click again, or push the door shut. The latch catches it.
 - **Read a letter:** click the letter sticking out of the slot. It comes out in its envelope: the wax seal pops, the flap opens and the letter slides out. Letters you have read are under **Your Letters** in the right-click menu.
 - **Write back:** press **Write back** on a letter. Your reply is kept on this Mac, in `~/Mailbox/.replies`. Nothing is sent anywhere.
@@ -21,6 +21,7 @@ It is also a hiding spot. Drop files in, close the door, and your desktop is cle
 - **Take it back:** drag it out, or right-click and choose **Put Back** to return it to where it came from, even its old spot on the desktop.
 - **Move it:** hold Option and Command and drag.
 - **Resize it:** hold Option and drag up to grow it or down to shrink it.
+- **Taller or shorter pole:** hold Shift and drag up or down.
 - **How often letters come:** right-click, then **Letters**. About once a day, a few times a week, about once a week, or paused.
 - **Clean up:** press **Throw away** on a letter, or right-click and choose **Throw Away Read Letters**.
 - **Everything else:** right-click the mailbox. Sound on or off, open the folder, see when more mail is coming, quit.

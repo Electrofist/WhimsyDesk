@@ -61,14 +61,30 @@ enum MailboxArt {
 
     // MARK: Pole and shadow
 
-    static func base(scale: CGFloat) -> CGImage? {
+    /// The soft shadow on the ground. It stays on the ground when the pole is made longer.
+    static func groundShadow(scale: CGFloat) -> CGImage? {
         Paint.render(Geo.size, scale: scale) { ctx in
             let shadow = Paint.gradient([(0, Paint.hex(0x000000, 0.3)), (1, Paint.hex(0x000000, 0))])
-            ctx.saveGState()
             ctx.translateBy(x: Geo.post.midX + 4, y: 22)
             ctx.scaleBy(x: 1, y: 0.2)
             ctx.drawRadialGradient(shadow, startCenter: .zero, startRadius: 0, endCenter: .zero, endRadius: 82, options: [])
-            ctx.restoreGState()
+        }
+    }
+
+    /// A thin slice of the pole, stretched to make it longer.
+    static func poleSlice(scale: CGFloat) -> CGImage? {
+        let p = Geo.post
+        return Paint.render(CGSize(width: p.width + 7, height: 4), scale: scale) { ctx in
+            Paint.fill(ctx, CGPath(rect: CGRect(x: p.width, y: 0, width: 7, height: 4), transform: nil), Paint.hex(0x4E5359))
+            Paint.fill(ctx, CGPath(rect: CGRect(x: 0, y: 0, width: p.width, height: 4), transform: nil),
+                       Paint.gradient([(0, Paint.hex(0x9DA3AA)), (0.4, Paint.hex(0xB9BEC4)), (1, Paint.hex(0x6E747B))]),
+                       from: .zero, to: CGPoint(x: p.width, y: 0))
+        }
+    }
+
+    /// The pole and the collar under the box (the ground shadow is separate).
+    static func base(scale: CGFloat) -> CGImage? {
+        Paint.render(Geo.size, scale: scale) { ctx in
 
             let p = Geo.post
             Paint.fill(ctx, CGPath(rect: CGRect(x: p.maxX, y: p.minY + 3, width: 7, height: p.height - 3), transform: nil),
@@ -177,9 +193,12 @@ enum MailboxArt {
             let s = Geo.slot
             Paint.fill(ctx, Paint.rounded(s, 3), Paint.gradient([(0, Paint.hex(0x1A0504)), (1, Paint.hex(0x050101))]),
                        from: CGPoint(x: 0, y: s.minY), to: CGPoint(x: 0, y: s.maxY))
+            // Depth: the hood shades the top of the opening; the lower lip is a darker red edge.
+            Paint.fill(ctx, Paint.rounded(s, 3), Paint.gradient([(0, Paint.hex(0x000000, 0)), (1, Paint.hex(0x000000, 0.6))]),
+                       from: CGPoint(x: 0, y: s.midY), to: CGPoint(x: 0, y: s.maxY))
             let lip = CGMutablePath()
-            lip.move(to: CGPoint(x: s.minX + 2, y: s.minY - 0.8)); lip.addLine(to: CGPoint(x: s.maxX - 2, y: s.minY - 0.8))
-            Paint.stroke(ctx, lip, Paint.hex(0xFFFFFF, 0.3), 1)
+            lip.move(to: CGPoint(x: s.minX + 3, y: s.minY - 0.7)); lip.addLine(to: CGPoint(x: s.maxX - 3, y: s.minY - 0.7))
+            Paint.stroke(ctx, lip, Paint.hex(0x5A100B, 0.7), 1.2)
 
             // Lettering, embossed.
             let font = Paint.serif(23, .bold)

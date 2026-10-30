@@ -8,7 +8,9 @@ All sizes are in pixels, at 2x. Everything is seen straight from the front with 
 
 | File | Size | What it is |
 |---|---|---|
-| `base.png` | 720 × 880 | The pole and its soft shadow on the ground. Nothing else. |
+| `base.png` | 720 × 880 | The pole and the collar under the box. No ground shadow. |
+| `shadow.png` | 720 × 880 | The soft shadow on the ground, under the pole. |
+| `pole-slice.png` | 86 × 8 | A thin slice of the pole and its shaded side, stretched when the pole is made taller. |
 | `box.png` | 720 × 880 | The whole box without its door. The door opening must be transparent (see below). Include the slot opening (dark) but not the hood over it. |
 | `hood.png` | 720 × 880 | Only the hood over the slot, with its shadow. It sits on top of the letter that sticks out of the slot. |
 | `door-front.png` | 352 × 296 | The door, front side. Hinges on the left edge. |

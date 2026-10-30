@@ -38,6 +38,9 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
 
     private let rig = CALayer()
     private let baseLayer = CALayer()
+    private let groundLayer = CALayer()
+    private let shadowLayer = CALayer()
+    private let poleExtension = CALayer()
     private let boxLayer = CALayer()
     private let interiorLayer = CALayer()
     private let itemsLayer = CALayer()
@@ -58,7 +61,7 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     /// The letter sticking out of the slot, if any.
     private var waitingID: String?
 
-    private enum Grab { case none, door(fraction: CGFloat), item(Item, CGRect), peek, resize(start: CGPoint, scale: CGFloat) }
+    private enum Grab { case none, door(fraction: CGFloat), item(Item, CGRect), peek, resize(start: CGPoint, scale: CGFloat), pole(start: CGPoint, extra: CGFloat) }
 
     // MARK: Size
 
@@ -71,22 +74,49 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         return v == 0 ? 1 : min(max(CGFloat(v), scaleRange.lowerBound), scaleRange.upperBound)
     }
 
-    private func scene(_ p: CGPoint) -> CGPoint { CGPoint(x: p.x / userScale, y: p.y / userScale) }
+    /// Shift-drag makes the pole longer or shorter. The box rises; the foot stays on the ground.
+    private(set) var poleExtra: CGFloat = 0
+    private static let poleRange: ClosedRange<CGFloat> = 0...260
+    static var savedPoleExtra: CGFloat {
+        min(max(CGFloat(UserDefaults.standard.double(forKey: "poleExtra")), poleRange.lowerBound), poleRange.upperBound)
+    }
+    static func viewSize(scale: CGFloat, pole: CGFloat) -> CGSize {
+        CGSize(width: Geo.size.width * scale, height: (Geo.size.height + pole) * scale)
+    }
+
+    private func scene(_ p: CGPoint) -> CGPoint { CGPoint(x: p.x / userScale, y: p.y / userScale - poleExtra) }
     private func viewRect(_ r: CGRect) -> CGRect {
-        CGRect(x: r.minX * userScale, y: r.minY * userScale, width: r.width * userScale, height: r.height * userScale)
+        CGRect(x: r.minX * userScale, y: (r.minY + poleExtra) * userScale, width: r.width * userScale, height: r.height * userScale)
+    }
+
+    /// Places the layers for the current size and pole length.
+    private func applyTransforms() {
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        rig.setAffineTransform(CGAffineTransform(scaleX: userScale, y: userScale).translatedBy(x: 0, y: poleExtra))
+        groundLayer.setAffineTransform(CGAffineTransform(scaleX: userScale, y: userScale))
+        let p = Geo.post
+        poleExtension.frame = CGRect(x: p.minX, y: p.minY, width: p.width + 7, height: poleExtra + 4)
+        poleExtension.isHidden = poleExtra < 1
+        CATransaction.commit()
     }
 
     /// Resizes around the bottom middle, so the pole stays planted.
     private func applyScale(_ s: CGFloat) {
-        guard let window else { return }
         userScale = min(max(s, Self.scaleRange.lowerBound), Self.scaleRange.upperBound)
+        applyGeometry()
+    }
+
+    private func applyPole(_ extra: CGFloat) {
+        poleExtra = min(max(extra, Self.poleRange.lowerBound), Self.poleRange.upperBound).rounded()
+        applyGeometry()
+    }
+
+    private func applyGeometry() {
+        guard let window else { return }
         let old = window.frame
-        let size = CGSize(width: Geo.size.width * userScale, height: Geo.size.height * userScale)
-        let origin = CGPoint(x: old.midX - size.width / 2, y: old.minY)
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        rig.setAffineTransform(CGAffineTransform(scaleX: userScale, y: userScale))
-        CATransaction.commit()
-        window.setFrame(CGRect(origin: origin, size: size), display: true)
+        let size = Self.viewSize(scale: userScale, pole: poleExtra)
+        applyTransforms()
+        window.setFrame(CGRect(origin: CGPoint(x: old.midX - size.width / 2, y: old.minY), size: size), display: true)
         setFrameSize(size)
         refreshToolTips()
     }
@@ -97,9 +127,10 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     init(store: FileStore, post: PostOffice) {
         self.store = store
         self.post = post
-        super.init(frame: CGRect(origin: .zero, size: CGSize(width: Geo.size.width * MailboxView.savedScale,
-                                                            height: Geo.size.height * MailboxView.savedScale)))
+        super.init(frame: CGRect(origin: .zero, size: MailboxView.viewSize(scale: MailboxView.savedScale,
+                                                                           pole: MailboxView.savedPoleExtra)))
         userScale = MailboxView.savedScale
+        poleExtra = MailboxView.savedPoleExtra
         layer = CALayer()
         wantsLayer = true
         buildLayers()
@@ -125,6 +156,18 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         }
         doorLayer.actions = none
         let full = CGRect(origin: .zero, size: Geo.size)
+        // The ground: shadow and the extra length of pole. It does not rise with the box.
+        for l in [groundLayer, shadowLayer, poleExtension] {
+            l.actions = none
+        }
+        groundLayer.anchorPoint = .zero
+        groundLayer.bounds = full
+        groundLayer.position = .zero
+        shadowLayer.frame = full
+        poleExtension.contentsGravity = .resize
+        groundLayer.addSublayer(shadowLayer)
+        groundLayer.addSublayer(poleExtension)
+        root.addSublayer(groundLayer)
         rig.anchorPoint = .zero
         rig.bounds = full
         rig.position = .zero
@@ -208,13 +251,16 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     }
 
     private func renderArt() {
-        rig.setAffineTransform(CGAffineTransform(scaleX: userScale, y: userScale))
+        applyTransforms()
         let scale = (window?.backingScaleFactor ?? 2) * max(1, userScale)
         guard scale != renderedScale else { return }
         renderedScale = scale
         CATransaction.begin(); CATransaction.setDisableActions(true)
         // Painted art in Resources/Art wins; otherwise the art drawn in code.
         baseLayer.contents = ArtFiles.image("base") ?? MailboxArt.base(scale: scale)
+        shadowLayer.contents = ArtFiles.image("shadow") ?? MailboxArt.groundShadow(scale: scale)
+        poleExtension.contents = ArtFiles.image("pole-slice") ?? MailboxArt.poleSlice(scale: scale)
+        for l in [shadowLayer, poleExtension] { l.contentsScale = scale }
         interiorLayer.contents = ArtFiles.image("interior") ?? MailboxArt.interior(scale: scale)
         bodyLayer.contents = ArtFiles.image("box") ?? MailboxArt.body(scale: scale)
         hoodLayer.contents = ArtFiles.image("hood") ?? MailboxArt.hood(scale: scale)
@@ -477,7 +523,8 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     }
 
     private func bodyHit(_ p: CGPoint) -> Bool {
-        Paint.dome(Geo.box.insetBy(dx: -2, dy: -2), Geo.domeHeight).contains(p) || Geo.post.contains(p)
+        let pole = CGRect(x: Geo.post.minX, y: Geo.post.minY - poleExtra, width: Geo.post.width + 7, height: Geo.post.height + poleExtra)
+        return Paint.dome(Geo.box.insetBy(dx: -2, dy: -2), Geo.domeHeight).contains(p) || pole.contains(p)
     }
 
     private func peekHit(_ p: CGPoint) -> Bool {
@@ -504,6 +551,10 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
             window?.performDrag(with: event)
             return
         }
+        if event.modifierFlags.contains(.shift) && (bodyHit(p) || doorHit(p)) {
+            grab = .pole(start: NSEvent.mouseLocation, extra: poleExtra)
+            return
+        }
         if event.modifierFlags.contains(.option) && (bodyHit(p) || doorHit(p)) {
             grab = .resize(start: NSEvent.mouseLocation, scale: userScale)
             return
@@ -518,15 +569,19 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         } else if doorHit(p) {
             let f = door.angle < 0.2 ? max(0.4, (p.x - Geo.hingeX) / Geo.door.width) : 0.85
             grab = .door(fraction: min(1, f))
-        } else if bodyHit(p) {
-            grab = .door(fraction: 0.85)
         } else {
+            // The rest of the box does nothing on click: only the door opens the door.
             grab = .none
         }
     }
 
     override func mouseDragged(with event: NSEvent) {
         let p = scene(convert(event.locationInWindow, from: nil))
+        if case .pole(let start, let extra) = grab {
+            // Up for a longer pole, down for a shorter one.
+            applyPole(extra + (NSEvent.mouseLocation.y - start.y) / userScale)
+            return
+        }
         if case .resize(let start, let scale) = grab {
             // Up or right to grow, down or left to shrink.
             let m = NSEvent.mouseLocation
@@ -576,6 +631,8 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
                     if event.clickCount >= 2 { NSWorkspace.shared.open(store.url(of: f)) } else { select(f.name) }
                 }
             }
+        case .pole:
+            UserDefaults.standard.set(Double(poleExtra), forKey: "poleExtra")
         case .resize:
             UserDefaults.standard.set(Double(userScale), forKey: "scale")
             renderedScale = 0
