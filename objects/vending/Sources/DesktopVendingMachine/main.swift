@@ -42,12 +42,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var view: VendingView?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let view = VendingView()
+        let view = VendingView(store: FileStore())
         let panel = VendingPanel(view: view)
         panel.orderFrontRegardless()
         self.panel = panel
         self.view = view
+        view.layoutItems()
+        #if DEBUG
+        listenForTestCommands()
+        #endif
     }
+
+    #if DEBUG
+    /// Debug builds only: drive the machine from a script, since clicks cannot reach a window at
+    /// desktop level. Commands: store:<path>.
+    private func listenForTestCommands() {
+        DistributedNotificationCenter.default().addObserver(forName: Notification.Name("io.github.electrofist.vending.test"),
+                                                            object: nil, queue: .main) { [weak self] note in
+            guard let self, let view = self.view, let command = note.object as? String else { return }
+            if command.hasPrefix("store:") { view.storeForTest([URL(fileURLWithPath: String(command.dropFirst(6)))]) }
+        }
+    }
+    #endif
 }
 
 // Art export for the app icon: DesktopVendingMachine --render-icon out.png

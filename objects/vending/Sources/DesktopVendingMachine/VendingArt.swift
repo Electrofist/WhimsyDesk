@@ -237,6 +237,31 @@ enum VendingArt {
         }
     }
 
+    /// The text on a shelf label: the code in bold, then as much of the name as fits.
+    static func label(code: String, name: String?, scale: CGFloat) -> CGImage? {
+        let size = Geo.labelRect(0).size
+        return Paint.render(size, scale: scale) { ctx in
+            let ink = NSColor(cgColor: Paint.hex(0x2B2A27))!
+            let codeFont = NSFont.systemFont(ofSize: 6.2, weight: .heavy)
+            let nameFont = NSFont.systemFont(ofSize: 6.2, weight: .medium)
+            let s = NSMutableAttributedString(string: code, attributes: [.font: codeFont, .foregroundColor: ink])
+            if let name {
+                let room = size.width - 3 - s.size().width - 2
+                var text = name
+                func width(_ t: String) -> CGFloat { (t as NSString).size(withAttributes: [.font: nameFont]).width }
+                if width(text) > room {
+                    while !text.isEmpty && width(text + "…") > room { text.removeLast() }
+                    text = text.trimmingCharacters(in: .whitespaces) + "…"
+                }
+                s.append(NSAttributedString(string: " " + text, attributes: [.font: nameFont, .foregroundColor: ink]))
+            }
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
+            s.draw(at: NSPoint(x: 1.5, y: (size.height - s.size().height) / 2 + 0.2))
+            NSGraphicsContext.restoreGraphicsState()
+        }
+    }
+
     // MARK: Control panel
 
     /// The steel panel with the display bezel and keys. `pressed` draws every key pushed in,
