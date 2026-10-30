@@ -9,6 +9,8 @@ const PAGE = 12;               // cards shown before "Show more"
 const SHOTS = {
   fridge: 'media/shots/fridge.webp',
   mailbox: 'media/shots/mailbox.webp',
+  vending: 'media/shots/vending.webp',
+  'vending-keypad': 'media/shots/vending-keypad.webp',
 };
 // A short film for the spotlight, when there is one. Without it the spotlight shows the object's art.
 const SPOTLIGHT_MEDIA = {
