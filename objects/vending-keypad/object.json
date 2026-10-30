@@ -1,0 +1,23 @@
+{
+  "id": "vending-keypad",
+  "name": "Desktop Vending Machine Keypad",
+  "tagline": "Your files on little shelves. Type a code and one drops.",
+  "description": "A sunny little vending machine that stands on your desktop. Drop files on the window and each one stands on a shelf with a code and its name on a tag. Type the code on the keypad and that file drops into the bin for you to take out.",
+  "author": {
+    "name": "Krrish Parmar",
+    "github": "Electrofist"
+  },
+  "version": "1.0",
+  "minMacOS": "14.0",
+  "license": "MIT",
+  "storesFilesIn": "~/Vending Machine Keypad",
+  "build": {
+    "command": "./build.sh",
+    "app": "build/Desktop Vending Machine Keypad.app"
+  },
+  "accent": "#FFC92E",
+  "screenshots": [
+    "media/closed.png",
+    "media/hero.gif"
+  ]
+}
