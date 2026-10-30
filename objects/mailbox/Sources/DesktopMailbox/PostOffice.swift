@@ -9,6 +9,8 @@ struct Letter: Codable, Equatable {
     var title: String?
     var body: String
     var signoff: String?
+    /// Where the words come from, printed small at the foot of the letter (for letters from history).
+    var source: String?
     /// Delivered on the first launch, before any random deliveries.
     var welcome: Bool?
 }
@@ -142,9 +144,14 @@ final class PostOffice {
 
     // MARK: Deliveries
 
-    #if DEBUG
-    func deliverNow() { deliverRandom(announce: true) }
-    #endif
+    /// Delivers a letter right now. Once every letter has come, older ones come round again.
+    func deliverNow() {
+        if hasLettersLeft { deliverRandom(announce: true); return }
+        let waiting = Set(inbox.filter { !$0.read }.map(\.id))
+        guard let pick = letters.filter({ !waiting.contains($0.id) && $0.welcome != true }).randomElement() else { return }
+        inbox.removeAll { $0.id == pick.id }
+        deliver(pick, announce: true)
+    }
 
     private func deliverRandom(announce: Bool) {
         let left = letters.filter { !delivered.contains($0.id) }
@@ -241,19 +248,29 @@ final class PostOffice {
         try? data.write(to: stateURL, options: .atomic)
     }
 
+    /// Reads letters.json plus every .json file in the Letters folder (one file per collection).
+    /// In the app they sit in Resources; with `swift run` they are read from the source folder.
     private static func loadLetters() -> [Letter] {
-        var candidates: [URL] = []
-        if let url = Bundle.main.url(forResource: "letters", withExtension: "json") { candidates.append(url) }
-        // When run with `swift run`, read straight from the source folder.
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-            .appendingPathComponent("../../Resources/letters.json").standardizedFileURL
-        candidates.append(source)
-        for url in candidates {
+            .appendingPathComponent("../../Resources").standardizedFileURL
+        let base = Bundle.main.url(forResource: "letters", withExtension: "json")?.deletingLastPathComponent() ?? source
+        var files = [base.appendingPathComponent("letters.json")]
+        let folder = base.appendingPathComponent("Letters")
+        let extra = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        files += extra.filter { $0.pathExtension == "json" }.sorted { $0.lastPathComponent < $1.lastPathComponent }
+
+        var letters: [Letter] = []
+        var seen = Set<String>()
+        for url in files {
             guard let data = try? Data(contentsOf: url) else { continue }
-            do { return try JSONDecoder().decode([Letter].self, from: data) } catch {
-                NSLog("letters.json could not be read: \(error)")
+            do {
+                for letter in try JSONDecoder().decode([Letter].self, from: data) where seen.insert(letter.id).inserted {
+                    letters.append(letter)
+                }
+            } catch {
+                NSLog("\(url.lastPathComponent) could not be read: \(error)")
             }
         }
-        return []
+        return letters
     }
 }

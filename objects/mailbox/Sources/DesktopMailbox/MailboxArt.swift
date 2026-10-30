@@ -2,7 +2,7 @@ import AppKit
 
 /// The kinds of mail. Each has its own envelope paper and stamp colour.
 enum MailKind: String, Codable, CaseIterable {
-    case note, movie, book, song, quote
+    case note, movie, book, song, quote, history
 
     /// Stamp colour.
     var color: CGColor {
@@ -12,6 +12,7 @@ enum MailKind: String, Codable, CaseIterable {
         case .book: return Paint.hex(0x3C7FB1)
         case .song: return Paint.hex(0x7A5BB5)
         case .quote: return Paint.hex(0x3E9A6B)
+        case .history: return Paint.hex(0x8B5E3C)
         }
     }
 
@@ -23,6 +24,7 @@ enum MailKind: String, Codable, CaseIterable {
         case .book: return 0xC69C6D     // kraft
         case .song: return 0x9DB4CF     // dusty blue
         case .quote: return 0xE8C3B0    // blush
+        case .history: return 0xE4D3B0  // aged paper
         }
     }
 
@@ -34,6 +36,7 @@ enum MailKind: String, Codable, CaseIterable {
         case .book: return 0xF1E6CF
         case .song: return 0xF4EFE3
         case .quote: return 0xF7EDE4
+        case .history: return 0xF3E8D0
         }
     }
 
@@ -44,6 +47,7 @@ enum MailKind: String, Codable, CaseIterable {
         case .book: return "A BOOK"
         case .song: return "A SONG"
         case .quote: return "WORDS"
+        case .history: return "OLD LETTER"
         }
     }
 }

@@ -16,6 +16,10 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/$EXEC"
 cp Support/Info.plist "$APP/Contents/Info.plist"
 cp Resources/letters.json "$APP/Contents/Resources/"
+if compgen -G "Resources/Letters/*.json" >/dev/null; then
+    mkdir -p "$APP/Contents/Resources/Letters"
+    cp Resources/Letters/*.json "$APP/Contents/Resources/Letters/"
+fi
 if compgen -G "Resources/Sounds/*.wav" >/dev/null; then
     cp Resources/Sounds/*.wav "$APP/Contents/Resources/"
 fi

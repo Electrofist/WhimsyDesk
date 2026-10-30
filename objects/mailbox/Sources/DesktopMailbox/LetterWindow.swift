@@ -79,7 +79,9 @@ final class LetterWindow: NSPanel, NSTextViewDelegate {
 
     private func buildText() {
         let s = LetterWindow.paperSize
-        scroll.frame = CGRect(x: 40, y: 82, width: s.width - 80, height: s.height - 82 - 150)
+        // Leave room at the bottom for the source line on letters from history.
+        let bottom: CGFloat = letter.source == nil ? 82 : 94
+        scroll.frame = CGRect(x: 40, y: bottom, width: s.width - 80, height: s.height - bottom - 150)
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
@@ -465,6 +467,15 @@ final class PaperView: NSView {
             Paint.text(ctx, letter.from, at: CGPoint(x: r.minX + 42, y: r.maxY - 84), font: Paint.hand(size), color: ink)
             if let title = letter.title, !title.isEmpty {
                 Paint.text(ctx, title, at: CGPoint(x: r.minX + 42, y: r.maxY - 128), font: Paint.serif(17, .bold), color: ink)
+            }
+            if let source = letter.source, !source.isEmpty {
+                // Credit line above the buttons.
+                let style = NSMutableParagraphStyle()
+                style.alignment = .center
+                style.lineBreakMode = .byWordWrapping
+                (source as NSString).draw(in: CGRect(x: r.minX + 36, y: r.minY + 64, width: r.width - 72, height: 26),
+                                          withAttributes: [.font: NSFont.systemFont(ofSize: 9.5), .foregroundColor: muted.withAlphaComponent(0.85),
+                                                           .paragraphStyle: style])
             }
         } else {
             Paint.text(ctx, "Your reply to \(letter.from)", at: CGPoint(x: r.minX + 42, y: r.maxY - 60),
