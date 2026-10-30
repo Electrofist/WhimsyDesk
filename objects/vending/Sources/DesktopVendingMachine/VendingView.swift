@@ -57,7 +57,7 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     /// A coil is turning or a file is falling; the keypad waits.
     private var vending = false
     /// What the mouse is holding.
-    private enum Grab { case none, key(Int), item(StoredItem, CGRect) }
+    private enum Grab { case none, key(Int), item(StoredItem, CGRect), move(start: CGPoint, origin: CGPoint), resize(start: CGPoint, scale: CGFloat) }
     private var grab = Grab.none
     private var downPoint = CGPoint.zero
     private var dragged = false
@@ -192,6 +192,17 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         renderArt()
+    }
+
+    /// Resizes around the bottom middle, so the machine stays standing where it was.
+    private func applyScale(_ s: CGFloat) {
+        guard let window else { return }
+        userScale = min(max(s, Self.scaleRange.lowerBound), Self.scaleRange.upperBound)
+        let old = window.frame
+        let size = CGSize(width: Geo.size.width * userScale, height: Geo.size.height * userScale)
+        applyTransforms()
+        window.setFrame(CGRect(origin: CGPoint(x: old.midX - size.width / 2, y: old.minY), size: size), display: true)
+        setFrameSize(size)
     }
 
     private func applyTransforms() {
@@ -392,6 +403,7 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
             guard let self else { return true }
             t += dt
             guard t >= 0 else { return false }
+            if t - dt < 0 && delay == 0 { Sounds.play(.motorShort, volume: 0.4) }
             let u = t / duration
             self.turnCoil(i, to: start + CGFloat(Self.easeInOut(u)) * .pi / 2)
             l.opacity = Float(min(1, u / 0.3))
@@ -667,6 +679,18 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         downPoint = p
         dragged = false
         grab = .none
+        // Read the keys held right now as well as the event's, in case another app rewrites them.
+        let keys = event.modifierFlags.union(NSEvent.modifierFlags).intersection([.option, .command, .shift, .control])
+        if keys == [.option, .command], let window {
+            // The system's window drag does not work at desktop level, so the machine follows the mouse itself.
+            grab = .move(start: NSEvent.mouseLocation, origin: window.frame.origin)
+            NSCursor.closedHand.set()
+            return
+        }
+        if keys == .option {
+            grab = .resize(start: NSEvent.mouseLocation, scale: userScale)
+            return
+        }
         if let k = keyIndex(at: p) {
             // Only the keys press. The key goes down with the mouse and comes up with it.
             grab = .key(k)
@@ -689,6 +713,13 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
             guard item.inTray, !dragged, hypot(p.x - downPoint.x, p.y - downPoint.y) >= 3 else { return }
             dragged = true
             beginDrag(item, rect: rect, event: event)
+        case .move(let start, let origin):
+            let m = NSEvent.mouseLocation
+            window?.setFrameOrigin(CGPoint(x: origin.x + m.x - start.x, y: origin.y + m.y - start.y))
+        case .resize(let start, let scale):
+            // Up or right to grow, down or left to shrink.
+            let m = NSEvent.mouseLocation
+            applyScale(scale + ((m.y - start.y) + (m.x - start.x) * 0.5) / 300)
         case .none:
             break
         }
@@ -708,6 +739,12 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
             } else {
                 select(item.name)
             }
+        case .move:
+            NSCursor.arrow.set()
+        case .resize:
+            UserDefaults.standard.set(Double(userScale), forKey: "scale")
+            renderedScale = 0
+            renderArt()      // redraw sharp at the new size
         case .none:
             break
         }
@@ -910,6 +947,13 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
 
     /// For test scripts: put files in as if they were dropped on the glass.
     func storeForTest(_ urls: [URL]) { storeFiles(urls) }
+
+    /// For test scripts: resize as an Option-drag would.
+    func scaleForTest(_ scale: CGFloat) {
+        applyScale(scale)
+        renderedScale = 0
+        renderArt()
+    }
 
     /// For test scripts: select the n-th file, as a click would.
     func selectForTest(_ n: Int) {

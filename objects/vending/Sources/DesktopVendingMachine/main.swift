@@ -39,9 +39,42 @@ final class VendingPanel: NSPanel, NSWindowDelegate {
     }
 }
 
+/// Lock, screen sleep and system sleep. Anything moving holds still and carries on afterwards.
+final class SystemEvents {
+    private var reasons = Set<String>()
+    private var tokens: [(NotificationCenter, NSObjectProtocol)] = []
+    private weak var view: VendingView?
+
+    init(view: VendingView) {
+        self.view = view
+        let workspace = NSWorkspace.shared.notificationCenter
+        pair(workspace, NSWorkspace.screensDidSleepNotification, NSWorkspace.screensDidWakeNotification, reason: "screen")
+        pair(workspace, NSWorkspace.willSleepNotification, NSWorkspace.didWakeNotification, reason: "system")
+        pair(DistributedNotificationCenter.default(), Notification.Name("com.apple.screenIsLocked"),
+             Notification.Name("com.apple.screenIsUnlocked"), reason: "lock")
+    }
+
+    deinit {
+        for (center, token) in tokens { center.removeObserver(token) }
+    }
+
+    private func pair(_ center: NotificationCenter, _ begin: Notification.Name, _ end: Notification.Name, reason: String) {
+        tokens.append((center, center.addObserver(forName: begin, object: nil, queue: .main) { [weak self] _ in
+            self?.reasons.insert(reason)
+            self?.view?.pause()
+        }))
+        tokens.append((center, center.addObserver(forName: end, object: nil, queue: .main) { [weak self] _ in
+            guard let self else { return }
+            self.reasons.remove(reason)
+            if self.reasons.isEmpty { self.view?.resume() }
+        }))
+    }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: VendingPanel?
     private var view: VendingView?
+    private var events: SystemEvents?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let view = VendingView(store: FileStore())
@@ -50,6 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.panel = panel
         self.view = view
         view.layoutItems()
+        events = SystemEvents(view: view)
         #if DEBUG
         listenForTestCommands()
         #endif
@@ -58,7 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     #if DEBUG
     /// Debug builds only: drive the machine from a script, since clicks cannot reach a window at
     /// desktop level. Commands: store:<path>, key:<label>, vend:<code>,
-    /// select:<n>, putback:<n>, take:<folder>, slow:<factor>, sounds:<folder>.
+    /// select:<n>, putback:<n>, take:<folder>, scale:<n>, slow:<factor>, sounds:<folder>.
     private func listenForTestCommands() {
         DistributedNotificationCenter.default().addObserver(forName: Notification.Name("io.github.electrofist.vending.test"),
                                                             object: nil, queue: .main) { [weak self] note in
@@ -68,6 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if command.hasPrefix("select:") { view.selectForTest(Int(command.dropFirst(7)) ?? 0) }
             if command.hasPrefix("putback:") { view.putBackForTest(Int(command.dropFirst(8)) ?? 0) }
             if command.hasPrefix("take:") { view.takeForTest(to: URL(fileURLWithPath: String(command.dropFirst(5)))) }
+            if command.hasPrefix("scale:") { view.scaleForTest(CGFloat(Double(command.dropFirst(6)) ?? 1)) }
             if command.hasPrefix("slow:") { VendingView.slowMotion = Double(command.dropFirst(5)) ?? 1 }
             if command.hasPrefix("vend:") { view.vend(String(command.dropFirst(5))) }
             if command.hasPrefix("sounds:") { Sounds.export(to: URL(fileURLWithPath: String(command.dropFirst(7)))) }
