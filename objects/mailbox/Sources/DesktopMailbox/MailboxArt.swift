@@ -87,9 +87,11 @@ enum MailboxArt {
         Paint.render(Geo.size, scale: scale) { ctx in
 
             let p = Geo.post
-            Paint.fill(ctx, CGPath(rect: CGRect(x: p.maxX, y: p.minY + 3, width: 7, height: p.height - 3), transform: nil),
+            // Plain and even from top to bottom, exactly like the slice used to make it taller,
+            // so no join shows when the pole is stretched.
+            Paint.fill(ctx, CGPath(rect: CGRect(x: p.maxX, y: p.minY, width: 7, height: p.height), transform: nil),
                        Paint.hex(0x4E5359))
-            Paint.fill(ctx, Paint.rounded(p, 2), Paint.gradient([(0, Paint.hex(0x9DA3AA)), (0.4, Paint.hex(0xB9BEC4)),
+            Paint.fill(ctx, CGPath(rect: p, transform: nil), Paint.gradient([(0, Paint.hex(0x9DA3AA)), (0.4, Paint.hex(0xB9BEC4)),
                                                                 (1, Paint.hex(0x6E747B))]),
                        from: CGPoint(x: p.minX, y: 0), to: CGPoint(x: p.maxX, y: 0))
             // Collar where the pole meets the box.
@@ -98,14 +100,6 @@ enum MailboxArt {
                        from: CGPoint(x: 0, y: collar.minY), to: CGPoint(x: 0, y: collar.maxY))
             for x in [collar.minX + 5, collar.maxX - 5] {
                 Paint.circle(ctx, CGPoint(x: x, y: collar.midY), 2, Paint.hex(0x3E4247))
-            }
-            // A little weathering.
-            var rng = SeededRandom(seed: 11)
-            for _ in 0..<14 {
-                let y = p.minY + rng.unit() * (p.height - 16)
-                let l = CGMutablePath()
-                l.move(to: CGPoint(x: p.minX + 2, y: y)); l.addLine(to: CGPoint(x: p.minX + 2 + rng.range(4, p.width - 6), y: y))
-                Paint.stroke(ctx, l, Paint.hex(0x000000, 0.06), 0.8)
             }
         }
     }

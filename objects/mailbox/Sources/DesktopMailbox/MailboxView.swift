@@ -173,6 +173,8 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         groundLayer.position = .zero
         shadowLayer.frame = full
         poleExtension.contentsGravity = .resize
+        // Stretch only the solid middle rows of the slice; its edge rows can be part transparent.
+        poleExtension.contentsRect = CGRect(x: 0, y: 0.3, width: 1, height: 0.4)
         groundLayer.addSublayer(shadowLayer)
         groundLayer.addSublayer(poleExtension)
         root.addSublayer(groundLayer)
