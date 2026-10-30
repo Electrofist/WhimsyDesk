@@ -1,0 +1,23 @@
+{
+  "id": "vending",
+  "name": "Desktop Vending Machine",
+  "tagline": "Your files on little shelves. Press a button and one drops.",
+  "description": "A sunny little vending machine that stands on your desktop. Drop files on the window and each one stands on a shelf with its name on a tag. Press the button under a file and it drops into the bin for you to take out.",
+  "author": {
+    "name": "Krrish Parmar",
+    "github": "Electrofist"
+  },
+  "version": "0.1",
+  "minMacOS": "14.0",
+  "license": "MIT",
+  "storesFilesIn": "~/Vending Machine",
+  "build": {
+    "command": "./build.sh",
+    "app": "build/Desktop Vending Machine.app"
+  },
+  "accent": "#FFC92E",
+  "screenshots": [
+    "media/closed.png",
+    "media/hero.gif"
+  ]
+}
