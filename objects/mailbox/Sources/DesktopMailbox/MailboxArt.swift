@@ -323,6 +323,37 @@ enum MailboxArt {
         }
     }
 
+    /// A kraft parcel envelope for a stored file, with its name written on it and its icon as the stamp.
+    static func parcel(name: String, icon: NSImage, size: CGSize = envelopeSize, scale: CGFloat) -> CGImage? {
+        Paint.render(CGSize(width: size.width, height: size.height + 8), scale: scale) { ctx in
+            let u = size.width / 46
+            let body = CGRect(x: 1, y: 2 * u, width: size.width - 2, height: size.height - 3 * u)
+            ctx.saveGState()
+            ctx.setShadow(offset: CGSize(width: 0, height: -1.5 * u), blur: 2.5 * u, color: Paint.hex(0x000000, 0.45))
+            Paint.fill(ctx, Paint.rounded(body, 2 * u), Paint.hex(0xC9A271))
+            ctx.restoreGState()
+            Paint.fill(ctx, Paint.rounded(body, 2 * u), Paint.gradient([(0, Paint.hex(0xFFFFFF, 0.14)), (1, Paint.hex(0x000000, 0.08))]),
+                       from: CGPoint(x: 0, y: body.maxY), to: CGPoint(x: 0, y: body.minY))
+            // Twine around it.
+            let twine = Paint.hex(0xEFE4CC, 0.9)
+            Paint.fill(ctx, CGPath(rect: CGRect(x: body.minX + body.width * 0.3, y: body.minY, width: 1.3 * u, height: body.height), transform: nil), twine)
+            Paint.fill(ctx, CGPath(rect: CGRect(x: body.minX, y: body.midY - 0.6 * u, width: body.width, height: 1.3 * u), transform: nil), twine)
+            // The file's own icon as the stamp.
+            let stamp = CGRect(x: body.maxX - 13 * u, y: body.maxY - 13 * u, width: 11 * u, height: 11 * u)
+            Paint.fill(ctx, CGPath(rect: stamp.insetBy(dx: -u, dy: -u), transform: nil), Paint.hex(0xFFFDF6))
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
+            icon.draw(in: stamp)
+            NSGraphicsContext.restoreGraphicsState()
+            // A label with the name, handwritten.
+            let label = CGRect(x: body.minX + body.width * 0.36, y: body.minY + 3 * u, width: body.width * 0.6 - 2 * u, height: 9 * u)
+            Paint.fill(ctx, CGPath(rect: label, transform: nil), Paint.hex(0xFBF6EA))
+            let shown = name.count > 14 ? String(name.prefix(13)) + "…" : name
+            Paint.text(ctx, shown, at: CGPoint(x: label.minX + u, y: label.minY + 0.5 * u), font: Paint.hand(6.2 * u),
+                       color: NSColor(srgbRed: 0.17, green: 0.24, blue: 0.38, alpha: 1))
+        }
+    }
+
     // MARK: The big envelope for opening a letter
 
     static let bigEnvelope = CGSize(width: 360, height: 228)

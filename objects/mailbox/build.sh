@@ -19,6 +19,10 @@ cp Resources/letters.json "$APP/Contents/Resources/"
 if compgen -G "Resources/Sounds/*.wav" >/dev/null; then
     cp Resources/Sounds/*.wav "$APP/Contents/Resources/"
 fi
+if compgen -G "Resources/Art/*.png" >/dev/null; then
+    mkdir -p "$APP/Contents/Resources/Art"
+    cp Resources/Art/*.png "$APP/Contents/Resources/Art/"
+fi
 if [[ -f Resources/AppIcon.icns ]]; then
     cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 fi

@@ -16,7 +16,8 @@ It is also a hiding spot. Drop files in, close the door, and your desktop is cle
 - **Close it:** click again, or push the door shut. The latch catches it.
 - **Read a letter:** click the letter sticking out of the slot. It comes out in its envelope: the wax seal pops, the flap opens and the letter slides out. Older letters are inside the box; open the door and click one.
 - **Write back:** press **Write back** on a letter. Your reply is kept on this Mac, in `~/Mailbox/.replies`. Nothing is sent anywhere.
-- **Hide files:** drag files or folders onto the mailbox. The door opens for you. Drag them back out, or right-click and choose **Put Back** to return a file to where it came from, even its old spot on the desktop.
+- **Post files:** drag files or folders onto the box. The hood over the slot lifts, and each one goes in as a parcel with its name on it.
+- **The tray:** open the door and a tray slides out beside the box with every letter and parcel. Click a letter to read it. Double-click a parcel to open it, drag it out to take it back, or right-click and choose **Put Back** to return it to where it came from, even its old spot on the desktop.
 - **Move it:** hold Option and Command and drag.
 - **How often letters come:** right-click, then **Letters**. About once a day, a few times a week, about once a week, or paused.
 - **Clean up:** press **Throw away** on a letter, or right-click and choose **Throw Away Read Letters**.
@@ -76,7 +77,7 @@ Every sound is made in code, so there are no audio files to license. To use a re
 
 ## Art
 
-All art is drawn in code in `Sources/DesktopMailbox/MailboxArt.swift`. To export it:
+The art is drawn in code in `Sources/DesktopMailbox/MailboxArt.swift`. Painted art can replace it piece by piece: see [`Resources/Art/README.md`](Resources/Art/README.md). To export the code-drawn art:
 
 ```sh
 swift build

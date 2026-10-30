@@ -24,6 +24,10 @@ final class MailboxView: NSView, NSDraggingSource {
     let store: FileStore
     let post: PostOffice
     weak var delegate: MailboxViewDelegate?
+    /// The door opened (true) or closed (false).
+    var onDoorChange: ((Bool) -> Void)?
+    /// Letters or files changed.
+    var onContentsChange: (() -> Void)?
 
     private var door = DoorModel()
     private var closingByClick = false
@@ -171,12 +175,13 @@ final class MailboxView: NSView, NSDraggingSource {
         guard scale != renderedScale else { return }
         renderedScale = scale
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        baseLayer.contents = MailboxArt.base(scale: scale)
-        interiorLayer.contents = MailboxArt.interior(scale: scale)
-        bodyLayer.contents = MailboxArt.body(scale: scale)
-        hoodLayer.contents = MailboxArt.hood(scale: scale)
-        doorFront.contents = MailboxArt.doorFront(scale: scale)
-        doorBack.contents = MailboxArt.doorBack(scale: scale)
+        // Painted art in Resources/Art wins; otherwise the art drawn in code.
+        baseLayer.contents = ArtFiles.image("base") ?? MailboxArt.base(scale: scale)
+        interiorLayer.contents = ArtFiles.image("interior") ?? MailboxArt.interior(scale: scale)
+        bodyLayer.contents = ArtFiles.image("box") ?? MailboxArt.body(scale: scale)
+        hoodLayer.contents = ArtFiles.image("hood") ?? MailboxArt.hood(scale: scale)
+        doorFront.contents = ArtFiles.image("door-front") ?? MailboxArt.doorFront(scale: scale)
+        doorBack.contents = ArtFiles.image("door-back") ?? MailboxArt.doorBack(scale: scale)
         for l in [rig, baseLayer, boxLayer, interiorLayer, itemsLayer, bodyLayer, peekClip, peekLayer, hoodLayer,
                   doorFront, doorShade, doorBack] {
             l.contentsScale = scale
@@ -262,6 +267,7 @@ final class MailboxView: NSView, NSDraggingSource {
         }
         CATransaction.commit()
         refreshToolTips()
+        onContentsChange?()
     }
 
     private func makeItemLayer(_ item: Item) -> CALayer {
@@ -277,11 +283,9 @@ final class MailboxView: NSView, NSDraggingSource {
             l.setAffineTransform(CGAffineTransform(rotationAngle: tilt))
         case .file(let f):
             let icon = NSWorkspace.shared.icon(forFile: store.url(of: f).path)
-            var rect = CGRect(x: 0, y: 0, width: 64, height: 64)
-            l.contents = icon.cgImage(forProposedRect: &rect, context: nil, hints: nil)
-            l.shadowOpacity = 0.35
-            l.shadowRadius = 2
-            l.shadowOffset = CGSize(width: 0, height: -1.5)
+            l.contents = MailboxArt.parcel(name: f.name, icon: icon, scale: renderedScale * 1.2)
+            let tilt = CGFloat(Int(f.name.utf8.reduce(0) { $0 + Int($1) }) % 7 - 3) * 0.02
+            l.setAffineTransform(CGAffineTransform(rotationAngle: tilt))
         }
         return l
     }
@@ -419,6 +423,7 @@ final class MailboxView: NSView, NSDraggingSource {
         } else {
             refreshToolTips()
         }
+        onDoorChange?(open)
     }
 
     func toggleDoor() {
@@ -547,6 +552,18 @@ final class MailboxView: NSView, NSDraggingSource {
     }
 
     #if DEBUG
+    /// For test scripts: post files as if they were dropped on the box.
+    func postForTest(_ urls: [URL]) {
+        let names = urls.map(\.lastPathComponent)
+        let icons = urls.map { NSWorkspace.shared.icon(forFile: $0.path) }
+        liftHood(true)
+        store.store(urls) { [weak self] in
+            self?.liftHood(false)
+            self?.postAnimation(names: names, icons: icons)
+            self?.layoutItems()
+        }
+    }
+
     /// For test scripts: open the letter in the slot as if it were clicked.
     func openWaiting(_ id: String) { delegate?.openLetter(id, replying: false, from: peekScreenRect) }
     #endif
@@ -582,10 +599,57 @@ final class MailboxView: NSView, NSDraggingSource {
         (info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []
     }
 
+    /// Files are posted through the slot: the hood lifts while something is held over the box.
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard (sender.draggingSource as AnyObject?) !== self, !fileURLs(sender).isEmpty else { return [] }
-        openDoor()
+        liftHood(true)
         return .move
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) { liftHood(false) }
+
+    private func liftHood(_ up: Bool) {
+        let a = CABasicAnimation(keyPath: "transform")
+        a.fromValue = NSValue(caTransform3D: hoodLayer.presentation()?.transform ?? hoodLayer.transform)
+        let t = up ? CATransform3DMakeTranslation(0, 3, 0) : CATransform3DIdentity
+        a.toValue = NSValue(caTransform3D: t)
+        a.duration = 0.15
+        hoodLayer.add(a, forKey: "lift")
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        hoodLayer.transform = t
+        CATransaction.commit()
+        if up { Sounds.play(.seal, volume: 0.25) }
+    }
+
+    /// A parcel with the file's name slides up into the slot and disappears.
+    private func postAnimation(names: [String], icons: [NSImage]) {
+        for (i, name) in names.prefix(4).enumerated() {
+            let l = CALayer()
+            l.contentsScale = renderedScale
+            l.contents = MailboxArt.parcel(name: name, icon: icons[i], size: Geo.peek.size, scale: renderedScale)
+            l.bounds = CGRect(origin: .zero, size: CGSize(width: Geo.peek.width, height: Geo.peek.height + 8))
+            let rest = CGPoint(x: Geo.peek.midX, y: Geo.peek.midY + 40)
+            l.position = rest
+            l.opacity = 0
+            peekClip.addSublayer(l)
+            let start = CACurrentMediaTime() + Double(i) * 0.22
+            let move = CAKeyframeAnimation(keyPath: "position.y")
+            move.values = [rest.y - 60, rest.y - 52, rest.y].map { NSNumber(value: Double($0)) }
+            move.keyTimes = [0, 0.35, 1]
+            let fade = CAKeyframeAnimation(keyPath: "opacity")
+            fade.values = [0, 1, 1]
+            fade.keyTimes = [0, 0.2, 1]
+            let group = CAAnimationGroup()
+            group.animations = [move, fade]
+            group.beginTime = start
+            group.duration = 0.55
+            group.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            group.fillMode = .both
+            group.isRemovedOnCompletion = false
+            l.add(group, forKey: "post")
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.22 + 0.4) { Sounds.play(.arrive, volume: 0.6) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.22 + 0.7) { l.removeFromSuperlayer() }
+        }
     }
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
@@ -595,8 +659,11 @@ final class MailboxView: NSView, NSDraggingSource {
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         let urls = fileURLs(sender)
         guard !urls.isEmpty else { return false }
+        liftHood(false)
+        let names = urls.map(\.lastPathComponent)
+        let icons = urls.map { NSWorkspace.shared.icon(forFile: $0.path) }
         store.store(urls) { [weak self] in
-            Sounds.play(.drop, volume: 0.7)
+            self?.postAnimation(names: names, icons: icons)
             self?.layoutItems()
         }
         return true
