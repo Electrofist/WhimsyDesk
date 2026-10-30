@@ -21,6 +21,7 @@
 </p>
 
 <p align="center">
+  <a href="https://whimsydesk.art"><b>whimsydesk.art</b></a> &nbsp;·&nbsp;
   <a href="https://github.com/Electrofist/whimsydesk/releases/latest"><b>Download</b></a> &nbsp;·&nbsp;
   <a href="#the-objects">Objects</a> &nbsp;·&nbsp;
   <a href="#get-started">Get started</a> &nbsp;·&nbsp;
