@@ -2,15 +2,19 @@ import AppKit
 
 /// Layout of the machine, in points. Origin at the bottom left of the window, y up.
 enum Geo {
-    static let size = CGSize(width: 360, height: 520)
+    /// The machine grows taller with each shelf; the shelves never get squeezed.
+    static let rowHeight: CGFloat = 96
+    static var shelvesHeight: CGFloat { rowHeight * CGFloat(rows.count) }
+
+    static let size = CGSize(width: 360, height: 232 + shelvesHeight)
 
     /// The rounded body, seen from the front. Its right side shows a little, `side` deep.
-    static let body = CGRect(x: 20, y: 30, width: 310, height: 474)
+    static let body = CGRect(x: 20, y: 30, width: 310, height: 186 + shelvesHeight)
     static let bodyRadius: CGFloat = 38
     static let side: CGFloat = 9
 
-    /// The window. Three shelves of files stand behind it.
-    static let glass = CGRect(x: 42, y: 196, width: 266, height: 288)
+    /// The window. Four shelves of files stand behind it, A at the top to D at the bottom.
+    static let glass = CGRect(x: 42, y: 196, width: 266, height: shelvesHeight)
 
     /// The little screen between the window and the bin, and the lamp beside it.
     static let display = CGRect(x: 112, y: 152, width: 126, height: 24)
@@ -21,10 +25,9 @@ enum Geo {
 
     // MARK: Slots
 
-    static let rows = ["A", "B", "C"]
-    static let columns = 4
+    static let rows = ["A", "B", "C", "D"]
+    static let columns = 3
     static var slotCount: Int { rows.count * columns }
-    static let rowHeight: CGFloat = glass.height / CGFloat(rows.count)
     static let columnWidth: CGFloat = glass.width / CGFloat(columns)
     static let iconSize: CGFloat = 44
     /// Height of the shelf front, where the button and the name sit.
