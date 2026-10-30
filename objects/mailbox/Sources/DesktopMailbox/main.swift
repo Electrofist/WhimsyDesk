@@ -66,7 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MailboxViewDelegate {
 
     #if DEBUG
     /// Debug builds only: drive the mailbox from a script without clicking.
-    /// Commands: toggle, deliver, read:<id>, reply:<id>, close-letter.
+    /// Commands: toggle, deliver, letters, read:<id>, reply:<id>, close-letter.
     private func listenForTestCommands() {
         DistributedNotificationCenter.default().addObserver(forName: Notification.Name("io.github.electrofist.mailbox.test"),
                                                             object: nil, queue: .main) { [weak self] note in
@@ -75,6 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MailboxViewDelegate {
             case "toggle": self.view?.toggleDoor()
             case "slot": if let id = self.post?.inbox.last(where: { !$0.read })?.id { self.view?.openWaiting(id) }
             case "deliver": self.post?.deliverNow()
+            case "letters": if let v = self.view { v.showLetterList(at: NSPoint(x: v.bounds.midX, y: v.bounds.midY)) }
             case "close-letter": self.letterWindow?.putAway()
             default:
                 if command.hasPrefix("sounds:") { Sounds.export(to: URL(fileURLWithPath: String(command.dropFirst(7)))) }

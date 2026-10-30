@@ -14,7 +14,7 @@ It is also a hiding spot. Drop files in, close the door, and your desktop is cle
 
 - **Open the door:** click the door. Or grab it and swing it. It slows on its hinges and bounces off its stop.
 - **Close it:** click again, or push the door shut. The latch catches it.
-- **Read a letter:** click the letter sticking out of the slot. It comes out in its envelope: the wax seal pops, the flap opens and the letter slides out. Letters you have read are under **Your Letters** in the right-click menu.
+- **Read a letter:** click the letter sticking out of the slot. It comes out in its envelope: the wax seal pops, the flap opens and the letter slides out. To see every letter that has come, click the envelope on the front of the box, or choose **Your Letters** in the right-click menu.
 - **Write back:** press **Write back** on a letter. Your reply is kept on this Mac, in `~/Mailbox/.replies`. Nothing is sent anywhere.
 - **Hide files:** drag files or folders onto the box. The door swings open and they land on the floor and the two shelves, as their own icons. It holds 24.
 - **See a file:** click it to see its name. Press Space to preview it, like in Finder. Double-click to open it.

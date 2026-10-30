@@ -61,7 +61,7 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     /// The letter sticking out of the slot, if any.
     private var waitingID: String?
 
-    private enum Grab { case none, door(fraction: CGFloat), item(Item, CGRect), peek, resize(start: CGPoint, scale: CGFloat), pole(start: CGPoint, extra: CGFloat), move(start: CGPoint, origin: CGPoint) }
+    private enum Grab { case none, door(fraction: CGFloat), item(Item, CGRect), peek, resize(start: CGPoint, scale: CGFloat), pole(start: CGPoint, extra: CGFloat), move(start: CGPoint, origin: CGPoint), emblem }
 
     // MARK: Size
 
@@ -574,7 +574,10 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         downPoint = p
         dragged = false
         if slot(at: p) == nil { select(nil) }
-        if peekHit(p) && !(door.angle > 0.2 && doorHit(p)) {
+        if Self.emblem.insetBy(dx: -6, dy: -6).contains(p) {
+            grab = .emblem
+            pressEmblem()
+        } else if peekHit(p) && !(door.angle > 0.2 && doorHit(p)) {
             grab = .peek
         } else if let s = slot(at: p) {
             grab = .item(s.item, s.rect)
@@ -632,6 +635,8 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
             } else {
                 toggleDoor()
             }
+        case .emblem:
+            showLetterList(at: convert(event.locationInWindow, from: nil))
         case .peek:
             if let id = waitingID {
                 let rect = peekScreenRect
@@ -685,6 +690,60 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     func letterTaken() {
         layoutItems()
         updateWaiting(animated: true)
+    }
+
+    /// The envelope emblem on the front. Clicking it lists the letters that have come, newest first.
+    static let emblem = CGRect(x: Geo.box.midX - 18, y: 362, width: 36, height: 23)
+    /// A hidden extra (`defaults write io.github.electrofist.mailbox emblemButton -bool true`):
+    /// the list also offers a letter right away.
+    private var emblemButton: Bool { UserDefaults.standard.bool(forKey: "emblemButton") }
+
+    /// The letters that have come, newest first, in a small menu by the emblem.
+    func showLetterList(at point: NSPoint) {
+        let menu = NSMenu()
+        let arrived = post.inbox.sorted { $0.deliveredAt > $1.deliveredAt }
+        if arrived.isEmpty {
+            let none = NSMenuItem(title: "No letters yet. The first one is on its way.", action: nil, keyEquivalent: "")
+            none.isEnabled = false
+            menu.addItem(none)
+        } else {
+            let head = NSMenuItem(title: "Your Letters", action: nil, keyEquivalent: "")
+            head.isEnabled = false
+            menu.addItem(head)
+            let dateText = DateFormatter()
+            dateText.dateStyle = .medium
+            dateText.timeStyle = .none
+            for d in arrived {
+                guard let letter = post.letter(d.id) else { continue }
+                let name = letter.title ?? "From \(letter.from)"
+                let item = ActionItem(d.read ? name : "New: \(name)") { [weak self] in
+                    guard let self else { return }
+                    self.delegate?.openLetter(d.id, replying: false, from: d.id == self.waitingID ? self.peekScreenRect : nil)
+                }
+                item.toolTip = "Arrived \(dateText.string(from: d.deliveredAt))"
+                menu.addItem(item)
+            }
+        }
+        if emblemButton {
+            menu.addItem(.separator())
+            menu.addItem(ActionItem("Bring a Letter Now") { [weak self] in self?.post.deliverNow() })
+        }
+        menu.popUp(positioning: nil, at: point, in: self)
+    }
+
+    /// A small press: the emblem glows for a moment.
+    private func pressEmblem() {
+        let glow = CALayer()
+        glow.frame = Self.emblem.insetBy(dx: -8, dy: -8)
+        glow.cornerRadius = 10
+        glow.backgroundColor = Paint.hex(0xFFE9C8, 0.35)
+        boxLayer.addSublayer(glow)
+        let fade = CABasicAnimation(keyPath: "opacity")
+        fade.fromValue = 1; fade.toValue = 0; fade.duration = 0.45
+        fade.fillMode = .forwards; fade.isRemovedOnCompletion = false
+        glow.add(fade, forKey: "fade")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { glow.removeFromSuperlayer() }
+        Sounds.play(.seal, volume: 0.4)
     }
 
     // MARK: Putting files in
