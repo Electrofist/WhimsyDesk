@@ -58,15 +58,15 @@ Each object is a small, standalone Mac app. Free, open source and made to be rem
   </tr>
   <tr>
     <td align="center" width="25%">
-      <img src="objects/vending/media/logo.png" alt="Vending Machine" width="190"><br>
+      <img src="objects/vending/media/icon.png" alt="Desktop Vending Machine icon" width="112"><br>
       <b>Desktop Vending Machine</b><br>
       <sub>Files on little shelves. Press a button and one drops.</sub><br><br>
       <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Vending-Machine.dmg"><b>Download</b></a> &nbsp;·&nbsp; <a href="#desktop-vending-machine">Details</a>
     </td>
     <td align="center" width="25%">
-      <img src="objects/vending-keypad/media/logo.png" alt="Vending Machine 2" width="190"><br>
-      <b>Desktop Vending Machine 2</b><br>
-      <sub>The keypad version. Type a code and one drops.</sub><br><br>
+      <img src="objects/vending-keypad/media/icon.png" alt="Desktop Vending Machine Keypad icon" width="112"><br>
+      <b>Desktop Vending Machine Keypad</b><br>
+      <sub>The same machine with a keypad. Type a code and one drops.</sub><br><br>
       <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Vending-Machine-Keypad.dmg"><b>Download</b></a> &nbsp;·&nbsp; <a href="#desktop-vending-machine">Details</a>
     </td>
     <td align="center" width="25%">
