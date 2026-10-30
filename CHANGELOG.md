@@ -12,6 +12,10 @@ Each object keeps its own version in its `object.json`. Entries are grouped by o
 - Added downloads: `scripts/release.sh` and a release workflow that publishes a DMG and zip per object when a tag like `fridge-v1.0` is pushed. Signs and notarizes once Apple Developer secrets are added.
 - Added `scripts/make-icon.swift` and a Phoenix Code section in the guide, pointing to the Desktop Objects Studio extension.
 
+### Desktop Mailbox 1.0
+- First release. A red post box for your desktop: handpicked letters arrive now and then through the slot, including short real letters from history. Store up to 24 files on its shelves, with Put Back.
+- Click the envelope on the front to see every letter that has come.
+
 ### Desktop Fridge 1.2
 - New green fridge icon.
 
