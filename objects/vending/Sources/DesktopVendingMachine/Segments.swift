@@ -1,9 +1,9 @@
 import AppKit
 
-/// The two-line amber display, drawn as fourteen-segment characters. Unlit segments show faintly,
+/// The little green screen, drawn as fourteen-segment characters. Unlit segments show faintly,
 /// like on the real thing. Redrawn only when the text changes.
 enum Segments {
-    static let columns = 10
+    static let columns = 15
 
     // Segment ends inside a character cell, from the corners, edge middles and centre.
     private enum P { case tl, tc, tr, ml, c, mr, bl, bc, br }
@@ -30,36 +30,42 @@ enum Segments {
         return String(folded.map { font[$0] != nil ? $0 : " " })
     }
 
-    static func render(_ lines: [String], scale: CGFloat) -> CGImage? {
+    /// One centred line of green characters. Longer text is cut to fit.
+    static func render(_ line: String, scale: CGFloat) -> CGImage? {
         let size = Geo.display.size
         return Paint.render(size, scale: scale) { ctx in
-            let cell = CGSize(width: 5.4, height: 11)
-            let advance: CGFloat = 7.3
+            let r = CGRect(origin: .zero, size: size)
+            ctx.addPath(Paint.rounded(r, 5)); ctx.clip()
+            Paint.fill(ctx, CGPath(rect: r, transform: nil), Paint.gradient([(0, Paint.hex(0x14261A)), (1, Paint.hex(0x0B160E))]),
+                       from: CGPoint(x: 0, y: size.height), to: .zero)
+            let cell = CGSize(width: 5.2, height: 10.5)
+            let advance: CGFloat = 7.9
             let left = (size.width - advance * CGFloat(columns - 1) - cell.width) / 2
-            let baselines: [CGFloat] = [size.height - 6 - cell.height, 6]
-            let lit = Paint.hex(0xFFB547)
+            let y = (size.height - cell.height) / 2
+            var text = Array(clean(line).trimmingCharacters(in: .whitespaces))
+            if text.count > columns { text = Array(text.prefix(columns - 1)) + ["-"] }
+            let pad = (columns - text.count) / 2
+            let lit = Paint.hex(0x8DFFA6)
             ctx.setLineCap(.round)
-            for (row, y) in baselines.enumerated() {
-                let text = Array(row < lines.count ? clean(lines[row]) : "")
-                for col in 0..<columns {
-                    let origin = CGPoint(x: left + CGFloat(col) * advance, y: y)
-                    let on = col < text.count ? (font[text[col]] ?? "") : ""
-                    for (name, ends) in segments {
-                        let path = segment(ends, origin: origin, cell: cell)
-                        if on.contains(name) {
-                            ctx.saveGState()
-                            ctx.setShadow(offset: .zero, blur: 3, color: Paint.hex(0xFF9A2E, 0.9))
-                            Paint.stroke(ctx, path, lit, 1.15)
-                            ctx.restoreGState()
-                        } else {
-                            Paint.stroke(ctx, path, Paint.hex(0xFFB547, 0.07), 1.15)
-                        }
+            for col in 0..<columns {
+                let origin = CGPoint(x: left + CGFloat(col) * advance, y: y)
+                let n = col - pad
+                let on = n >= 0 && n < text.count ? (font[text[n]] ?? "") : ""
+                for (name, ends) in segments {
+                    let path = segment(ends, origin: origin, cell: cell)
+                    if on.contains(name) {
+                        ctx.saveGState()
+                        ctx.setShadow(offset: .zero, blur: 3, color: Paint.hex(0x3DFF73, 0.8))
+                        Paint.stroke(ctx, path, lit, 1.15)
+                        ctx.restoreGState()
+                    } else {
+                        Paint.stroke(ctx, path, Paint.hex(0x8DFFA6, 0.06), 1.15)
                     }
                 }
             }
-            // A faint reflection on the display glass.
+            // A faint reflection on the screen.
             Paint.fill(ctx, CGPath(rect: CGRect(x: 0, y: size.height * 0.55, width: size.width, height: size.height * 0.45), transform: nil),
-                       Paint.hex(0xFFFFFF, 0.035))
+                       Paint.hex(0xFFFFFF, 0.04))
         }
     }
 

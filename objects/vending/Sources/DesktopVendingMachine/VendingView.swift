@@ -4,39 +4,54 @@ import Quartz
 
 /// The vending machine on the desktop. Layer-hosting: all art is cached in layers, and the display
 /// link only runs while something moves.
+///
+/// How it is used: drop files on the window and each one stands on a shelf. Press the button under
+/// a file and it is pushed off the shelf, falls, and lands in the bin. Take it from the bin.
 final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     let store: FileStore
 
     private let rig = CALayer()
     private let shadowLayer = CALayer()
-    private let cabinetLayer = CALayer()
+    private let bodyLayer = CALayer()
     private let trayLayer = CALayer()
-    private let backCoils = CALayer()
-    /// Holds the file icons. Masked to the window and the tray, so a falling file passes
-    /// behind the cabinet front between them.
+    /// Holds the file icons. Masked to the window and the bin, so a falling file passes behind
+    /// the body between them.
     private let itemsLayer = CALayer()
-    private let frontCoils = CALayer()
     private let labelsLayer = CALayer()
-    /// A file that has left its coil falls here, in front of the coils and shelf edges.
+    private let buttonsLayer = CALayer()
+    /// Outlines showing where dropped files will stand.
+    private let ghostsLayer = CALayer()
+    /// A file pushed off its shelf falls here, in front of the shelves and buttons.
     private let dropLayer = CALayer()
     private let glassLayer = CALayer()
     private let flapHolder = CALayer()
     private let flapLayer = CALayer()
-    private let panelLayer = CALayer()
     private let displayLayer = CALayer()
-    private var coilBackLayers: [CALayer] = []
-    private var coilFrontLayers: [CALayer] = []
+    private let nameTag = CATextLayer()
     private var labelLayers: [CALayer] = []
-    private var keyLayers: [CALayer] = []
+    private var buttonLayers: [CALayer] = []
+    private var ghostLayers: [CAShapeLayer] = []
+    private var buttonImages: [VendingArt.ButtonState: CGImage] = [:]
     private var itemLayers: [String: CALayer] = [:]
     private var renderedScale: CGFloat = 0
-    private var displayLines: [String] = []
+    private var displayText = ""
     private var idleWork: DispatchWorkItem?
 
-    /// How far each coil has turned, in radians. Only the picture turns; a full turn looks the same.
-    private var coilAngles = [CGFloat](repeating: 0, count: Geo.slotCount)
     /// Files whose layers a motion is moving right now; layout leaves them alone.
     private var moving = Set<String>()
+    /// A file is being pushed or is falling; the buttons wait.
+    private var vending = false
+    /// The file being pushed toward the shelf edge. Its name and button stay until it falls.
+    private var pushing: (slot: Int, name: String)?
+    /// The slot under the pointer, and the button held down.
+    private var hovered: Int?
+    private var pressedButton: Int?
+    private var selectedName: String?
+
+    /// The bin flap: how far it has swung out (radians) and how fast.
+    private var flapAngle = 0.0
+    private var flapSpeed = 0.0
+    private var flapMoving = false
 
     // MARK: Motion
 
@@ -51,23 +66,11 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     /// Lock or sleep: everything holds still where it is until it ends.
     private var paused = false
 
-    /// The code being typed on the keypad.
-    private var entryLetter: String?
-    private var entryDigit: Int?
-    /// A coil is turning or a file is falling; the keypad waits.
-    private var vending = false
     /// What the mouse is holding.
-    private enum Grab { case none, key(Int), item(StoredItem, CGRect), move(start: CGPoint, origin: CGPoint), resize(start: CGPoint, scale: CGFloat) }
+    private enum Grab { case none, button(Int), item(StoredItem, CGRect), move(start: CGPoint, origin: CGPoint), resize(start: CGPoint, scale: CGFloat) }
     private var grab = Grab.none
     private var downPoint = CGPoint.zero
     private var dragged = false
-    private var selectedName: String?
-    private let nameTag = CATextLayer()
-
-    /// The tray flap: how far it has swung out (radians) and how fast.
-    private var flapAngle = 0.0
-    private var flapSpeed = 0.0
-    private var flapMoving = false
 
     // MARK: Size
 
@@ -94,7 +97,7 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         wantsLayer = true
         buildLayers()
         registerForDraggedTypes([.fileURL])
-        displayLines = idleLines
+        displayText = idleText
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
         setAccessibilityLabel("Vending machine")
@@ -106,7 +109,8 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
 
     private static let still: [String: CAAction] = ["position": NSNull(), "bounds": NSNull(), "transform": NSNull(),
                                                      "opacity": NSNull(), "contents": NSNull(), "hidden": NSNull(),
-                                                     "sublayers": NSNull(), "frame": NSNull(), "contentsRect": NSNull()]
+                                                     "sublayers": NSNull(), "frame": NSNull(), "contentsRect": NSNull(),
+                                                     "backgroundColor": NSNull(), "path": NSNull()]
 
     private func buildLayers() {
         guard let root = layer else { return }
@@ -116,17 +120,21 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         rig.position = .zero
         root.addSublayer(rig)
 
-        for l in [shadowLayer, cabinetLayer, backCoils, itemsLayer, frontCoils, labelsLayer, dropLayer] {
+        for l in [shadowLayer, bodyLayer] {
             l.frame = full
             rig.addSublayer(l)
         }
-        rig.insertSublayer(trayLayer, above: cabinetLayer)
         trayLayer.frame = Geo.tray
+        rig.addSublayer(trayLayer)
+        for l in [itemsLayer, labelsLayer, buttonsLayer, ghostsLayer, dropLayer] {
+            l.frame = full
+            rig.addSublayer(l)
+        }
 
-        // Files show only through the window and the tray opening.
+        // Files show only through the window and the bin opening.
         let openings = CGMutablePath()
-        openings.addRect(Geo.glass)
-        openings.addRect(Geo.tray)
+        openings.addPath(Paint.rounded(Geo.glass, 15))
+        openings.addPath(Paint.rounded(Geo.tray, 14))
         var perspective = CATransform3DIdentity
         perspective.m34 = -1 / 600
         for l in [itemsLayer, dropLayer] {
@@ -136,22 +144,26 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
             l.sublayerTransform = perspective
         }
 
-        let labelMask = CAShapeLayer()
-        labelMask.path = CGPath(rect: Geo.glass, transform: nil)
-        labelsLayer.mask = labelMask
-
         for i in 0..<Geo.slotCount {
-            let back = CALayer(), front = CALayer()
-            for l in [back, front] { l.frame = Geo.coilRect(i) }
-            backCoils.addSublayer(back)
-            frontCoils.addSublayer(front)
-            coilBackLayers.append(back)
-            coilFrontLayers.append(front)
-
             let label = CALayer()
             label.frame = Geo.labelRect(i)
             labelsLayer.addSublayer(label)
             labelLayers.append(label)
+
+            let button = CALayer()
+            button.frame = Geo.buttonRect(i)
+            buttonsLayer.addSublayer(button)
+            buttonLayers.append(button)
+
+            let ghost = CAShapeLayer()
+            ghost.path = Paint.rounded(Geo.slotRect(i), 10)
+            ghost.fillColor = Paint.hex(0xFFFFFF, 0.28)
+            ghost.strokeColor = Paint.hex(0xE8401E, 0.8)
+            ghost.lineWidth = 1.5
+            ghost.lineDashPattern = [5, 3]
+            ghost.isHidden = true
+            ghostsLayer.addSublayer(ghost)
+            ghostLayers.append(ghost)
         }
 
         glassLayer.frame = Geo.glass
@@ -166,20 +178,11 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         flapHolder.addSublayer(flapLayer)
         rig.addSublayer(flapHolder)
 
-        panelLayer.frame = Geo.panel
-        rig.addSublayer(panelLayer)
-        for (_, rect) in Geo.keys {
-            let k = CALayer()
-            k.frame = rect.insetBy(dx: -2, dy: -2.5)
-            k.isHidden = true
-            rig.addSublayer(k)
-            keyLayers.append(k)
-        }
         displayLayer.frame = Geo.display
         rig.addSublayer(displayLayer)
 
-        for l in [rig, shadowLayer, cabinetLayer, trayLayer, backCoils, itemsLayer, frontCoils, labelsLayer, dropLayer, glassLayer,
-                  flapHolder, flapLayer, panelLayer, displayLayer] + coilBackLayers + coilFrontLayers + keyLayers + labelLayers {
+        for l in [rig, shadowLayer, bodyLayer, trayLayer, itemsLayer, labelsLayer, buttonsLayer, ghostsLayer, dropLayer,
+                  glassLayer, flapHolder, flapLayer, displayLayer] + labelLayers + buttonLayers + ghostLayers {
             l.actions = Self.still
         }
     }
@@ -191,6 +194,7 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        window?.acceptsMouseMovedEvents = true
         renderArt()
     }
 
@@ -219,36 +223,27 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         CATransaction.begin(); CATransaction.setDisableActions(true)
         // Painted art in Resources/Art wins; otherwise the art drawn in code.
         shadowLayer.contents = ArtFiles.image("shadow") ?? VendingArt.shadow(scale: scale)
-        cabinetLayer.contents = ArtFiles.image("cabinet") ?? VendingArt.cabinet(scale: scale)
-        trayLayer.contents = ArtFiles.image("tray") ?? VendingArt.tray(scale: scale)
+        bodyLayer.contents = ArtFiles.image("body") ?? VendingArt.body(scale: scale)
+        trayLayer.contents = ArtFiles.image("bin") ?? VendingArt.tray(scale: scale)
         glassLayer.contents = ArtFiles.image("glass") ?? VendingArt.glass(scale: scale)
         flapLayer.contents = ArtFiles.image("flap") ?? VendingArt.flap(scale: scale)
-        panelLayer.contents = ArtFiles.image("panel") ?? VendingArt.panel(pressed: false, scale: scale)
-        let back = ArtFiles.image("coil-back") ?? VendingArt.coil(front: false, scale: scale)
-        let front = ArtFiles.image("coil-front") ?? VendingArt.coil(front: true, scale: scale)
-        for l in coilBackLayers { l.contents = back }
-        for l in coilFrontLayers { l.contents = front }
-        // Each key's pushed-in look is cut out of a picture of the whole panel with every key pressed.
-        let pressed = ArtFiles.image("keys-pressed") ?? VendingArt.panel(pressed: true, scale: scale)
-        for l in keyLayers {
-            l.contents = pressed
-            let f = l.frame, p = Geo.panel
-            l.contentsRect = CGRect(x: (f.minX - p.minX) / p.width, y: 1 - (f.maxY - p.minY) / p.height,
-                                    width: f.width / p.width, height: f.height / p.height)
+        let names: [VendingArt.ButtonState: String] = [.empty: "button-empty", .ready: "button", .hover: "button-hover", .pressed: "button-pressed"]
+        for state in VendingArt.ButtonState.allCases {
+            buttonImages[state] = ArtFiles.image(names[state]!) ?? VendingArt.button(state, scale: scale)
         }
-        for l in [rig, shadowLayer, cabinetLayer, trayLayer, backCoils, itemsLayer, frontCoils, labelsLayer, dropLayer, glassLayer,
-                  flapHolder, flapLayer, panelLayer, displayLayer] + coilBackLayers + coilFrontLayers + keyLayers + labelLayers {
+        for l in [rig, shadowLayer, bodyLayer, trayLayer, itemsLayer, labelsLayer, buttonsLayer, ghostsLayer, dropLayer,
+                  glassLayer, flapHolder, flapLayer, displayLayer] + labelLayers + buttonLayers {
             l.contentsScale = scale
         }
         for l in itemLayers.values { l.contentsScale = scale }
         CATransaction.commit()
         layoutItems()
-        showDisplay(displayLines)
+        showDisplay(displayText)
     }
 
-    // MARK: Files in coils and in the tray
+    // MARK: Files on the shelves and in the bin
 
-    /// Puts each file's icon in its coil or in the tray. Files that are moving are left alone.
+    /// Puts each file's icon on its shelf or in the bin. Files that are moving are left alone.
     func layoutItems(animated: Bool = false) {
         let tray = store.trayItems
         CATransaction.begin(); CATransaction.setDisableActions(true)
@@ -260,12 +255,12 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
             if l.superlayer == nil { itemsLayer.addSublayer(l) }
             guard !moving.contains(item.name) else { continue }
             if let slot = item.slot, let i = Geo.index(of: slot) {
-                place(l, in: Geo.iconRect(i))
+                place(l, in: Geo.iconRect(i), pose: Pose(scale: hovered == i ? 1.06 : 1))
             } else if let n = tray.firstIndex(of: item) {
                 let before = l.position
                 place(l, in: Geo.traySpot(n, of: tray.count), pose: Self.trayPose(item.name))
                 if animated && before != l.position && before != .zero {
-                    // The others in the tray shuffle along to make room.
+                    // The others in the bin shuffle along to make room.
                     let slide = CABasicAnimation(keyPath: "position")
                     slide.fromValue = NSValue(point: before)
                     slide.duration = 0.22
@@ -279,9 +274,8 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
             itemLayers[name] = nil
             moving.remove(name)
         }
-        for (i, angle) in coilAngles.enumerated() { turnCoil(i, to: angle) }
         CATransaction.commit()
-        refreshLabels()
+        refreshShelves()
     }
 
     private func makeItemLayer(_ item: StoredItem) -> CALayer {
@@ -291,12 +285,17 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         l.bounds = CGRect(x: 0, y: 0, width: Geo.iconSize, height: Geo.iconSize)
         l.contentsGravity = .resizeAspect
         l.contentsScale = renderedScale
+        l.cornerRadius = 8
         let icon = NSWorkspace.shared.icon(forFile: store.url(of: item).path)
         var rect = CGRect(x: 0, y: 0, width: 128, height: 128)
         l.contents = icon.cgImage(forProposedRect: &rect, context: nil, hints: nil)
-        l.shadowOpacity = 0.45
-        l.shadowRadius = 1.5
-        l.shadowOffset = CGSize(width: 0, height: -1)
+        // A soft contact shadow where it stands, rather than a floating drop shadow.
+        let s = Geo.iconSize
+        l.shadowPath = CGPath(ellipseIn: CGRect(x: s * 0.14, y: -2.5, width: s * 0.76, height: 6), transform: nil)
+        l.shadowOpacity = 0.38
+        l.shadowRadius = 2.4
+        l.shadowOffset = CGSize(width: 1, height: 0)
+        l.shadowColor = Paint.hex(0x2A2116)
         return l
     }
 
@@ -312,17 +311,25 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         l.transform = t
     }
 
-    /// Files in the tray lean a little, each its own way.
+    /// Files in the bin lie a little crooked, each its own way.
     private static func trayPose(_ name: String) -> Pose {
         let h = name.utf8.reduce(5381) { ($0 &* 33) &+ Int($1) }
-        return Pose(scale: 1, tip: 0.28, tilt: CGFloat(abs(h) % 17 - 8) * 0.012)
+        return Pose(scale: Geo.trayIcon / Geo.iconSize, tip: 0.22, tilt: CGFloat(abs(h) % 17 - 8) * 0.014)
     }
 
-    private func turnCoil(_ i: Int, to angle: CGFloat) {
-        coilAngles[i] = angle
-        let t = CGAffineTransform(rotationAngle: angle)
-        coilBackLayers[i].setAffineTransform(t)
-        coilFrontLayers[i].setAffineTransform(t)
+    /// Names on the shelf fronts, and each button lit if there is something to get.
+    private func refreshShelves() {
+        let scale = renderedScale == 0 ? 2 : renderedScale
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        for i in 0..<Geo.slotCount {
+            let item = store.item(in: Geo.code(i))
+            let name = pushing?.slot == i ? pushing?.name : item.flatMap { moving.contains($0.name) ? nil : $0.name }
+            labelLayers[i].contents = VendingArt.label(name: name, scale: scale)
+            let state: VendingArt.ButtonState = pressedButton == i || pushing?.slot == i ? .pressed
+                : name == nil ? .empty : (hovered == i && !vending ? .hover : .ready)
+            buttonLayers[i].contents = buttonImages[state]
+        }
+        CATransaction.commit()
     }
 
     // MARK: Moving things
@@ -374,11 +381,11 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         return x < 0.5 ? 4 * x * x * x : 1 - pow(-2 * x + 2, 3) / 2
     }
 
-    static func easeOut(_ t: Double) -> Double { 1 - pow(1 - min(max(t, 0), 1), 3) }
+    static func easeIn(_ t: Double) -> Double { let x = min(max(t, 0), 1); return x * x * x }
 
     // MARK: Putting files in
 
-    /// Moves files into free coils. A full machine rattles its glass and says so.
+    /// Moves files onto free shelf spots. A full machine rattles its glass and says so.
     func storeFiles(_ urls: [URL]) {
         let room = store.freeSlots.count
         guard room > 0 else { refuseFull(); return }
@@ -386,129 +393,113 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
             guard let self else { return }
             self.moving.formUnion(added.map(\.name))
             self.layoutItems()
-            for (n, item) in added.enumerated() { self.pullIn(item, delay: Double(n) * 0.12) }
-            if let last = added.last, let slot = last.slot { self.say([slot, Self.displayName(last.name)]) }
+            for (n, item) in added.enumerated() { self.setDown(item, delay: Double(n) * 0.09) }
+            if let last = added.last { self.say(added.count == 1 ? Self.displayName(last.name) : "\(added.count) FILES IN") }
             if urls.count > room { DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { self.refuseFull() } }
         }
     }
 
-    /// The coil gives a short turn backwards and draws the new file into place.
-    private func pullIn(_ item: StoredItem, delay: Double) {
+    /// A new file drops onto its shelf from just above, with a small bounce.
+    private func setDown(_ item: StoredItem, delay: Double) {
         guard let slot = item.slot, let i = Geo.index(of: slot), let l = itemLayers[item.name] else { return }
-        let start = coilAngles[i], rect = Geo.iconRect(i), duration = 0.5
+        let rest = Geo.iconRect(i), duration = 0.42
         l.opacity = 0
-        place(l, in: rect, pose: Pose(scale: 1.16))
         var t = -delay
         run { [weak self] dt in
             guard let self else { return true }
             t += dt
             guard t >= 0 else { return false }
-            if t - dt < 0 && delay == 0 { Sounds.play(.motorShort, volume: 0.4) }
-            let u = t / duration
-            self.turnCoil(i, to: start + CGFloat(Self.easeInOut(u)) * .pi / 2)
-            l.opacity = Float(min(1, u / 0.3))
-            self.place(l, in: rect, pose: Pose(scale: 1 + 0.16 * CGFloat(1 - Self.easeOut(u))))
+            if t - dt < 0 { Sounds.play(.plop, volume: 0.35) }
+            let u = min(1, t / duration)
+            // Falls 16 points, lands, hops a little, settles.
+            let y: Double = u < 0.55 ? 16 * (1 - pow(u / 0.55, 2)) : 3 * sin(Double.pi * (u - 0.55) / 0.45)
+            l.opacity = Float(min(1, u / 0.25))
+            let squash = u > 0.5 && u < 0.7 ? 1 - 0.06 * sin(Double.pi * (u - 0.5) / 0.2) : 1
+            var pose = Pose(scale: 1)
+            pose.scale = CGFloat(squash)
+            self.place(l, in: rest.offsetBy(dx: 0, dy: CGFloat(y)), pose: pose)
             if u >= 1 {
                 self.moving.remove(item.name)
+                self.refreshShelves()
                 return true
             }
             return false
         }
     }
 
-    // MARK: Keypad
-
-    /// A key was pressed: letters pick a row, digits a coil, OK vends.
-    func press(_ key: Geo.Key) {
-        guard !vending else { return }
-        switch key {
-        case .letter(let l):
-            entryLetter = l
-            entryDigit = nil
-            say(["\(l)_", ""], for: 8)
-        case .digit(let d):
-            guard let l = entryLetter else { say(["--", ""]); return }
-            entryDigit = d
-            let code = "\(l)\(d)"
-            say([code, store.item(in: code).map { Self.displayName($0.name) } ?? ""], for: 8)
-        case .clear:
-            entryLetter = nil
-            entryDigit = nil
-            idleWork?.cancel()
-            showDisplay(idleLines)
-        case .ok:
-            guard let l = entryLetter, let d = entryDigit else {
-                Sounds.play(.error, volume: 0.3)
-                say(["--", ""])
-                return
-            }
-            entryLetter = nil
-            entryDigit = nil
-            vend("\(l)\(d)")
-        }
-    }
-
-    private func keyIndex(at p: CGPoint) -> Int? {
-        Geo.keys.firstIndex { $0.rect.insetBy(dx: -1.5, dy: -1.5).contains(p) }
-    }
-
-    private func showKey(_ index: Int, down: Bool) {
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        keyLayers[index].isHidden = !down
-        CATransaction.commit()
+    private func refuseFull() {
+        let shake = CAKeyframeAnimation(keyPath: "position.x")
+        shake.values = [0, -2.5, 2.5, -2, 1.5, -0.8, 0].map { NSNumber(value: $0) }
+        shake.isAdditive = true
+        shake.duration = 0.38
+        glassLayer.add(shake, forKey: "full")
+        let rattle = shake.copy() as! CAKeyframeAnimation
+        rattle.values = [0, -0.8, 0.8, -0.5, 0.3, 0].map { NSNumber(value: $0) }
+        rig.add(rattle, forKey: "full")
+        Sounds.play(.rattle, volume: 0.4)
+        say("SOLD OUT")
     }
 
     // MARK: Vending
 
-    /// The heart of it: the coil turns once and pushes the file forward until it tips off the
-    /// shelf, falls, lands in the tray with a knock and a bounce, and the flap swings and settles.
-    func vend(_ code: String) {
+    /// The button under a file: it goes in, and the file is pushed off its shelf.
+    func pressButton(_ i: Int) {
         guard !vending else { return }
-        guard let i = Geo.index(of: code) else {
-            Sounds.play(.error, volume: 0.3)
-            say(["--", ""])
+        vend(Geo.code(i))
+    }
+
+    /// The heart of it: the file is pushed forward until it tips off the shelf, falls, lands in
+    /// the bin with a knock and a bounce, and the flap swings and settles.
+    func vend(_ code: String) {
+        guard !vending, let i = Geo.index(of: code) else { return }
+        guard let waiting = store.item(in: code), itemLayers[waiting.name] != nil else {
+            Sounds.play(.error, volume: 0.25)
+            say("EMPTY")
             return
         }
-        guard store.item(in: code) != nil, let item = store.vend(code), let l = itemLayers[item.name] else {
-            Sounds.play(.error, volume: 0.3)
-            say(["EMPTY", ""])
+        guard let item = store.vend(code), let l = itemLayers[item.name] else {
+            Sounds.play(.error, volume: 0.25)
+            say("EMPTY")
             return
         }
         select(nil)
         vending = true
         moving.insert(item.name)
-        Sounds.play(.beep, volume: 0.3)
-        say([code, Self.displayName(item.name)], for: 30)
+        pushing = (i, item.name)
+        hovered = nil
+        refreshShelves()
+        say(Self.displayName(item.name), for: 30)
 
-        let start = coilAngles[i], rest = Geo.iconRect(i)
+        let rest = Geo.iconRect(i)
         let tray = store.trayItems
         let spot = Geo.traySpot(tray.firstIndex(of: item) ?? max(0, tray.count - 1), of: tray.count)
         let landing = Self.trayPose(item.name)
-        let turn = 0.9, gravity = 2400.0, step = 1.0 / 240
+        let push = 0.5, gravity = 2400.0, step = 1.0 / 240
         let x0 = Double(rest.midX), floor = Double(spot.minY)
         let top = Double(Geo.glass.minY), bottom = Double(Geo.tray.maxY)
-        let drift = Double(landing.tilt) > 0 ? 0.18 : -0.18
-        var t = -0.14, leftover = 0.0
+        let drift = Double(landing.tilt) > 0 ? 0.16 : -0.16
+        var t = -0.08, leftover = 0.0
         var falling = false, landed = false, bounces = 0
-        var y = Double(rest.minY), vy = 0.0, tip = 0.4, tipSpeed = 1.6, fallTime = 0.0
+        var y = Double(rest.minY), vy = 0.0, tip = 0.35, tipSpeed = 1.6, fallTime = 0.0
 
         run { [weak self] dt in
             guard let self else { return true }
             t += dt
             if t < 0 { return false }
             if !falling {
-                if t - dt < 0 { Sounds.play(.motor, volume: 0.55) }
-                // One full turn of the spiral, easing in and out. The file rides forward on it
-                // and starts to lean as it runs out of wire.
-                let e = Self.easeInOut(t / turn)
-                self.turnCoil(i, to: start - CGFloat(e) * 2 * .pi)
-                let lean = e > 0.72 ? (e - 0.72) / 0.28 * 0.4 : 0
-                // Past the last loop of wire it is in front of everything behind the glass.
-                if e > 0.8 && l.superlayer !== self.dropLayer { self.dropLayer.addSublayer(l) }
-                self.place(l, in: rest, pose: Pose(scale: CGFloat(1 + 0.14 * e), tip: CGFloat(lean)))
-                if t >= turn {
+                if t - dt < 0 { Sounds.play(.motorShort, volume: 0.45) }
+                // A pusher behind the file slides it forward to the edge of the shelf, where it
+                // starts to lean.
+                let e = Self.easeIn(t / push)
+                let lean = e > 0.6 ? (e - 0.6) / 0.4 * 0.35 : 0
+                if e > 0.4 && l.superlayer !== self.dropLayer { self.dropLayer.addSublayer(l) }
+                // Coming toward you along the shelf, it also sits a little lower in the picture.
+                self.place(l, in: rest.offsetBy(dx: 0, dy: CGFloat(-6 * e)), pose: Pose(scale: CGFloat(1 + 0.16 * e), tip: CGFloat(lean)))
+                if t >= push {
                     falling = true
-                    self.refreshLabels()
+                    y -= 6
+                    self.pushing = nil
+                    self.refreshShelves()
                     self.layoutItems(animated: true)
                 }
                 return false
@@ -520,15 +511,15 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
                 fallTime += step
                 vy -= gravity * step
                 y += vy * step
-                tip = min(0.9, tip + tipSpeed * step)
+                tip = min(0.85, tip + tipSpeed * step)
                 tipSpeed += 2 * step
                 if y <= floor {
                     y = floor
                     let impact = -vy
                     if impact > 90 && bounces < 3 {
-                        Sounds.play(.thunk, volume: Float(min(0.9, 0.15 + impact / 1800)))
+                        Sounds.play(.thunk, volume: Float(min(0.85, 0.15 + impact / 1800)))
                         self.knockFlap(impact * 0.0021)
-                        vy = impact * 0.27
+                        vy = impact * 0.26
                         bounces += 1
                     } else {
                         vy = 0
@@ -536,20 +527,19 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
                     }
                 }
             }
-            // Out of sight between the window and the tray, it slides over to its place in the tray.
+            // Out of sight between the window and the bin, it slides over to its place in the bin.
             let k = Self.easeInOut((top - y) / (top - bottom))
             let x = x0 + (Double(spot.midX) - x0) * k
-            let pose = Pose(scale: CGFloat(1.14 + (1 - 1.14) * k),
+            let pose = Pose(scale: CGFloat(1.16 + (Double(landing.scale) - 1.16) * k),
                             tip: CGFloat(tip + (Double(landing.tip) - tip) * k),
                             tilt: CGFloat(drift * min(1, fallTime * 3) * (1 - k) + Double(landing.tilt) * k))
-            self.place(l, in: CGRect(x: x - Double(Geo.iconSize) / 2, y: y, width: Double(Geo.iconSize), height: Double(Geo.iconSize)),
-                       pose: pose)
+            self.place(l, in: CGRect(x: x - 1, y: y, width: 2, height: 2), pose: pose)
             if landed && !self.flapMoving {
                 self.itemsLayer.addSublayer(l)
                 self.moving.remove(item.name)
                 self.vending = false
                 self.layoutItems()
-                self.say([code, Self.displayName(item.name)])
+                self.say("TAKE IT BELOW")
                 return true
             }
             return false
@@ -585,65 +575,43 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         }
     }
 
-    private func refuseFull() {
-        let shake = CAKeyframeAnimation(keyPath: "position.x")
-        shake.values = [0, -2.5, 2.5, -2, 1.5, -0.8, 0].map { NSNumber(value: $0) }
-        shake.isAdditive = true
-        shake.duration = 0.38
-        glassLayer.add(shake, forKey: "full")
-        let rattle = shake.copy() as! CAKeyframeAnimation
-        rattle.values = [0, -0.8, 0.8, -0.5, 0.3, 0].map { NSNumber(value: $0) }
-        rig.add(rattle, forKey: "full")
-        Sounds.play(.rattle, volume: 0.4)
-        say(["SOLD OUT", ""])
+    // MARK: Display
+
+    /// What the screen says while nobody is using it.
+    private var idleText: String {
+        if store.items.contains(where: { $0.slot != nil }) { return "PICK A FILE" }
+        return store.trayItems.isEmpty ? "DROP FILES IN" : "TAKE IT BELOW"
     }
 
-    // MARK: Labels and display
-
-    /// Each shelf label shows its code and, if the coil holds a file, the start of its name.
-    func refreshLabels() {
-        let scale = renderedScale == 0 ? 2 : renderedScale
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        for (i, l) in labelLayers.enumerated() {
-            l.contents = VendingArt.label(code: Geo.code(i), name: name(at: i), scale: scale)
-        }
-        CATransaction.commit()
-    }
-
-    /// The name of the file in a coil, if any.
-    func name(at index: Int) -> String? { store.item(in: Geo.code(index))?.name }
-
-    /// What the display says while nobody is using it.
-    private var idleLines: [String] { store.items.contains { $0.slot != nil } ? ["PICK ONE", ""] : ["DROP FILES", "ON GLASS"] }
-
-    /// The display shows a message, then goes back to its resting text after a few seconds.
-    func say(_ lines: [String], for seconds: Double = 5) {
+    /// The screen shows a message, then goes back to its resting text after a few seconds.
+    func say(_ text: String, for seconds: Double = 4) {
         idleWork?.cancel()
-        showDisplay(lines)
+        showDisplay(text)
         let work = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            self.showDisplay(self.idleLines)
+            guard let self, !self.vending else { return }
+            self.showDisplay(self.hoverText ?? self.idleText)
         }
         idleWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: work)
     }
 
-    /// A file name as the display shows it: without its extension.
+    /// A file name as the screen shows it: without its extension.
     static func displayName(_ name: String) -> String { (name as NSString).deletingPathExtension }
 
-    func showDisplay(_ lines: [String]) {
-        displayLines = lines
+    func showDisplay(_ text: String) {
+        displayText = text
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        displayLayer.contents = Segments.render(lines, scale: renderedScale == 0 ? 2 : renderedScale)
+        displayLayer.contents = Segments.render(text, scale: renderedScale == 0 ? 2 : renderedScale)
         CATransaction.commit()
     }
 
     // MARK: Hit testing
 
-    /// The cabinet and its feet. The transparent corners let clicks through to the desktop.
+    /// The body and its feet. The transparent corners let clicks through to the desktop.
     private func bodyHit(_ p: CGPoint) -> Bool {
-        let c = Geo.cabinet
-        return CGRect(x: c.minX, y: c.minY - 10, width: c.width + Geo.depth.dx, height: c.height + 10 + Geo.depth.dy).contains(p)
+        let b = Geo.body
+        let shape = Paint.rounded(CGRect(x: b.minX, y: b.minY, width: b.width + Geo.side, height: b.height), Geo.bodyRadius)
+        return shape.contains(p) || CGRect(x: b.minX + 30, y: b.minY - 12, width: b.width - 56, height: 14).contains(p)
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -652,9 +620,20 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    // MARK: Mouse
+    /// The button under the pointer, if any.
+    private func button(at p: CGPoint) -> Int? {
+        (0..<Geo.slotCount).first { Geo.buttonRect($0).insetBy(dx: -5, dy: -5).contains(p) }
+    }
 
-    /// The file under the mouse: one in a coil behind the glass, or one in the tray.
+    /// The slot the pointer is over: its file, its button or its name.
+    private func slot(at p: CGPoint) -> Int? {
+        guard Geo.glass.contains(p) else { return nil }
+        return (0..<Geo.slotCount).first {
+            Geo.slotRect($0).contains(p) || Geo.buttonRect($0).insetBy(dx: -5, dy: -5).contains(p) || Geo.labelRect($0).contains(p)
+        }
+    }
+
+    /// The file under the pointer: one on a shelf, or one in the bin.
     private func item(at p: CGPoint) -> (item: StoredItem, rect: CGRect)? {
         if Geo.tray.contains(p) {
             let tray = store.trayItems
@@ -667,12 +646,56 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         }
         guard Geo.glass.contains(p) else { return nil }
         for item in store.items where !moving.contains(item.name) {
-            if let slot = item.slot, let i = Geo.index(of: slot), Geo.iconRect(i).insetBy(dx: -3, dy: -3).contains(p) {
+            if let slot = item.slot, let i = Geo.index(of: slot), Geo.iconRect(i).insetBy(dx: -4, dy: -4).contains(p) {
                 return (item, Geo.iconRect(i))
             }
         }
         return nil
     }
+
+    // MARK: Hover
+
+    private var tracking: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let tracking { removeTrackingArea(tracking) }
+        let t = NSTrackingArea(rect: bounds, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                               owner: self, userInfo: nil)
+        addTrackingArea(t)
+        tracking = t
+    }
+
+    /// The name of the file under the pointer, for the screen.
+    private var hoverText: String? {
+        guard let i = hovered, let item = store.item(in: Geo.code(i)), !moving.contains(item.name) else { return nil }
+        return Self.displayName(item.name)
+    }
+
+    /// Pointing at a file or its button lifts the file a touch, brightens its button and puts its
+    /// name on the screen.
+    private func setHover(_ i: Int?) {
+        let target = i.flatMap { store.item(in: Geo.code($0)) != nil ? $0 : nil }
+        guard target != hovered else { return }
+        hovered = target
+        layoutItems()
+        guard !vending else { return }
+        if let text = hoverText {
+            idleWork?.cancel()
+            showDisplay(text)
+        } else if idleWork == nil || displayText != idleText {
+            showDisplay(idleText)
+        }
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        guard case .none = grab else { return }
+        setHover(slot(at: scene(convert(event.locationInWindow, from: nil))))
+    }
+
+    override func mouseExited(with event: NSEvent) { setHover(nil) }
+
+    // MARK: Mouse
 
     override func mouseDown(with event: NSEvent) {
         let p = scene(convert(event.locationInWindow, from: nil))
@@ -691,10 +714,11 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
             grab = .resize(start: NSEvent.mouseLocation, scale: userScale)
             return
         }
-        if let k = keyIndex(at: p) {
-            // Only the keys press. The key goes down with the mouse and comes up with it.
-            grab = .key(k)
-            showKey(k, down: true)
+        if let b = button(at: p), !vending {
+            // The button goes in with the mouse and comes out with it.
+            grab = .button(b)
+            pressedButton = b
+            refreshShelves()
             Sounds.play(.click, volume: 0.35)
         } else if let hit = item(at: p) {
             grab = .item(hit.item, hit.rect)
@@ -706,10 +730,14 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     override func mouseDragged(with event: NSEvent) {
         let p = scene(convert(event.locationInWindow, from: nil))
         switch grab {
-        case .key(let k):
-            showKey(k, down: keyIndex(at: p) == k)
+        case .button(let b):
+            let inside = button(at: p) == b
+            if (pressedButton == b) != inside {
+                pressedButton = inside ? b : nil
+                refreshShelves()
+            }
         case .item(let item, let rect):
-            // Files come out only from the tray. Behind the glass they wait for their code.
+            // Files come out only from the bin. On the shelves they wait for their button.
             guard item.inTray, !dragged, hypot(p.x - downPoint.x, p.y - downPoint.y) >= 3 else { return }
             dragged = true
             beginDrag(item, rect: rect, event: event)
@@ -728,13 +756,14 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     override func mouseUp(with event: NSEvent) {
         let p = scene(convert(event.locationInWindow, from: nil))
         switch grab {
-        case .key(let k):
-            showKey(k, down: false)
-            if keyIndex(at: p) == k { press(Geo.keys[k].key) }
+        case .button(let b):
+            pressedButton = nil
+            refreshShelves()
+            if button(at: p) == b { pressButton(b) }
         case .item(let item, _):
             guard !dragged else { break }
             if event.clickCount >= 2 {
-                // Two clicks: behind the glass it vends, in the tray it opens.
+                // Two clicks: on a shelf it vends, in the bin it opens.
                 if let slot = item.slot { vend(slot) } else { NSWorkspace.shared.open(store.url(of: item)) }
             } else {
                 select(item.name)
@@ -757,10 +786,7 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     private func select(_ name: String?) {
         selectedName = name
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        for (key, l) in itemLayers {
-            l.backgroundColor = key == name ? Paint.hex(0xFFFFFF, 0.25) : nil
-            l.cornerRadius = 5
-        }
+        for (key, l) in itemLayers { l.backgroundColor = key == name ? Paint.hex(0xFFFFFF, 0.45) : nil }
         CATransaction.commit()
         guard let name, let item = store.items.first(where: { $0.name == name }) else {
             nameTag.isHidden = true
@@ -774,14 +800,14 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
             let tray = store.trayItems
             rect = Geo.traySpot(tray.firstIndex(of: item) ?? 0, of: tray.count)
         }
-        showTag(item.slot.map { "\($0)  \(name)" } ?? name, above: rect)
+        showTag(name, above: rect)
         // Take the keyboard so Space can open Quick Look.
         window?.makeKey()
         window?.makeFirstResponder(self)
         if QLPreviewPanel.sharedPreviewPanelExists() && QLPreviewPanel.shared().isVisible { QLPreviewPanel.shared().reloadData() }
     }
 
-    /// A small paper tag with the name, just above the icon.
+    /// A small tag with the full name, just above the icon.
     private func showTag(_ text: String, above rect: CGRect) {
         if nameTag.superlayer == nil {
             nameTag.actions = ["position": NSNull(), "bounds": NSNull(), "contents": NSNull(), "hidden": NSNull(), "string": NSNull()]
@@ -789,23 +815,21 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
             nameTag.fontSize = 11
             nameTag.alignmentMode = .center
             nameTag.truncationMode = .middle
-            nameTag.foregroundColor = Paint.hex(0x24302F)
-            nameTag.backgroundColor = Paint.hex(0xFAF3E2)
-            nameTag.cornerRadius = 6
-            nameTag.borderWidth = 0.5
-            nameTag.borderColor = Paint.hex(0x8A7A5A, 0.4)
+            nameTag.foregroundColor = Paint.hex(0x3A2A0E)
+            nameTag.backgroundColor = Paint.hex(0xFFFBF0)
+            nameTag.cornerRadius = 9
             nameTag.shadowOpacity = 0.3
-            nameTag.shadowRadius = 3
-            nameTag.shadowOffset = CGSize(width: 0, height: -1)
+            nameTag.shadowRadius = 4
+            nameTag.shadowOffset = CGSize(width: 0, height: -1.5)
             rig.addSublayer(nameTag)
         }
         nameTag.contentsScale = renderedScale
-        let width = min(220, (text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium)]).width + 16)
+        let width = min(230, (text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium)]).width + 20)
         var x = rect.midX - width / 2
-        x = min(max(x, 4), Geo.size.width - width - 4)
+        x = min(max(x, 6), Geo.size.width - width - 6)
         CATransaction.begin(); CATransaction.setDisableActions(true)
         nameTag.string = text
-        nameTag.frame = CGRect(x: x, y: rect.maxY + 4, width: width, height: 18)
+        nameTag.frame = CGRect(x: x, y: rect.maxY + 5, width: width, height: 19)
         nameTag.isHidden = false
         CATransaction.commit()
     }
@@ -837,7 +861,7 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         return store.url(of: f) as NSURL
     }
 
-    // MARK: Taking files out of the tray
+    // MARK: Taking files out of the bin
 
     private func beginDrag(_ item: StoredItem, rect: CGRect, event: NSEvent) {
         select(nil)
@@ -845,7 +869,7 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         let dragItem = NSDraggingItem(pasteboardWriter: url as NSURL)
         dragItem.setDraggingFrame(viewRect(rect), contents: NSWorkspace.shared.icon(forFile: url.path))
         beginDraggingSession(with: [dragItem], event: event, source: self)
-        // Your hand pushes the flap in on the way out.
+        // Your hand pushes the flap on the way out.
         knockFlap(1.8)
     }
 
@@ -856,6 +880,7 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
         store.reconcile()
         layoutItems(animated: true)
+        if !vending { showDisplay(idleText) }
     }
 
     // MARK: Menu
@@ -868,7 +893,7 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         if let hit = item(at: p) {
             let item = hit.item, url = store.url(of: item)
             if let slot = item.slot {
-                let vendItem = ActionItem("Vend \(slot)") { [weak self] in self?.vend(slot) }
+                let vendItem = ActionItem("Vend") { [weak self] in self?.vend(slot) }
                 vendItem.isEnabled = !vending
                 menu.addItem(vendItem)
             } else {
@@ -879,15 +904,17 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
             menu.addItem(.separator())
         }
         let vendMenu = NSMenu()
-        let inCoils = store.items.filter { $0.slot != nil }.sorted { ($0.slot ?? "") < ($1.slot ?? "") }
-        for item in inCoils {
+        let onShelves = store.items.filter { $0.slot != nil }.sorted { ($0.slot ?? "") < ($1.slot ?? "") }
+        for item in onShelves {
             guard let slot = item.slot else { continue }
-            let entry = ActionItem("\(slot)   \(item.name)") { [weak self] in self?.vend(slot) }
+            let entry = ActionItem(item.name) { [weak self] in self?.vend(slot) }
+            entry.image = NSWorkspace.shared.icon(forFile: store.url(of: item).path)
+            entry.image?.size = NSSize(width: 16, height: 16)
             entry.isEnabled = !vending
             vendMenu.addItem(entry)
         }
-        if inCoils.isEmpty {
-            let none = NSMenuItem(title: "Nothing inside yet. Drop files on the glass.", action: nil, keyEquivalent: "")
+        if onShelves.isEmpty {
+            let none = NSMenuItem(title: "Nothing inside yet. Drop files on the window.", action: nil, keyEquivalent: "")
             none.isEnabled = false
             vendMenu.addItem(none)
         }
@@ -917,7 +944,8 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         select(nil)
         for item in items where !moving.contains(item.name) { store.putBack(item) }
         layoutItems(animated: true)
-        if store.items.allSatisfy({ $0.slot == nil }) { idleWork?.cancel(); showDisplay(idleLines) }
+        idleWork?.cancel()
+        showDisplay(idleText)
     }
 
     // MARK: Dropping files in
@@ -926,17 +954,47 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         (info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []
     }
 
-    /// Only the glass takes files.
-    private func overGlass(_ info: NSDraggingInfo) -> Bool {
-        (info.draggingSource as AnyObject?) !== self && !fileURLs(info).isEmpty
+    /// Only the window takes files. While they hover over it, outlines show where they will stand.
+    private func dragOperation(_ info: NSDraggingInfo) -> NSDragOperation {
+        let urls = fileURLs(info)
+        let over = (info.draggingSource as AnyObject?) !== self && !urls.isEmpty
             && Geo.glass.contains(scene(convert(info.draggingLocation, from: nil)))
+        let free = store.freeSlots.compactMap(Geo.index(of:))
+        let landing = over ? Array(free.prefix(urls.count)) : []
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        for (i, ghost) in ghostLayers.enumerated() { ghost.isHidden = !landing.contains(i) }
+        CATransaction.commit()
+        guard over else {
+            if displayText == "SOLD OUT" || displayText.hasPrefix("DROP ") { showDisplay(idleText) }
+            return []
+        }
+        if free.isEmpty {
+            if displayText != "SOLD OUT" { showDisplay("SOLD OUT") }
+            return []
+        }
+        idleWork?.cancel()
+        let text = urls.count == 1 ? "DROP IT IN" : "DROP \(min(urls.count, free.count)) IN"
+        if displayText != text { showDisplay(text) }
+        return .move
     }
 
-    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { overGlass(sender) ? .move : [] }
-    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { overGlass(sender) ? .move : [] }
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { dragOperation(sender) }
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { dragOperation(sender) }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        hideGhosts()
+        if !vending { showDisplay(idleText) }
+    }
+
+    private func hideGhosts() {
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        for ghost in ghostLayers { ghost.isHidden = true }
+        CATransaction.commit()
+    }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        guard overGlass(sender) else { return false }
+        hideGhosts()
+        guard Geo.glass.contains(scene(convert(sender.draggingLocation, from: nil))) else { return false }
         storeFiles(fileURLs(sender))
         return true
     }
@@ -945,7 +1003,7 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     /// For test scripts: 0.1 plays every motion ten times slower.
     static var slowMotion = 1.0
 
-    /// For test scripts: put files in as if they were dropped on the glass.
+    /// For test scripts: put files in as if they were dropped on the window.
     func storeForTest(_ urls: [URL]) { storeFiles(urls) }
 
     /// For test scripts: resize as an Option-drag would.
@@ -961,13 +1019,23 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         select(store.items[n].name)
     }
 
+    /// For test scripts: point at a slot, as the mouse would (-1 for none).
+    func hoverForTest(_ i: Int) { setHover(i < 0 ? nil : i) }
+
+    /// For test scripts: show the drop outlines for `count` files.
+    func ghostsForTest(_ count: Int) {
+        let free = store.freeSlots.compactMap(Geo.index(of:)).prefix(count)
+        for (i, ghost) in ghostLayers.enumerated() { ghost.isHidden = !free.contains(i) }
+        showDisplay(count == 0 ? idleText : (count == 1 ? "DROP IT IN" : "DROP \(count) IN"))
+    }
+
     /// For test scripts: Put Back the n-th file.
     func putBackForTest(_ n: Int) {
         guard n < store.items.count else { return }
         putBack([store.items[n]])
     }
 
-    /// For test scripts: take the first file in the tray out into a folder, as a drag would.
+    /// For test scripts: take the first file in the bin out into a folder, as a drag would.
     func takeForTest(to folder: URL) {
         guard let item = store.trayItems.first else { return }
         knockFlap(1.8)
@@ -976,14 +1044,16 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         layoutItems(animated: true)
     }
 
-    /// For test scripts: press a key by its label (A, 1, CLR, OK), as a click would.
-    func keyForTest(_ label: String) {
-        guard let k = Geo.keys.firstIndex(where: { $0.key.label == label }) else { return }
-        showKey(k, down: true)
+    /// For test scripts: press the button under slot n, as a click would.
+    func pressForTest(_ i: Int) {
+        guard i < Geo.slotCount, !vending else { return }
+        pressedButton = i
+        refreshShelves()
         Sounds.play(.click, volume: 0.35)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
-            self?.showKey(k, down: false)
-            self?.press(Geo.keys[k].key)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) { [weak self] in
+            self?.pressedButton = nil
+            self?.refreshShelves()
+            self?.pressButton(i)
         }
     }
     #endif

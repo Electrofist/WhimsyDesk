@@ -4,7 +4,7 @@ import AppKit
 /// otherwise the sound is made in code, modelled on the real thing (a geared motor, a knock on a
 /// steel tray, a plastic flap). Built once on first use. Nothing loops and nothing is scheduled.
 enum Sounds {
-    enum Name: String, CaseIterable { case click, beep, error, motor, motorShort, thunk, flap, rattle }
+    enum Name: String, CaseIterable { case click, plop, error, motorShort, thunk, flap, rattle }
 
     static var enabled: Bool {
         get { !UserDefaults.standard.bool(forKey: "soundOff") }
@@ -113,12 +113,13 @@ enum Sounds {
                 let back = (t > 0.006 && t < 0.0075) ? noise.next() * 0.5 : 0
                 return tick.run(hit + back) + body.run(hit) * 3
             }
-        case .beep:
-            // The piezo beeper on the panel: a bright square-ish tone.
-            return render(0.12, peak: 0.5) { t, _ in
-                let env = min(1, t / 0.003) * min(1, (0.12 - t) / 0.012)
-                let w = 2 * Double.pi * 2700 * t
-                return (sin(w) + sin(3 * w) / 3 + sin(5 * w) / 5) * env
+        case .plop:
+            // A file set down on a plastic shelf: a soft, hollow tap.
+            var shelf = Panel([(520, 120, 1), (910, 180, 0.5), (1480, 260, 0.25)])
+            var soft = LowPass(1400)
+            return render(0.16, peak: 0.6) { t, _ in
+                let hit = t < 0.004 ? soft.run(noise.next()) * (1 - t / 0.004) * 4 : soft.run(0)
+                return shelf.run(hit)
             }
         case .error:
             // Two low buzzes: nothing there.
@@ -129,8 +130,6 @@ enum Sounds {
                 let w = 2 * Double.pi * 520 * t
                 return (sin(w) + sin(3 * w) / 3 + sin(5 * w) / 5 + sin(7 * w) / 7) * env
             }
-        case .motor:
-            return motor(seconds: 0.95, noise: &noise)
         case .motorShort:
             return motor(seconds: 0.5, noise: &noise)
         case .thunk:

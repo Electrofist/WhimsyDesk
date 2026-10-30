@@ -1,6 +1,6 @@
 # Desktop Vending Machine
 
-A retro snack machine that stands on your desktop. Your files are the snacks, each on its own spiral coil behind the glass. Type a code, the coil turns, and the file drops into the tray.
+A little vending machine that stands on your desktop. Your files are the snacks, each standing on a shelf behind the glass with its name on a tag. Press the button under one and it is pushed off the shelf and drops into the bin.
 
 The art is a placeholder drawn in code for now. Painted art can replace it piece by piece; see `Resources/Art/README.md`.
 
@@ -8,10 +8,10 @@ Made by [Electrofist](https://github.com/Electrofist). Part of [Desktop Objects]
 
 ## Use it
 
-- Drag files or folders onto the glass. Each one goes into the next free coil, A1 first, and moves into `~/Vending Machine`. Twenty coils; when they are full, the display says SOLD OUT.
-- Type a code on the keypad, for example B then 3, and press OK. The coil turns and the file falls into the tray.
-- Double-click a file behind the glass to vend it straight away.
-- Drag a file out of the tray onto the desktop or any folder to take it out. Files left in the tray stay there.
+- Drag files or folders onto the window. Outlines show where they will stand, and each one moves into `~/Vending Machine`. Twelve spots; when they are full, the screen says SOLD OUT.
+- Point at a file or its button to see its name on the screen.
+- Press the red button under a file. It is pushed off its shelf and falls into the bin. Double-clicking a file does the same.
+- Drag a file out of the bin onto the desktop or any folder to take it out. Files left in the bin stay there.
 - Click a file to see its name. Press Space to look at it in Quick Look.
 - Right-click a file and choose Put Back to send it back where it came from.
 - Right-click anywhere for Vend, Open Vending Machine Folder, Put Back All, Sound and Quit.

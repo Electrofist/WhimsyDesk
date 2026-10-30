@@ -2,38 +2,37 @@ import AppKit
 
 /// Layout of the machine, in points. Origin at the bottom left of the window, y up.
 enum Geo {
-    static let size = CGSize(width: 396, height: 560)
+    static let size = CGSize(width: 360, height: 520)
 
-    /// The front face of the cabinet. The right side and the top show a little, `depth` deep.
-    static let cabinet = CGRect(x: 22, y: 30, width: 342, height: 500)
-    static let depth = CGVector(dx: 14, dy: 9)
+    /// The rounded body, seen from the front. Its right side shows a little, `side` deep.
+    static let body = CGRect(x: 20, y: 30, width: 310, height: 474)
+    static let bodyRadius: CGFloat = 38
+    static let side: CGFloat = 9
 
-    /// The lit sign along the top.
-    static let header = CGRect(x: 38, y: 494, width: 310, height: 28)
+    /// The window. Three shelves of files stand behind it.
+    static let glass = CGRect(x: 42, y: 196, width: 266, height: 288)
 
-    /// The window on the left two thirds. Rows of coils sit behind it.
-    static let glass = CGRect(x: 38, y: 150, width: 212, height: 336)
+    /// The little screen between the window and the bin, and the lamp beside it.
+    static let display = CGRect(x: 112, y: 152, width: 126, height: 24)
+    static let lamp = CGPoint(x: 262, y: 164)
 
-    /// The control panel on the right third: display and keypad.
-    static let panel = CGRect(x: 262, y: 150, width: 88, height: 336)
-    static let display = CGRect(x: 268, y: 434, width: 76, height: 42)
-
-    /// The pickup tray under the glass, behind a hinged flap.
-    static let tray = CGRect(x: 60, y: 58, width: 168, height: 52)
+    /// The pickup bin, behind a clear flap.
+    static let tray = CGRect(x: 52, y: 58, width: 246, height: 74)
 
     // MARK: Slots
 
-    static let rows = ["A", "B", "C", "D"]
-    static let columns = 5
+    static let rows = ["A", "B", "C"]
+    static let columns = 4
     static var slotCount: Int { rows.count * columns }
-    static let rowHeight: CGFloat = 78
-    /// The bottom of the drop gap under row D, where a falling file passes into the tray.
-    static let rowsTop: CGFloat = 480
-    static let columnWidth: CGFloat = (glass.width - 4) / CGFloat(columns)
-    static let coilRadius: CGFloat = 19
-    static let iconSize: CGFloat = 30
+    static let rowHeight: CGFloat = glass.height / CGFloat(rows.count)
+    static let columnWidth: CGFloat = glass.width / CGFloat(columns)
+    static let iconSize: CGFloat = 44
+    /// Height of the shelf front, where the button and the name sit.
+    static let lip: CGFloat = 28
+    /// Depth of a shelf's top surface, seen from a little above.
+    static let shelfDepth: CGFloat = 9
 
-    /// "A1" for slot 0, "D5" for slot 19.
+    /// "A1" for slot 0. Codes are only used inside; the buttons are what you press.
     static func code(_ index: Int) -> String { "\(rows[index / columns])\(index % columns + 1)" }
 
     static func index(of code: String) -> Int? {
@@ -42,71 +41,41 @@ enum Geo {
         return row * columns + column - 1
     }
 
-    /// The bottom of the shelf a row of coils sits on.
-    static func shelfY(row: Int) -> CGFloat { rowsTop - CGFloat(row + 1) * rowHeight }
+    /// The bottom of a row's shelf front.
+    static func shelfY(row: Int) -> CGFloat { glass.maxY - CGFloat(row + 1) * rowHeight }
 
-    static func coilCenter(_ index: Int) -> CGPoint {
-        let row = index / columns, column = index % columns
-        return CGPoint(x: glass.minX + 2 + columnWidth * (CGFloat(column) + 0.5), y: shelfY(row: row) + 36)
-    }
+    static func columnMidX(_ index: Int) -> CGFloat { glass.minX + columnWidth * (CGFloat(index % columns) + 0.5) }
 
-    /// The icon of a stored file rests in its coil, a touch below the middle.
+    /// A stored file stands on its shelf.
     static func iconRect(_ index: Int) -> CGRect {
-        let c = coilCenter(index)
-        return CGRect(x: c.x - iconSize / 2, y: c.y - iconSize / 2 - 1, width: iconSize, height: iconSize)
+        let y = shelfY(row: index / columns) + lip + 3
+        return CGRect(x: columnMidX(index) - iconSize / 2, y: y, width: iconSize, height: iconSize)
     }
 
-    static func coilRect(_ index: Int) -> CGRect {
-        let c = coilCenter(index), r = coilRadius + 3
-        return CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)
+    /// The space above a shelf front that belongs to one slot: where a dropped file will stand.
+    static func slotRect(_ index: Int) -> CGRect {
+        let y = shelfY(row: index / columns)
+        return CGRect(x: columnMidX(index) - columnWidth / 2 + 4, y: y + lip + 1, width: columnWidth - 8, height: rowHeight - lip - 5)
     }
 
-    /// The little paper label on the shelf edge under each coil.
+    /// The round push button under each file, below its name tag.
+    static func buttonRect(_ index: Int) -> CGRect {
+        CGRect(x: columnMidX(index) - 7, y: shelfY(row: index / columns) + 2, width: 14, height: 14)
+    }
+
+    /// The paper name tag in the shelf edge, just under the file.
     static func labelRect(_ index: Int) -> CGRect {
-        let c = coilCenter(index)
-        return CGRect(x: c.x - 19, y: shelfY(row: index / columns) + 2, width: 38, height: 9)
+        CGRect(x: columnMidX(index) - 29, y: shelfY(row: index / columns) + 17, width: 58, height: 10)
     }
 
-    /// Where the n-th file of `count` lies in the tray.
+    /// Where the n-th file of `count` lies in the bin.
+    static let trayIcon: CGFloat = 40
     static func traySpot(_ n: Int, of count: Int) -> CGRect {
-        let room = tray.width - 16 - iconSize
-        let step = count > 1 ? min(34, room / CGFloat(count - 1)) : 0
-        let start = tray.midX - step * CGFloat(count - 1) / 2 - iconSize / 2
-        return CGRect(x: start + step * CGFloat(n), y: tray.minY + 6, width: iconSize, height: iconSize)
+        let room = tray.width - 24 - trayIcon
+        let step = count > 1 ? min(46, room / CGFloat(count - 1)) : 0
+        let start = tray.midX - step * CGFloat(count - 1) / 2 - trayIcon / 2
+        return CGRect(x: start + step * CGFloat(n), y: tray.minY + 9, width: trayIcon, height: trayIcon)
     }
-
-    // MARK: Keypad
-
-    enum Key: Equatable {
-        case letter(String), digit(Int), clear, ok
-
-        var label: String {
-            switch self {
-            case .letter(let l): return l
-            case .digit(let d): return "\(d)"
-            case .clear: return "CLR"
-            case .ok: return "OK"
-            }
-        }
-    }
-
-    /// Letters on top, then digits, Clear and a wide OK.
-    static let keys: [(key: Key, rect: CGRect)] = {
-        var out: [(Key, CGRect)] = []
-        let x0 = display.minX, w = display.width, h: CGFloat = 15, gap: CGFloat = 4
-        let small = (w - 3 * gap) / 4
-        for (i, l) in rows.enumerated() {
-            out.append((.letter(l), CGRect(x: x0 + CGFloat(i) * (small + gap), y: 402, width: small, height: h)))
-        }
-        let third = (w - 2 * gap) / 3
-        let lower: [Key] = [.digit(1), .digit(2), .digit(3), .digit(4), .digit(5), .clear]
-        for (i, k) in lower.enumerated() {
-            out.append((k, CGRect(x: x0 + CGFloat(i % 3) * (third + gap), y: 382 - CGFloat(i / 3) * (h + gap - 1),
-                                  width: third, height: h)))
-        }
-        out.append((.ok, CGRect(x: x0, y: 342, width: w, height: h)))
-        return out
-    }()
 }
 
 /// Small drawing helpers. Everything is drawn once per screen scale and cached as layer contents.
@@ -155,11 +124,29 @@ enum Paint {
         fill(ctx, CGPath(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r), transform: nil), color)
     }
 
-    static func polygon(_ points: [CGPoint]) -> CGPath {
-        let p = CGMutablePath()
-        p.addLines(between: points)
-        p.closeSubpath()
-        return p
+    /// A soft glow or shade: a radial fade from `color` at the centre to nothing at `radius`.
+    static func glow(_ ctx: CGContext, at c: CGPoint, radius: CGFloat, _ color: CGColor, squash: CGFloat = 1) {
+        ctx.saveGState()
+        ctx.translateBy(x: c.x, y: c.y)
+        ctx.scaleBy(x: 1, y: squash)
+        let g = gradient([(0, color), (1, color.copy(alpha: 0)!)])
+        ctx.drawRadialGradient(g, startCenter: .zero, startRadius: 0, endCenter: .zero, endRadius: radius, options: [])
+        ctx.restoreGState()
+    }
+
+    /// Clips to the inside of `path`, then draws a soft shadow falling in from its top edge,
+    /// so the area looks set into the surface.
+    static func innerShadow(_ ctx: CGContext, _ path: CGPath, blur: CGFloat, offset: CGFloat, alpha: CGFloat) {
+        ctx.saveGState()
+        ctx.addPath(path); ctx.clip()
+        let outer = CGMutablePath()
+        outer.addRect(path.boundingBox.insetBy(dx: -60, dy: -60))
+        outer.addPath(path)
+        ctx.setShadow(offset: CGSize(width: 0, height: -offset), blur: blur, color: hex(0x000000, alpha))
+        ctx.addPath(outer)
+        ctx.setFillColor(hex(0x000000))
+        ctx.fillPath(using: .evenOdd)
+        ctx.restoreGState()
     }
 
     /// Draws text with AppKit into a Core Graphics context.

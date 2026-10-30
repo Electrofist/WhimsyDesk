@@ -91,14 +91,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     #if DEBUG
     /// Debug builds only: drive the machine from a script, since clicks cannot reach a window at
-    /// desktop level. Commands: store:<path>, key:<label>, vend:<code>,
+    /// desktop level. Commands: store:<path>, press:<n>, hover:<n>, ghosts:<n>, vend:<code>,
     /// select:<n>, putback:<n>, take:<folder>, scale:<n>, slow:<factor>, sounds:<folder>.
     private func listenForTestCommands() {
         DistributedNotificationCenter.default().addObserver(forName: Notification.Name("io.github.electrofist.vending.test"),
                                                             object: nil, queue: .main) { [weak self] note in
             guard let self, let view = self.view, let command = note.object as? String else { return }
             if command.hasPrefix("store:") { view.storeForTest([URL(fileURLWithPath: String(command.dropFirst(6)))]) }
-            if command.hasPrefix("key:") { view.keyForTest(String(command.dropFirst(4))) }
+            if command.hasPrefix("press:") { view.pressForTest(Int(command.dropFirst(6)) ?? 0) }
+            if command.hasPrefix("hover:") { view.hoverForTest(Int(command.dropFirst(6)) ?? -1) }
+            if command.hasPrefix("ghosts:") { view.ghostsForTest(Int(command.dropFirst(7)) ?? 0) }
             if command.hasPrefix("select:") { view.selectForTest(Int(command.dropFirst(7)) ?? 0) }
             if command.hasPrefix("putback:") { view.putBackForTest(Int(command.dropFirst(8)) ?? 0) }
             if command.hasPrefix("take:") { view.takeForTest(to: URL(fileURLWithPath: String(command.dropFirst(5)))) }

@@ -2,55 +2,44 @@
 
 Put PNG files here with these exact names and rebuild. Any piece that is missing falls back to the art drawn in code, so you can add them one at a time.
 
-All sizes are in pixels, at 2x. Everything is seen from the front with a little of the right side and the top showing, lit from the top left. Leave everything outside the object transparent.
+All sizes are in pixels, at 2x. Everything is seen from the front with a little of the right side showing, lit from the top left. Leave everything outside the object transparent.
+
+The look sits between a toy and the real thing: a chunky, rounded yellow body, and a believable inside (white shelves, paper name tags, metal-ringed buttons) so the files look at home.
 
 ## The pieces
 
 | File | Size | What it is |
 |---|---|---|
-| `cabinet.png` | 792 × 1120 | The whole machine without its moving parts: body, sign, feet, and the inside behind the glass with its empty shelves, shelf edges and blank paper labels. The tray opening can be dark. |
-| `shadow.png` | 792 × 1120 | Optional. The soft shadow on the ground under the feet. |
-| `glass.png` | 424 × 672 | Only the reflections on the window. Mostly transparent. |
-| `coil-back.png` | 88 × 88 | The part of one spiral coil behind the file: every loop but the first, shrinking toward the back. |
-| `coil-front.png` | 88 × 88 | The first loop of the same coil, which passes in front of the file, with the cut end of the wire. |
-| `panel.png` | 176 × 672 | The control panel: steel plate, display frame and all keys up. Leave the display area dark; the code lights it. |
-| `keys-pressed.png` | 176 × 672 | Optional. The same panel with every key pushed in. Each key's pressed look is cut out of it. |
-| `tray.png` | 336 × 104 | The inside of the pickup tray. |
-| `flap.png` | 336 × 104 | The flap over the tray, hinged at its top edge. Make it see-through enough that files in the tray show. |
+| `body.png` | 720 × 1040 | The machine without its moving parts: body, feet, window frame, the inside with its empty shelves and blank paper tags, the screen surround, the lamp and the bin opening. |
+| `shadow.png` | 720 × 1040 | Optional. The soft shadow on the ground under the feet. |
+| `glass.png` | 532 × 576 | Only the reflections on the window. Mostly transparent. |
+| `bin.png` | 492 × 148 | The inside of the pickup bin. |
+| `flap.png` | 492 × 148 | The clear flap over the bin, hinged at its top edge. Files in the bin must show through it. |
+| `button.png` | 28 × 28 | A push button with something to get: metal ring, red cap. |
+| `button-empty.png` | 28 × 28 | The same button when its shelf spot is empty. |
+| `button-hover.png` | 28 × 28 | The red button, a touch brighter, while the pointer is on it. |
+| `button-pressed.png` | 28 × 28 | The red button pushed in. |
 
 The app icon is `Resources/AppIcon.icns`.
 
-## Where things go on the 792 × 1120 canvas
+## Where things go on the 720 × 1040 canvas
 
 Measured from the top left corner, in pixels.
 
-- Cabinet front: x 44 to 728, y 60 to 1060. The right side shows about 28 px deep, the top about 18 px.
-- Sign: x 76 to 696, y 76 to 132.
-- Window (`glass.png` sits here): x 76 to 500, y 148 to 820.
-- Control panel (`panel.png` sits here): x 524 to 700, y 148 to 820.
-- Tray opening (`tray.png` and `flap.png` sit here): x 120 to 456, y 900 to 1004.
+- Body front: x 40 to 660, y 32 to 980, corners about 76 px round. The right side shows about 18 px deep.
+- Window (`glass.png` sits here): x 84 to 616, y 72 to 648.
+- Screen: x 224 to 476, y 688 to 736. The code lights it; leave it dark.
+- Bin opening (`bin.png` and `flap.png` sit here): x 104 to 596, y 776 to 924.
 
 ## Inside the window
 
-Four rows, A at the top to D at the bottom, five coils each.
+Three shelves, four spots each.
 
-- Shelf edges (where the labels go): row A y 292 to 316, B y 448 to 472, C y 604 to 628, D y 760 to 784.
-- Coil centres: x 122, 205, 288, 371, 454. Row A y 244, B y 400, C y 556, D y 712.
-- Each label is 76 × 18, centred under its coil on the shelf edge. The code writes the text, so paint them blank.
-- Below row D is a 36 px gap where files fall through to the tray.
-
-## Coils
-
-Both coil pictures are turned around their centre to make the coil spin, so paint them seen exactly end on, centred, about 76 px across at the front loop. Files sit inside the coil at about 60 × 60.
-
-## The panel
-
-Measured from the top left of `panel.png`.
-
-- Display: x 12 to 164, y 20 to 104.
-- Keys A, B, C, D: y 138 to 168, at x 12, 52, 92 and 132, each 32 wide.
-- Keys 1, 2, 3: y 178 to 208. Keys 4, 5, CLR: y 214 to 244. At x 12, 65 and 119, each 45 wide.
-- OK: x 12 to 164, y 258 to 288.
+- Shelf fronts: y 208 to 264, 400 to 456 and 592 to 648. Each shelf top shows 18 px above its front.
+- Spot centres: x 150, 284, 416 and 550.
+- Paper tags: 116 × 20, centred on each spot, their top 2 px below the top of the shelf front. Paint them blank; the code writes the names.
+- Buttons: 28 × 28, centred on each spot, their bottom 4 px above the bottom of the shelf front.
+- Files stand on the shelf tops, about 88 px tall.
 
 No coin slot, no prices, no money anywhere.
 
