@@ -1,0 +1,19 @@
+{
+  "id": "vending",
+  "name": "Desktop Vending Machine",
+  "tagline": "Your files, on spiral coils. Pick one and it drops.",
+  "description": "A retro snack machine that stands on your desktop. Work in progress.",
+  "author": {
+    "name": "Krrish Parmar",
+    "github": "Electrofist"
+  },
+  "version": "0.1",
+  "minMacOS": "14.0",
+  "license": "MIT",
+  "storesFilesIn": "~/Vending Machine",
+  "build": {
+    "command": "./build.sh",
+    "app": "build/Desktop Vending Machine.app"
+  },
+  "accent": "#2FA39A"
+}
