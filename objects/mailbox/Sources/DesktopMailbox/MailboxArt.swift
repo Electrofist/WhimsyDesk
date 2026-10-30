@@ -118,20 +118,21 @@ enum MailboxArt {
             Paint.fill(ctx, CGPath(rect: CGRect(x: backRect.minX, y: backRect.maxY - 22, width: backRect.width, height: 22), transform: nil),
                        Paint.gradient([(0, Paint.hex(0xFFB09A, 0)), (1, Paint.hex(0xFFB09A, 0.10))]),
                        from: CGPoint(x: 0, y: backRect.maxY - 22), to: CGPoint(x: 0, y: backRect.maxY))
-            // A metal shelf halfway up.
-            let shelfY: CGFloat = 72
-            let top = CGMutablePath()
-            top.move(to: CGPoint(x: 0, y: shelfY)); top.addLine(to: CGPoint(x: s.width, y: shelfY))
-            top.addLine(to: CGPoint(x: backRect.maxX, y: shelfY + 12)); top.addLine(to: CGPoint(x: backRect.minX, y: shelfY + 12))
-            top.closeSubpath()
-            Paint.fill(ctx, top, Paint.gradient([(0, Paint.hex(0x7A2A21)), (1, Paint.hex(0x4A1510))]),
-                       from: CGPoint(x: 0, y: shelfY), to: CGPoint(x: 0, y: shelfY + 12))
-            Paint.fill(ctx, CGPath(rect: CGRect(x: 0, y: shelfY - 5, width: s.width, height: 5), transform: nil),
-                       Paint.gradient([(0, Paint.hex(0x5A1A14)), (1, Paint.hex(0xA03A2E))]),
-                       from: CGPoint(x: 0, y: shelfY - 5), to: CGPoint(x: 0, y: shelfY))
-            Paint.fill(ctx, CGPath(rect: CGRect(x: 0, y: shelfY - 14, width: s.width, height: 9), transform: nil),
-                       Paint.gradient([(0, Paint.hex(0x000000, 0)), (1, Paint.hex(0x000000, 0.35))]),
-                       from: CGPoint(x: 0, y: shelfY - 14), to: CGPoint(x: 0, y: shelfY - 5))
+            // Two metal shelves.
+            for shelfY in [CGFloat(50), 98] {
+                let top = CGMutablePath()
+                top.move(to: CGPoint(x: 0, y: shelfY)); top.addLine(to: CGPoint(x: s.width, y: shelfY))
+                top.addLine(to: CGPoint(x: backRect.maxX, y: shelfY + 10)); top.addLine(to: CGPoint(x: backRect.minX, y: shelfY + 10))
+                top.closeSubpath()
+                Paint.fill(ctx, top, Paint.gradient([(0, Paint.hex(0x7A2A21)), (1, Paint.hex(0x4A1510))]),
+                           from: CGPoint(x: 0, y: shelfY), to: CGPoint(x: 0, y: shelfY + 10))
+                Paint.fill(ctx, CGPath(rect: CGRect(x: 0, y: shelfY - 4, width: s.width, height: 4), transform: nil),
+                           Paint.gradient([(0, Paint.hex(0x5A1A14)), (1, Paint.hex(0xA03A2E))]),
+                           from: CGPoint(x: 0, y: shelfY - 4), to: CGPoint(x: 0, y: shelfY))
+                Paint.fill(ctx, CGPath(rect: CGRect(x: 0, y: shelfY - 12, width: s.width, height: 8), transform: nil),
+                           Paint.gradient([(0, Paint.hex(0x000000, 0)), (1, Paint.hex(0x000000, 0.35))]),
+                           from: CGPoint(x: 0, y: shelfY - 12), to: CGPoint(x: 0, y: shelfY - 4))
+            }
             // Shadow under the top edge.
             Paint.fill(ctx, CGPath(rect: CGRect(x: 0, y: s.height - 16, width: s.width, height: 16), transform: nil),
                        Paint.gradient([(0, Paint.hex(0x000000, 0)), (1, Paint.hex(0x000000, 0.5))]),

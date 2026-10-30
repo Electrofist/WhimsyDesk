@@ -4,7 +4,7 @@ A red post box that lives on your desktop. Every now and then a letter arrives: 
 
 <p align="center">
   <img src="media/closed.png" alt="Desktop Mailbox: a red post box with a letter sticking out of its slot" height="360">
-  <img src="media/open.png" alt="The post box with its door open: letters and files on a shelf and on the floor" height="360">
+  <img src="media/open.png" alt="The post box with its door open: files on the floor and the shelves" height="360">
   <img src="media/letter-opening.png" alt="A letter sliding out of an opened green envelope" height="360">
 </p>
 
@@ -14,11 +14,13 @@ It is also a hiding spot. Drop files in, close the door, and your desktop is cle
 
 - **Open the door:** click the box. Or grab the door and swing it. It slows on its hinges and bounces off its stop.
 - **Close it:** click again, or push the door shut. The latch catches it.
-- **Read a letter:** click the letter sticking out of the slot. It comes out in its envelope: the wax seal pops, the flap opens and the letter slides out. Older letters are inside the box; open the door and click one.
+- **Read a letter:** click the letter sticking out of the slot. It comes out in its envelope: the wax seal pops, the flap opens and the letter slides out. Letters you have read are under **Your Letters** in the right-click menu.
 - **Write back:** press **Write back** on a letter. Your reply is kept on this Mac, in `~/Mailbox/.replies`. Nothing is sent anywhere.
-- **Post files:** drag files or folders onto the box. The hood over the slot lifts, and each one goes in as a parcel with its name on it.
-- **The tray:** open the door and a tray slides out beside the box with every letter and parcel. Click a letter to read it. Double-click a parcel to open it, drag it out to take it back, or right-click and choose **Put Back** to return it to where it came from, even its old spot on the desktop.
+- **Hide files:** drag files or folders onto the box. The door swings open and they land on the floor and the two shelves, as their own icons. It holds 24.
+- **See a file:** click it to see its name. Press Space to preview it, like in Finder. Double-click to open it.
+- **Take it back:** drag it out, or right-click and choose **Put Back** to return it to where it came from, even its old spot on the desktop.
 - **Move it:** hold Option and Command and drag.
+- **Resize it:** hold Option and drag up to grow it or down to shrink it.
 - **How often letters come:** right-click, then **Letters**. About once a day, a few times a week, about once a week, or paused.
 - **Clean up:** press **Throw away** on a letter, or right-click and choose **Throw Away Read Letters**.
 - **Everything else:** right-click the mailbox. Sound on or off, open the folder, see when more mail is coming, quit.

@@ -1,5 +1,6 @@
 import AppKit
 import QuartzCore
+import Quartz
 
 protocol MailboxViewDelegate: AnyObject {
     /// `from` is where the letter starts on screen, if it was pulled from the slot.
@@ -9,7 +10,7 @@ protocol MailboxViewDelegate: AnyObject {
 
 /// The post box on the desktop. Layer-hosting: all art is cached in layers, and the display link
 /// only runs while the door is moving.
-final class MailboxView: NSView, NSDraggingSource {
+final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     enum Item {
         case letter(Delivery)
         case file(StoredItem)
@@ -51,12 +52,44 @@ final class MailboxView: NSView, NSDraggingSource {
     private let doorEdge = CALayer()
     private var itemLayers: [String: CALayer] = [:]
     private var slots: [(item: Item, rect: CGRect)] = []
-    private var overflowRect: CGRect?
+    private var selectedName: String?
+    private let nameTag = CATextLayer()
     private var renderedScale: CGFloat = 0
     /// The letter sticking out of the slot, if any.
     private var waitingID: String?
 
-    private enum Grab { case none, door(fraction: CGFloat), item(Item, CGRect), peek, overflow }
+    private enum Grab { case none, door(fraction: CGFloat), item(Item, CGRect), peek, resize(start: CGPoint, scale: CGFloat) }
+
+    // MARK: Size
+
+    /// Option-drag makes the box bigger or smaller. Everything is laid out at scale 1 and the
+    /// whole drawing is scaled; mouse points are scaled back with `scene`.
+    private(set) var userScale: CGFloat = 1
+    private static let scaleRange: ClosedRange<CGFloat> = 0.6...1.6
+    static var savedScale: CGFloat {
+        let v = UserDefaults.standard.double(forKey: "scale")
+        return v == 0 ? 1 : min(max(CGFloat(v), scaleRange.lowerBound), scaleRange.upperBound)
+    }
+
+    private func scene(_ p: CGPoint) -> CGPoint { CGPoint(x: p.x / userScale, y: p.y / userScale) }
+    private func viewRect(_ r: CGRect) -> CGRect {
+        CGRect(x: r.minX * userScale, y: r.minY * userScale, width: r.width * userScale, height: r.height * userScale)
+    }
+
+    /// Resizes around the bottom middle, so the pole stays planted.
+    private func applyScale(_ s: CGFloat) {
+        guard let window else { return }
+        userScale = min(max(s, Self.scaleRange.lowerBound), Self.scaleRange.upperBound)
+        let old = window.frame
+        let size = CGSize(width: Geo.size.width * userScale, height: Geo.size.height * userScale)
+        let origin = CGPoint(x: old.midX - size.width / 2, y: old.minY)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        rig.setAffineTransform(CGAffineTransform(scaleX: userScale, y: userScale))
+        CATransaction.commit()
+        window.setFrame(CGRect(origin: origin, size: size), display: true)
+        setFrameSize(size)
+        refreshToolTips()
+    }
     private var grab = Grab.none
     private var downPoint = CGPoint.zero
     private var dragged = false
@@ -64,7 +97,9 @@ final class MailboxView: NSView, NSDraggingSource {
     init(store: FileStore, post: PostOffice) {
         self.store = store
         self.post = post
-        super.init(frame: CGRect(origin: .zero, size: Geo.size))
+        super.init(frame: CGRect(origin: .zero, size: CGSize(width: Geo.size.width * MailboxView.savedScale,
+                                                            height: Geo.size.height * MailboxView.savedScale)))
+        userScale = MailboxView.savedScale
         layer = CALayer()
         wantsLayer = true
         buildLayers()
@@ -90,7 +125,9 @@ final class MailboxView: NSView, NSDraggingSource {
         }
         doorLayer.actions = none
         let full = CGRect(origin: .zero, size: Geo.size)
-        rig.frame = full
+        rig.anchorPoint = .zero
+        rig.bounds = full
+        rig.position = .zero
         root.addSublayer(rig)
 
         baseLayer.frame = full
@@ -171,7 +208,8 @@ final class MailboxView: NSView, NSDraggingSource {
     }
 
     private func renderArt() {
-        let scale = window?.backingScaleFactor ?? 2
+        rig.setAffineTransform(CGAffineTransform(scaleX: userScale, y: userScale))
+        let scale = (window?.backingScaleFactor ?? 2) * max(1, userScale)
         guard scale != renderedScale else { return }
         renderedScale = scale
         CATransaction.begin(); CATransaction.setDisableActions(true)
@@ -204,68 +242,52 @@ final class MailboxView: NSView, NSDraggingSource {
     // MARK: Items on the floor
 
     private var allItems: [Item] {
-        post.inbox.reversed().map { Item.letter($0) } + store.items.map { Item.file($0) }
+        store.items.map { Item.file($0) }
     }
 
-    /// Four on the floor, four on the shelf.
-    func layoutItems() {
-        let items = allItems
-        let d = Geo.door
-        let front = (count: 4, slot: CGFloat(42), size: CGFloat(38), y: d.minY + 4)
-        let back = (count: 4, slot: CGFloat(40), size: CGFloat(34), y: d.minY + 76)
-        let capacity = front.count + back.count
-        let shown = items.count > capacity ? capacity - 1 : items.count
-        let backCount = max(0, shown - front.count) + (items.count > shown ? 1 : 0)
+    /// Most files the box holds: three rows of eight.
+    static let capacity = 24
+    /// Row heights above the bottom of the door opening: the floor and two shelves.
+    static let rowBase: [CGFloat] = [4, 54, 102]
 
+    /// Files sit on the floor and the shelves as their own icons, like in the fridge.
+    /// Rows fill from the floor up; icons get a little smaller as a row fills.
+    func layoutItems() {
+        let items = Array(allItems.prefix(Self.capacity))
+        let d = Geo.door
+        let perRow = max(5, Int((Double(items.count) / 3).rounded(.up)))
+        let width = d.width - 16
+        let size = min(34, width / CGFloat(perRow) - 2)
         var newSlots: [(item: Item, rect: CGRect)] = []
-        for (i, item) in items.prefix(shown).enumerated() {
-            let isFront = i < front.count
-            let row = isFront ? front : back
-            let index = isFront ? i : i - front.count
-            let inRow = isFront ? min(shown, front.count) : backCount
-            let start = d.midX - CGFloat(inRow) * row.slot / 2
-            let rect = CGRect(x: start + CGFloat(index) * row.slot + (row.slot - row.size) / 2, y: row.y,
-                              width: row.size, height: row.size)
+        for (i, item) in items.enumerated() {
+            let row = i / perRow, column = i % perRow
+            let inRow = min(perRow, items.count - row * perRow)
+            let step = width / CGFloat(perRow)
+            let start = d.midX - step * CGFloat(inRow) / 2
+            let rect = CGRect(x: start + step * CGFloat(column) + (step - size) / 2, y: d.minY + Self.rowBase[min(row, 2)],
+                              width: size, height: size)
             newSlots.append((item, rect))
         }
         slots = newSlots
 
         CATransaction.begin(); CATransaction.setDisableActions(true)
         var keep = Set<String>()
-        for (index, slot) in slots.enumerated().reversed() {
+        for slot in slots {
             let key = slot.item.key
             keep.insert(key)
             let l = itemLayers[key] ?? makeItemLayer(slot.item)
             itemLayers[key] = l
             l.frame = slot.rect
-            l.zPosition = CGFloat(-index)
             if l.superlayer == nil { itemsLayer.addSublayer(l) }
         }
         for (key, l) in itemLayers where !keep.contains(key) {
             l.removeFromSuperlayer()
             itemLayers[key] = nil
         }
-        itemsLayer.sublayers?.filter { $0.name == "overflow" }.forEach { $0.removeFromSuperlayer() }
-        overflowRect = nil
-        if items.count > shown {
-            let start = d.midX - CGFloat(backCount) * back.slot / 2
-            let r = CGRect(x: start + CGFloat(backCount - 1) * back.slot + 1, y: back.y + 5, width: back.slot - 2, height: 20)
-            let badge = CATextLayer()
-            badge.name = "overflow"
-            badge.actions = ["contents": NSNull(), "position": NSNull(), "bounds": NSNull()]
-            badge.frame = r
-            badge.cornerRadius = 10
-            badge.backgroundColor = Paint.hex(0xF4EBD8, 0.92)
-            badge.foregroundColor = Paint.hex(0x8F2018)
-            badge.font = NSFont.systemFont(ofSize: 12, weight: .bold)
-            badge.fontSize = 12
-            badge.alignmentMode = .center
-            badge.string = "+\(items.count - shown)"
-            badge.contentsScale = renderedScale
-            itemsLayer.addSublayer(badge)
-            overflowRect = r
-        }
         CATransaction.commit()
+        if let name = selectedName, !slots.contains(where: { if case .file(let f) = $0.item { return f.name == name }; return false }) {
+            select(nil)
+        }
         refreshToolTips()
         onContentsChange?()
     }
@@ -283,16 +305,18 @@ final class MailboxView: NSView, NSDraggingSource {
             l.setAffineTransform(CGAffineTransform(rotationAngle: tilt))
         case .file(let f):
             let icon = NSWorkspace.shared.icon(forFile: store.url(of: f).path)
-            l.contents = MailboxArt.parcel(name: f.name, icon: icon, scale: renderedScale * 1.2)
-            let tilt = CGFloat(Int(f.name.utf8.reduce(0) { $0 + Int($1) }) % 7 - 3) * 0.02
-            l.setAffineTransform(CGAffineTransform(rotationAngle: tilt))
+            var rect = CGRect(x: 0, y: 0, width: 64, height: 64)
+            l.contents = icon.cgImage(forProposedRect: &rect, context: nil, hints: nil)
+            l.shadowOpacity = 0.4
+            l.shadowRadius = 2
+            l.shadowOffset = CGSize(width: 0, height: -1.5)
         }
         return l
     }
 
     private func refreshToolTips() {
         removeAllToolTips()
-        if waitingID != nil { addToolTip(Geo.peek, owner: "A letter for you" as NSString, userData: nil) }
+        if waitingID != nil { addToolTip(viewRect(Geo.peek), owner: "A letter for you" as NSString, userData: nil) }
         guard door.isOpen else { return }
         for slot in slots {
             let tip: String
@@ -300,9 +324,8 @@ final class MailboxView: NSView, NSDraggingSource {
             case .letter(let d): tip = "A letter from \(post.letter(d.id)?.from ?? "someone")"
             case .file(let f): tip = f.name
             }
-            addToolTip(slot.rect, owner: tip as NSString, userData: nil)
+            addToolTip(viewRect(slot.rect), owner: tip as NSString, userData: nil)
         }
-        if let r = overflowRect { addToolTip(r, owner: "Open the Mailbox folder to see everything" as NSString, userData: nil) }
     }
 
     // MARK: The letter in the slot
@@ -364,7 +387,7 @@ final class MailboxView: NSView, NSDraggingSource {
     /// Where the waiting letter is, in screen coordinates.
     private var peekScreenRect: NSRect? {
         guard let window else { return nil }
-        return window.convertToScreen(convert(Geo.peek, to: nil))
+        return window.convertToScreen(convert(viewRect(Geo.peek), to: nil))
     }
 
     /// A letter arrived: it slides into the slot and the box gives a little shake.
@@ -421,6 +444,7 @@ final class MailboxView: NSView, NSDraggingSource {
             store.reconcile()
             layoutItems()
         } else {
+            select(nil)
             refreshToolTips()
         }
         onDoorChange?(open)
@@ -466,7 +490,7 @@ final class MailboxView: NSView, NSDraggingSource {
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        let p = convert(point, from: superview)
+        let p = scene(convert(point, from: superview))
         return doorHit(p) || bodyHit(p) ? self : nil
     }
 
@@ -475,17 +499,20 @@ final class MailboxView: NSView, NSDraggingSource {
     // MARK: Mouse
 
     override func mouseDown(with event: NSEvent) {
-        let p = convert(event.locationInWindow, from: nil)
+        let p = scene(convert(event.locationInWindow, from: nil))
         if event.modifierFlags.contains([.option, .command]) {
             window?.performDrag(with: event)
             return
         }
+        if event.modifierFlags.contains(.option) && (bodyHit(p) || doorHit(p)) {
+            grab = .resize(start: NSEvent.mouseLocation, scale: userScale)
+            return
+        }
         downPoint = p
         dragged = false
+        if slot(at: p) == nil { select(nil) }
         if peekHit(p) && !(door.angle > 0.2 && doorHit(p)) {
             grab = .peek
-        } else if door.isOpen, let r = overflowRect, r.contains(p) {
-            grab = .overflow
         } else if let s = slot(at: p) {
             grab = .item(s.item, s.rect)
         } else if doorHit(p) {
@@ -499,7 +526,13 @@ final class MailboxView: NSView, NSDraggingSource {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        let p = convert(event.locationInWindow, from: nil)
+        let p = scene(convert(event.locationInWindow, from: nil))
+        if case .resize(let start, let scale) = grab {
+            // Up or right to grow, down or left to shrink.
+            let m = NSEvent.mouseLocation
+            applyScale(scale + ((m.y - start.y) + (m.x - start.x) * 0.5) / 300)
+            return
+        }
         if !dragged && hypot(p.x - downPoint.x, p.y - downPoint.y) < 3 { return }
         let first = !dragged
         dragged = true
@@ -539,11 +572,14 @@ final class MailboxView: NSView, NSDraggingSource {
                     let screen = r.flatMap { rect in window.map { $0.convertToScreen(convert(rect, to: nil)) } }
                     delegate?.openLetter(d.id, replying: false, from: screen)
                 case .file(let f):
-                    if event.clickCount >= 2 { NSWorkspace.shared.open(store.url(of: f)) }
+                    // One click shows its name, two open it. Space shows it in Quick Look.
+                    if event.clickCount >= 2 { NSWorkspace.shared.open(store.url(of: f)) } else { select(f.name) }
                 }
             }
-        case .overflow:
-            if !dragged { NSWorkspace.shared.open(store.folder) }
+        case .resize:
+            UserDefaults.standard.set(Double(userScale), forKey: "scale")
+            renderedScale = 0
+            renderArt()      // redraw sharp at the new size
         case .none:
             break
         }
@@ -552,16 +588,13 @@ final class MailboxView: NSView, NSDraggingSource {
     }
 
     #if DEBUG
-    /// For test scripts: post files as if they were dropped on the box.
-    func postForTest(_ urls: [URL]) {
-        let names = urls.map(\.lastPathComponent)
-        let icons = urls.map { NSWorkspace.shared.icon(forFile: $0.path) }
-        liftHood(true)
-        store.store(urls) { [weak self] in
-            self?.liftHood(false)
-            self?.postAnimation(names: names, icons: icons)
-            self?.layoutItems()
-        }
+    /// For test scripts: put files in as if they were dropped on the box.
+    func postForTest(_ urls: [URL]) { openDoor(); store(urls) }
+
+    /// For test scripts: select a file and open Quick Look.
+    func selectForTest(_ index: Int) {
+        guard index < slots.count, case .file(let f) = slots[index].item else { return }
+        select(f.name)
     }
 
     /// For test scripts: open the letter in the slot as if it were clicked.
@@ -574,13 +607,118 @@ final class MailboxView: NSView, NSDraggingSource {
         updateWaiting(animated: true)
     }
 
+    // MARK: Putting files in
+
+    /// Moves files in, as long as there is room. A full box gives a shake and refuses.
+    private func store(_ urls: [URL]) {
+        let room = Self.capacity - store.items.count
+        guard room > 0 else { refuseFull(); return }
+        store.store(Array(urls.prefix(room))) { [weak self] in
+            Sounds.play(.drop, volume: 0.7)
+            self?.layoutItems()
+        }
+        if urls.count > room { refuseFull() }
+    }
+
+    private func refuseFull() {
+        let shake = CAKeyframeAnimation(keyPath: "position.x")
+        shake.values = [0, -4, 4, -3, 2, 0].map { NSNumber(value: $0) }
+        shake.isAdditive = true
+        shake.duration = 0.35
+        rig.add(shake, forKey: "full")
+        Sounds.play(.thud, volume: 0.5)
+        showTag("The box is full", above: CGRect(x: Geo.door.midX - 1, y: Geo.door.maxY - 30, width: 2, height: 2))
+    }
+
+    // MARK: Selection, names and Quick Look
+
+    private func select(_ name: String?) {
+        selectedName = name
+        for (key, l) in itemLayers {
+            let on = name.map { key == "file:\($0)" } ?? false
+            l.borderWidth = 0
+            l.backgroundColor = on ? Paint.hex(0xFFFFFF, 0.22) : nil
+            l.cornerRadius = 5
+        }
+        guard let name, let slot = slots.first(where: { $0.item.key == "file:\(name)" }) else {
+            nameTag.isHidden = true
+            if QLPreviewPanel.sharedPreviewPanelExists() && QLPreviewPanel.shared().isVisible { QLPreviewPanel.shared().orderOut(nil) }
+            return
+        }
+        showTag(name, above: slot.rect)
+        // Take the keyboard so Space can open Quick Look.
+        window?.makeKey()
+        window?.makeFirstResponder(self)
+        if QLPreviewPanel.sharedPreviewPanelExists() && QLPreviewPanel.shared().isVisible { QLPreviewPanel.shared().reloadData() }
+    }
+
+    /// A small paper tag with the name, just above the icon.
+    private func showTag(_ text: String, above rect: CGRect) {
+        if nameTag.superlayer == nil {
+            nameTag.actions = ["position": NSNull(), "bounds": NSNull(), "contents": NSNull(), "hidden": NSNull()]
+            nameTag.font = NSFont.systemFont(ofSize: 11, weight: .medium)
+            nameTag.fontSize = 11
+            nameTag.alignmentMode = .center
+            nameTag.truncationMode = .middle
+            nameTag.foregroundColor = Paint.hex(0x2B3A55)
+            nameTag.backgroundColor = Paint.hex(0xFAF3E2)
+            nameTag.cornerRadius = 6
+            nameTag.borderWidth = 0.5
+            nameTag.borderColor = Paint.hex(0x8A7A5A, 0.4)
+            nameTag.shadowOpacity = 0.3
+            nameTag.shadowRadius = 3
+            nameTag.shadowOffset = CGSize(width: 0, height: -1)
+            rig.addSublayer(nameTag)
+        }
+        nameTag.contentsScale = renderedScale
+        let width = min(220, (text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium)]).width + 16)
+        var x = rect.midX - width / 2
+        x = min(max(x, 4), Geo.size.width - width - 4)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        nameTag.string = text
+        nameTag.frame = CGRect(x: x, y: rect.maxY + 4, width: width, height: 18)
+        nameTag.isHidden = false
+        CATransaction.commit()
+    }
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func keyDown(with event: NSEvent) {
+        switch event.keyCode {
+        case 49 where selectedName != nil:      // Space
+            let panel = QLPreviewPanel.shared()!
+            if panel.isVisible { panel.orderOut(nil) } else { panel.makeKeyAndOrderFront(nil) }
+        case 53:                                // Escape
+            select(nil)
+        case 36, 76:                            // Return opens it
+            if let name = selectedName, let f = store.items.first(where: { $0.name == name }) {
+                NSWorkspace.shared.open(store.url(of: f))
+            }
+        default:
+            super.keyDown(with: event)
+        }
+    }
+
+    var hasSelection: Bool { selectedName != nil }
+
+    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool { true }
+    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) { panel.dataSource = self }
+    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) { panel.dataSource = nil }
+
+    func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int { selectedName == nil ? 0 : 1 }
+
+    func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> QLPreviewItem! {
+        guard let name = selectedName, let f = store.items.first(where: { $0.name == name }) else { return nil }
+        return store.url(of: f) as NSURL
+    }
+
     // MARK: Dragging files out
 
     private func beginDrag(_ item: Item, rect: CGRect, event: NSEvent) {
         guard case .file(let f) = item else { return }
         let url = store.url(of: f)
         let dragItem = NSDraggingItem(pasteboardWriter: url as NSURL)
-        dragItem.setDraggingFrame(rect, contents: NSWorkspace.shared.icon(forFile: url.path))
+        dragItem.setDraggingFrame(viewRect(rect), contents: NSWorkspace.shared.icon(forFile: url.path))
         beginDraggingSession(with: [dragItem], event: event, source: self)
     }
 
@@ -599,57 +737,11 @@ final class MailboxView: NSView, NSDraggingSource {
         (info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []
     }
 
-    /// Files are posted through the slot: the hood lifts while something is held over the box.
+    /// Dragging files over the box swings the door open, like the fridge.
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard (sender.draggingSource as AnyObject?) !== self, !fileURLs(sender).isEmpty else { return [] }
-        liftHood(true)
+        openDoor()
         return .move
-    }
-
-    override func draggingExited(_ sender: NSDraggingInfo?) { liftHood(false) }
-
-    private func liftHood(_ up: Bool) {
-        let a = CABasicAnimation(keyPath: "transform")
-        a.fromValue = NSValue(caTransform3D: hoodLayer.presentation()?.transform ?? hoodLayer.transform)
-        let t = up ? CATransform3DMakeTranslation(0, 3, 0) : CATransform3DIdentity
-        a.toValue = NSValue(caTransform3D: t)
-        a.duration = 0.15
-        hoodLayer.add(a, forKey: "lift")
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        hoodLayer.transform = t
-        CATransaction.commit()
-        if up { Sounds.play(.seal, volume: 0.25) }
-    }
-
-    /// A parcel with the file's name slides up into the slot and disappears.
-    private func postAnimation(names: [String], icons: [NSImage]) {
-        for (i, name) in names.prefix(4).enumerated() {
-            let l = CALayer()
-            l.contentsScale = renderedScale
-            l.contents = MailboxArt.parcel(name: name, icon: icons[i], size: Geo.peek.size, scale: renderedScale)
-            l.bounds = CGRect(origin: .zero, size: CGSize(width: Geo.peek.width, height: Geo.peek.height + 8))
-            let rest = CGPoint(x: Geo.peek.midX, y: Geo.peek.midY + 40)
-            l.position = rest
-            l.opacity = 0
-            peekClip.addSublayer(l)
-            let start = CACurrentMediaTime() + Double(i) * 0.22
-            let move = CAKeyframeAnimation(keyPath: "position.y")
-            move.values = [rest.y - 60, rest.y - 52, rest.y].map { NSNumber(value: Double($0)) }
-            move.keyTimes = [0, 0.35, 1]
-            let fade = CAKeyframeAnimation(keyPath: "opacity")
-            fade.values = [0, 1, 1]
-            fade.keyTimes = [0, 0.2, 1]
-            let group = CAAnimationGroup()
-            group.animations = [move, fade]
-            group.beginTime = start
-            group.duration = 0.55
-            group.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            group.fillMode = .both
-            group.isRemovedOnCompletion = false
-            l.add(group, forKey: "post")
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.22 + 0.4) { Sounds.play(.arrive, volume: 0.6) }
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.22 + 0.7) { l.removeFromSuperlayer() }
-        }
     }
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
@@ -659,20 +751,14 @@ final class MailboxView: NSView, NSDraggingSource {
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         let urls = fileURLs(sender)
         guard !urls.isEmpty else { return false }
-        liftHood(false)
-        let names = urls.map(\.lastPathComponent)
-        let icons = urls.map { NSWorkspace.shared.icon(forFile: $0.path) }
-        store.store(urls) { [weak self] in
-            self?.postAnimation(names: names, icons: icons)
-            self?.layoutItems()
-        }
+        store(urls)
         return true
     }
 
     // MARK: Menu
 
     override func menu(for event: NSEvent) -> NSMenu? {
-        let p = convert(event.locationInWindow, from: nil)
+        let p = scene(convert(event.locationInWindow, from: nil))
         let menu = NSMenu()
         if let s = slot(at: p) {
             switch s.item {
@@ -701,6 +787,20 @@ final class MailboxView: NSView, NSDraggingSource {
             menu.addItem(.separator())
         }
         menu.addItem(ActionItem(door.isOpen ? "Close the Door" : "Open the Door") { [weak self] in self?.toggleDoor() })
+        // Letters that have arrived live here, not in the box.
+        let read = post.inbox.filter(\.read)
+        if !read.isEmpty {
+            let letters = NSMenuItem(title: "Your Letters", action: nil, keyEquivalent: "")
+            let sub = NSMenu()
+            for d in read.reversed() {
+                guard let letter = post.letter(d.id) else { continue }
+                sub.addItem(ActionItem(letter.title ?? "From \(letter.from)") { [weak self] in
+                    self?.delegate?.openLetter(d.id, replying: false, from: nil)
+                })
+            }
+            letters.submenu = sub
+            menu.addItem(letters)
+        }
         menu.addItem(ActionItem("Open Mailbox Folder") { [weak self] in
             guard let self else { return }
             NSWorkspace.shared.open(self.store.folder)

@@ -20,7 +20,8 @@ final class MailboxPanel: NSPanel, NSWindowDelegate {
         delegate = self
     }
 
-    override var canBecomeKey: Bool { false }
+    /// Only takes the keyboard while a file is selected, so Space can open Quick Look.
+    override var canBecomeKey: Bool { (contentView as? MailboxView)?.hasSelection ?? false }
     override var canBecomeMain: Bool { false }
 
     func windowDidMove(_ notification: Notification) {
@@ -43,7 +44,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MailboxViewDelegate {
     private var view: MailboxView?
     private var post: PostOffice?
     private var letterWindow: LetterWindow?
-    private var tray: MailTray?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let store = FileStore()
@@ -53,15 +53,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MailboxViewDelegate {
         post.onDelivery = { [weak view] _ in view?.mailArrived() }
         let panel = MailboxPanel(view: view)
         panel.orderFrontRegardless()
-        let tray = MailTray(store: store, post: post)
-        tray.mailDelegate = self
-        tray.onChange = { [weak view] in view?.layoutItems() }
-        view.onDoorChange = { [weak tray, weak panel] open in
-            guard let tray, let panel else { return }
-            if open { tray.show(beside: panel.frame) } else { tray.hide() }
-        }
-        view.onContentsChange = { [weak tray] in if tray?.isShown == true { tray?.reload() } }
-        self.tray = tray
         self.panel = panel
         self.view = view
         self.post = post
@@ -88,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MailboxViewDelegate {
             default:
                 if command.hasPrefix("sounds:") { Sounds.export(to: URL(fileURLWithPath: String(command.dropFirst(7)))) }
                 if command.hasPrefix("post:") { self.view?.postForTest([URL(fileURLWithPath: String(command.dropFirst(5)))]) }
+                if command.hasPrefix("select:") { self.view?.selectForTest(Int(command.dropFirst(7)) ?? 0) }
                 if command.hasPrefix("read:") { self.openLetter(String(command.dropFirst(5)), replying: false, from: nil) }
                 if command.hasPrefix("reply:") { self.openLetter(String(command.dropFirst(6)), replying: true, from: nil) }
             }
