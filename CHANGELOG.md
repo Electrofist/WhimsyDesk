@@ -12,6 +12,12 @@ Each object keeps its own version in its `object.json`. Entries are grouped by o
 - Added downloads: `scripts/release.sh` and a release workflow that publishes a DMG and zip per object when a tag like `fridge-v1.0` is pushed. Signs and notarizes once Apple Developer secrets are added.
 - Added `scripts/make-icon.swift` and a Phoenix Code section in the guide, pointing to the Desktop Objects Studio extension.
 
+### Desktop Vending Machine 1.0
+- First release. A yellow vending machine for your desktop: files stand on four shelves of three, a red button under each drops it into the bin, with Put Back and Quick Look.
+
+### Desktop Vending Machine Keypad 1.0
+- First release. The same machine with a keypad: type a code like B2 and press OK to drop a file. Keeps its own folder, so both can run at once.
+
 ### Desktop Mailbox 1.1
 - New app icon.
 

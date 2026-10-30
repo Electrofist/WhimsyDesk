@@ -16,7 +16,7 @@
 
 <p align="center">
   <b>Real-feeling objects that live on your Mac desktop and hold your files.</b><br>
-  Drag a file into the fridge, shut the door, and your desktop is clear.<br>
+  A fridge, a drawer, a mailbox and a vending machine. Drop files in, close them up, and your desktop is clear.<br>
   Open it again and everything is where you left it.
 </p>
 
@@ -54,6 +54,20 @@ Each object is a small, standalone Mac app. Free, open source and made to be rem
       <b>Desktop Mailbox</b><br>
       <sub>A post box where a letter arrives every now and then.</sub><br><br>
       <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Mailbox.dmg"><b>Download</b></a> &nbsp;·&nbsp; <a href="#desktop-mailbox">Details</a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="25%">
+      <img src="objects/vending/media/icon.png" alt="Desktop Vending Machine icon" width="112"><br>
+      <b>Desktop Vending Machine</b><br>
+      <sub>Files on little shelves. Press a button and one drops.</sub><br><br>
+      <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Vending-Machine.dmg"><b>Download</b></a> &nbsp;·&nbsp; <a href="#desktop-vending-machine">Details</a>
+    </td>
+    <td align="center" width="25%">
+      <img src="objects/vending-keypad/media/icon.png" alt="Desktop Vending Machine Keypad icon" width="112"><br>
+      <b>Desktop Vending Machine Keypad</b><br>
+      <sub>The same machine with a keypad. Type a code and one drops.</sub><br><br>
+      <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Vending-Machine-Keypad.dmg"><b>Download</b></a> &nbsp;·&nbsp; <a href="#desktop-vending-machine">Details</a>
     </td>
     <td align="center" width="25%">
       <a href="docs/make-your-own.md"><img src=".github/assets/your-object.png" alt="An empty spot for your object" width="112"></a><br>
@@ -112,6 +126,27 @@ A red post box on a pole. Every now and then a letter arrives through the slot a
 
 <sub>Stores files in <code>~/Mailbox</code> &nbsp;·&nbsp; <a href="objects/mailbox/README.md">How to use it</a> &nbsp;·&nbsp; <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Mailbox.dmg">Download</a></sub>
 
+### Desktop Vending Machine
+
+<p align="center">
+  <img src="objects/vending/media/logo.png" alt="Vending Machine" width="380">
+</p>
+
+<p align="center">
+  <img src="objects/vending/media/hero.gif" alt="Files dropped onto the vending machine stand on its shelves, then a red button is pressed and a file drops into the bin" width="400">
+  <img src="objects/vending-keypad/media/hero.gif" alt="The keypad version: a code is typed and a file drops into the bin" width="400">
+</p>
+
+A sunny little vending machine that stands on your desktop. Your files are the snacks, each on a shelf behind the glass with its name on a tag. It comes in two versions; pick one, or run both.
+
+- **Buttons.** Press the red button under a file and it is pushed off its shelf into the bin.
+- **Keypad.** Type a code like B2, press OK, and that file drops.
+- **Take it out.** Drag a file out of the bin, or right-click and choose Put Back to return it to where it was.
+- **Twelve spots.** Drag files onto the window and outlines show where they will stand. When it is full, the screen says SOLD OUT.
+
+<sub>Buttons: stores files in <code>~/Vending Machine</code> &nbsp;·&nbsp; <a href="objects/vending/README.md">How to use it</a> &nbsp;·&nbsp; <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Vending-Machine.dmg">Download</a><br>
+Keypad: stores files in <code>~/Vending Machine Keypad</code> &nbsp;·&nbsp; <a href="objects/vending-keypad/README.md">How to use it</a> &nbsp;·&nbsp; <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Vending-Machine-Keypad.dmg">Download</a></sub>
+
 ## Get started
 
 ### Download
@@ -120,6 +155,8 @@ A red post box on a pole. Every now and then a letter arrives through the slot a
   <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Fridge.dmg"><img src="https://img.shields.io/badge/Download-Desktop%20Fridge-9DA716?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Fridge"></a>
   <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Drawer.dmg"><img src="https://img.shields.io/badge/Download-Desktop%20Drawer-5C3A1A?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Drawer"></a>
   <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Mailbox.dmg"><img src="https://img.shields.io/badge/Download-Desktop%20Mailbox-D8432F?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Mailbox"></a>
+  <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Vending-Machine.dmg"><img src="https://img.shields.io/badge/Download-Vending%20Machine-E0A400?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Vending Machine"></a>
+  <a href="https://github.com/Electrofist/desktop-objects/releases/download/downloads/Desktop-Vending-Machine-Keypad.dmg"><img src="https://img.shields.io/badge/Download-Vending%20Machine%20Keypad-C98A00?style=for-the-badge&logo=apple&logoColor=white" alt="Download Desktop Vending Machine Keypad"></a>
 </p>
 
 Click a button and the download starts. Open the file, drag the app into **Applications**, and open it from there. Free, for macOS 14 or later.
@@ -136,7 +173,7 @@ cd desktop-objects/objects/fridge
 ./build.sh run
 ```
 
-For the drawer: `cd objects/drawer && bash build_app.sh`, then open `build/Desktop Drawer.app`. For the mailbox: `cd objects/mailbox && ./build.sh run`.
+For the drawer: `cd objects/drawer && bash build_app.sh`, then open `build/Desktop Drawer.app`. For the mailbox: `cd objects/mailbox && ./build.sh run`. For the vending machines: `cd objects/vending && ./build.sh run` (or `objects/vending-keypad`).
 
 Questions about where files go, permissions or the "cannot be opened" warning are answered in the [FAQ](docs/faq.md).
 
@@ -182,6 +219,8 @@ objects/            one folder per object, each a standalone app
   fridge/
   drawer/
   mailbox/
+  vending/
+  vending-keypad/
 templates/object/   the starter object used by new-object.sh
 scripts/            new-object.sh, check-objects.sh, make-icon.swift, release tools
 docs/               make-your-own guide, FAQ, releasing

@@ -32,7 +32,7 @@ In short:
 6. Use your object for a day on your own desktop.
 7. Open a pull request using the "New object" checklist. Include a screen recording or GIF.
 
-You can also start from scratch instead of the template, as the fridge, drawer and mailbox did. Your object still needs its own folder, an `object.json`, a README, a CODEOWNERS line and a build script that produces a `.app`.
+You can also start from scratch instead of the template, as the fridge, drawer, mailbox and vending machines did. Your object still needs its own folder, an `object.json`, a README, a CODEOWNERS line and a build script that produces a `.app`.
 
 ## object.json fields
 
