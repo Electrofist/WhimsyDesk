@@ -1,9 +1,10 @@
 import AppKit
 import QuartzCore
+import Quartz
 
 /// The vending machine on the desktop. Layer-hosting: all art is cached in layers, and the display
 /// link only runs while something moves.
-final class VendingView: NSView {
+final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     let store: FileStore
 
     private let rig = CALayer()
@@ -55,8 +56,13 @@ final class VendingView: NSView {
     private var entryDigit: Int?
     /// A coil is turning or a file is falling; the keypad waits.
     private var vending = false
-    /// The key held down under the mouse, as an index into `Geo.keys`.
-    private var heldKey: Int?
+    /// What the mouse is holding.
+    private enum Grab { case none, key(Int), item(StoredItem, CGRect) }
+    private var grab = Grab.none
+    private var downPoint = CGPoint.zero
+    private var dragged = false
+    private var selectedName: String?
+    private let nameTag = CATextLayer()
 
     /// The tray flap: how far it has swung out (radians) and how fast.
     private var flapAngle = 0.0
@@ -636,33 +642,246 @@ final class VendingView: NSView {
 
     // MARK: Mouse
 
+    /// The file under the mouse: one in a coil behind the glass, or one in the tray.
+    private func item(at p: CGPoint) -> (item: StoredItem, rect: CGRect)? {
+        if Geo.tray.contains(p) {
+            let tray = store.trayItems
+            // The front-most (last placed) icon wins where they overlap.
+            for (n, item) in tray.enumerated().reversed() where !moving.contains(item.name) {
+                let r = Geo.traySpot(n, of: tray.count)
+                if r.insetBy(dx: -2, dy: -2).contains(p) { return (item, r) }
+            }
+            return nil
+        }
+        guard Geo.glass.contains(p) else { return nil }
+        for item in store.items where !moving.contains(item.name) {
+            if let slot = item.slot, let i = Geo.index(of: slot), Geo.iconRect(i).insetBy(dx: -3, dy: -3).contains(p) {
+                return (item, Geo.iconRect(i))
+            }
+        }
+        return nil
+    }
+
     override func mouseDown(with event: NSEvent) {
         let p = scene(convert(event.locationInWindow, from: nil))
+        downPoint = p
+        dragged = false
+        grab = .none
         if let k = keyIndex(at: p) {
             // Only the keys press. The key goes down with the mouse and comes up with it.
-            heldKey = k
+            grab = .key(k)
             showKey(k, down: true)
             Sounds.play(.click, volume: 0.35)
+        } else if let hit = item(at: p) {
+            grab = .item(hit.item, hit.rect)
+        } else {
+            select(nil)
         }
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard let k = heldKey else { return }
         let p = scene(convert(event.locationInWindow, from: nil))
-        showKey(k, down: keyIndex(at: p) == k)
+        switch grab {
+        case .key(let k):
+            showKey(k, down: keyIndex(at: p) == k)
+        case .item(let item, let rect):
+            // Files come out only from the tray. Behind the glass they wait for their code.
+            guard item.inTray, !dragged, hypot(p.x - downPoint.x, p.y - downPoint.y) >= 3 else { return }
+            dragged = true
+            beginDrag(item, rect: rect, event: event)
+        case .none:
+            break
+        }
     }
 
     override func mouseUp(with event: NSEvent) {
         let p = scene(convert(event.locationInWindow, from: nil))
-        if let k = heldKey {
+        switch grab {
+        case .key(let k):
             showKey(k, down: false)
-            heldKey = nil
             if keyIndex(at: p) == k { press(Geo.keys[k].key) }
+        case .item(let item, _):
+            guard !dragged else { break }
+            if event.clickCount >= 2 {
+                // Two clicks: behind the glass it vends, in the tray it opens.
+                if let slot = item.slot { vend(slot) } else { NSWorkspace.shared.open(store.url(of: item)) }
+            } else {
+                select(item.name)
+            }
+        case .none:
+            break
+        }
+        grab = .none
+        dragged = false
+    }
+
+    // MARK: Selection, names and Quick Look
+
+    private func select(_ name: String?) {
+        selectedName = name
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        for (key, l) in itemLayers {
+            l.backgroundColor = key == name ? Paint.hex(0xFFFFFF, 0.25) : nil
+            l.cornerRadius = 5
+        }
+        CATransaction.commit()
+        guard let name, let item = store.items.first(where: { $0.name == name }) else {
+            nameTag.isHidden = true
+            if QLPreviewPanel.sharedPreviewPanelExists() && QLPreviewPanel.shared().isVisible { QLPreviewPanel.shared().orderOut(nil) }
+            return
+        }
+        let rect: CGRect
+        if let slot = item.slot, let i = Geo.index(of: slot) {
+            rect = Geo.iconRect(i)
+        } else {
+            let tray = store.trayItems
+            rect = Geo.traySpot(tray.firstIndex(of: item) ?? 0, of: tray.count)
+        }
+        showTag(item.slot.map { "\($0)  \(name)" } ?? name, above: rect)
+        // Take the keyboard so Space can open Quick Look.
+        window?.makeKey()
+        window?.makeFirstResponder(self)
+        if QLPreviewPanel.sharedPreviewPanelExists() && QLPreviewPanel.shared().isVisible { QLPreviewPanel.shared().reloadData() }
+    }
+
+    /// A small paper tag with the name, just above the icon.
+    private func showTag(_ text: String, above rect: CGRect) {
+        if nameTag.superlayer == nil {
+            nameTag.actions = ["position": NSNull(), "bounds": NSNull(), "contents": NSNull(), "hidden": NSNull(), "string": NSNull()]
+            nameTag.font = NSFont.systemFont(ofSize: 11, weight: .medium)
+            nameTag.fontSize = 11
+            nameTag.alignmentMode = .center
+            nameTag.truncationMode = .middle
+            nameTag.foregroundColor = Paint.hex(0x24302F)
+            nameTag.backgroundColor = Paint.hex(0xFAF3E2)
+            nameTag.cornerRadius = 6
+            nameTag.borderWidth = 0.5
+            nameTag.borderColor = Paint.hex(0x8A7A5A, 0.4)
+            nameTag.shadowOpacity = 0.3
+            nameTag.shadowRadius = 3
+            nameTag.shadowOffset = CGSize(width: 0, height: -1)
+            rig.addSublayer(nameTag)
+        }
+        nameTag.contentsScale = renderedScale
+        let width = min(220, (text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium)]).width + 16)
+        var x = rect.midX - width / 2
+        x = min(max(x, 4), Geo.size.width - width - 4)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        nameTag.string = text
+        nameTag.frame = CGRect(x: x, y: rect.maxY + 4, width: width, height: 18)
+        nameTag.isHidden = false
+        CATransaction.commit()
+    }
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func keyDown(with event: NSEvent) {
+        switch event.keyCode {
+        case 49 where selectedName != nil:      // Space
+            let panel = QLPreviewPanel.shared()!
+            if panel.isVisible { panel.orderOut(nil) } else { panel.makeKeyAndOrderFront(nil) }
+        case 53:                                // Escape
+            select(nil)
+        default:
+            super.keyDown(with: event)
         }
     }
 
-    /// Selection comes with the next step; for now, nothing is selected.
-    private func select(_ name: String?) {}
+    var hasSelection: Bool { selectedName != nil }
+
+    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool { true }
+    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) { panel.dataSource = self }
+    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) { panel.dataSource = nil }
+
+    func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int { selectedName == nil ? 0 : 1 }
+
+    func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> QLPreviewItem! {
+        guard let name = selectedName, let f = store.items.first(where: { $0.name == name }) else { return nil }
+        return store.url(of: f) as NSURL
+    }
+
+    // MARK: Taking files out of the tray
+
+    private func beginDrag(_ item: StoredItem, rect: CGRect, event: NSEvent) {
+        select(nil)
+        let url = store.url(of: item)
+        let dragItem = NSDraggingItem(pasteboardWriter: url as NSURL)
+        dragItem.setDraggingFrame(viewRect(rect), contents: NSWorkspace.shared.icon(forFile: url.path))
+        beginDraggingSession(with: [dragItem], event: event, source: self)
+        // Your hand pushes the flap in on the way out.
+        knockFlap(1.8)
+    }
+
+    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        context == .outsideApplication ? [.move, .copy, .generic] : []
+    }
+
+    func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
+        store.reconcile()
+        layoutItems(animated: true)
+    }
+
+    // MARK: Menu
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        store.reconcile()
+        layoutItems()
+        let p = scene(convert(event.locationInWindow, from: nil))
+        let menu = NSMenu()
+        if let hit = item(at: p) {
+            let item = hit.item, url = store.url(of: item)
+            if let slot = item.slot {
+                let vendItem = ActionItem("Vend \(slot)") { [weak self] in self?.vend(slot) }
+                vendItem.isEnabled = !vending
+                menu.addItem(vendItem)
+            } else {
+                menu.addItem(ActionItem("Open") { NSWorkspace.shared.open(url) })
+                menu.addItem(ActionItem("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) })
+            }
+            menu.addItem(ActionItem("Put Back") { [weak self] in self?.putBack([item]) })
+            menu.addItem(.separator())
+        }
+        let vendMenu = NSMenu()
+        let inCoils = store.items.filter { $0.slot != nil }.sorted { ($0.slot ?? "") < ($1.slot ?? "") }
+        for item in inCoils {
+            guard let slot = item.slot else { continue }
+            let entry = ActionItem("\(slot)   \(item.name)") { [weak self] in self?.vend(slot) }
+            entry.isEnabled = !vending
+            vendMenu.addItem(entry)
+        }
+        if inCoils.isEmpty {
+            let none = NSMenuItem(title: "Nothing inside yet. Drop files on the glass.", action: nil, keyEquivalent: "")
+            none.isEnabled = false
+            vendMenu.addItem(none)
+        }
+        let vendRoot = NSMenuItem(title: "Vend", action: nil, keyEquivalent: "")
+        vendRoot.submenu = vendMenu
+        menu.addItem(vendRoot)
+        menu.addItem(ActionItem("Open Vending Machine Folder") { [weak self] in
+            guard let self else { return }
+            NSWorkspace.shared.open(self.store.folder)
+        })
+        let all = ActionItem("Put Back All") { [weak self] in
+            guard let self else { return }
+            self.putBack(self.store.items)
+        }
+        all.isEnabled = !store.items.isEmpty
+        menu.addItem(all)
+        let sound = ActionItem("Sound") { Sounds.enabled.toggle() }
+        sound.state = Sounds.enabled ? .on : .off
+        menu.addItem(sound)
+        menu.addItem(.separator())
+        menu.addItem(ActionItem("Quit Desktop Vending Machine") { NSApp.terminate(nil) })
+        return menu
+    }
+
+    /// Sends files back where they came from. A file in the middle of falling finishes first.
+    private func putBack(_ items: [StoredItem]) {
+        select(nil)
+        for item in items where !moving.contains(item.name) { store.putBack(item) }
+        layoutItems(animated: true)
+        if store.items.allSatisfy({ $0.slot == nil }) { idleWork?.cancel(); showDisplay(idleLines) }
+    }
 
     // MARK: Dropping files in
 
@@ -692,6 +911,27 @@ final class VendingView: NSView {
     /// For test scripts: put files in as if they were dropped on the glass.
     func storeForTest(_ urls: [URL]) { storeFiles(urls) }
 
+    /// For test scripts: select the n-th file, as a click would.
+    func selectForTest(_ n: Int) {
+        guard n < store.items.count else { return }
+        select(store.items[n].name)
+    }
+
+    /// For test scripts: Put Back the n-th file.
+    func putBackForTest(_ n: Int) {
+        guard n < store.items.count else { return }
+        putBack([store.items[n]])
+    }
+
+    /// For test scripts: take the first file in the tray out into a folder, as a drag would.
+    func takeForTest(to folder: URL) {
+        guard let item = store.trayItems.first else { return }
+        knockFlap(1.8)
+        try? FileManager.default.moveItem(at: store.url(of: item), to: folder.appendingPathComponent(item.name))
+        store.reconcile()
+        layoutItems(animated: true)
+    }
+
     /// For test scripts: press a key by its label (A, 1, CLR, OK), as a click would.
     func keyForTest(_ label: String) {
         guard let k = Geo.keys.firstIndex(where: { $0.key.label == label }) else { return }
@@ -703,4 +943,19 @@ final class VendingView: NSView {
         }
     }
     #endif
+}
+
+/// A menu item that runs a closure.
+final class ActionItem: NSMenuItem {
+    private let handler: () -> Void
+
+    init(_ title: String, _ handler: @escaping () -> Void) {
+        self.handler = handler
+        super.init(title: title, action: #selector(run), keyEquivalent: "")
+        target = self
+    }
+
+    required init(coder: NSCoder) { fatalError("not used") }
+
+    @objc private func run() { handler() }
 }

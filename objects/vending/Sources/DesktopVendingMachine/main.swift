@@ -20,6 +20,8 @@ final class VendingPanel: NSPanel, NSWindowDelegate {
         delegate = self
     }
 
+    /// Only takes the keyboard while a file is selected, so Space can open Quick Look.
+    override var canBecomeKey: Bool { (contentView as? VendingView)?.hasSelection ?? false }
     override var canBecomeMain: Bool { false }
 
     func windowDidMove(_ notification: Notification) {
@@ -56,13 +58,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     #if DEBUG
     /// Debug builds only: drive the machine from a script, since clicks cannot reach a window at
     /// desktop level. Commands: store:<path>, key:<label>, vend:<code>,
-    /// slow:<factor>, sounds:<folder>.
+    /// select:<n>, putback:<n>, take:<folder>, slow:<factor>, sounds:<folder>.
     private func listenForTestCommands() {
         DistributedNotificationCenter.default().addObserver(forName: Notification.Name("io.github.electrofist.vending.test"),
                                                             object: nil, queue: .main) { [weak self] note in
             guard let self, let view = self.view, let command = note.object as? String else { return }
             if command.hasPrefix("store:") { view.storeForTest([URL(fileURLWithPath: String(command.dropFirst(6)))]) }
             if command.hasPrefix("key:") { view.keyForTest(String(command.dropFirst(4))) }
+            if command.hasPrefix("select:") { view.selectForTest(Int(command.dropFirst(7)) ?? 0) }
+            if command.hasPrefix("putback:") { view.putBackForTest(Int(command.dropFirst(8)) ?? 0) }
+            if command.hasPrefix("take:") { view.takeForTest(to: URL(fileURLWithPath: String(command.dropFirst(5)))) }
             if command.hasPrefix("slow:") { VendingView.slowMotion = Double(command.dropFirst(5)) ?? 1 }
             if command.hasPrefix("vend:") { view.vend(String(command.dropFirst(5))) }
             if command.hasPrefix("sounds:") { Sounds.export(to: URL(fileURLWithPath: String(command.dropFirst(7)))) }
