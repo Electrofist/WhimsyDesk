@@ -2,7 +2,7 @@
   "id": "mailbox",
   "name": "Desktop Mailbox",
   "tagline": "Every now and then, a letter arrives.",
-  "description": "A navy mailbox on a wooden post. Handpicked letters arrive at random times, the flag pops up, and you can write back. It also hides your files: drop them in and close the door.",
+  "description": "A red post box. Handpicked letters arrive at random times through the slot, open in their envelopes, and you can write back. It also hides your files: drop them in and close the door.",
   "author": {
     "name": "Krrish Parmar",
     "github": "Electrofist"
@@ -18,6 +18,8 @@
   "accent": "#D8432F",
   "screenshots": [
     "media/closed.png",
-    "media/open.png"
+    "media/open.png",
+    "media/letter-opening.png",
+    "media/letter.png"
   ]
 }

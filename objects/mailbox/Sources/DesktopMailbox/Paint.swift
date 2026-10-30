@@ -1,27 +1,29 @@
 import AppKit
 
-/// Layout of the mailbox, in points. Origin at the bottom left of the window, y up.
+/// Layout of the post box, in points. Origin at the bottom left of the window, y up.
 enum Geo {
-    /// Wider than the box so the flag fits when it lies down to the right.
-    static let size = CGSize(width: 372, height: 400)
+    /// Room on the left for the door when it swings wide open.
+    static let size = CGSize(width: 360, height: 440)
 
-    /// The front of the mailbox: an arch (rectangle with a half circle on top).
-    static let mouth = CGRect(x: 60, y: 150, width: 200, height: 180)
-    /// The door sits just inside the front rim and is hinged along its bottom edge.
-    static let door = mouth.insetBy(dx: 7, dy: 7)
-    static var hingeY: CGFloat { door.minY }
-
-    /// The wooden post under the box.
-    static let post = CGRect(x: 144, y: 22, width: 32, height: 136)
-
-    /// The flag turns around this point on the right side of the box.
-    static let flagPivot = CGPoint(x: 278, y: 214)
-    static let flagSize = CGSize(width: 96, height: 96)
-    /// Where the pivot sits inside the flag image.
-    static let flagAnchor = CGPoint(x: 20, y: 20)
-
+    /// The front face: a tall box with a domed top.
+    static let box = CGRect(x: 90, y: 112, width: 220, height: 300)
+    static let domeHeight: CGFloat = 64
     /// Depth of the box seen slightly from the right.
-    static let depth = CGVector(dx: 13, dy: 9)
+    static let depth = CGVector(dx: 12, dy: 8)
+
+    /// The door in the lower front, hinged on its left edge.
+    static let door = CGRect(x: 112, y: 122, width: 176, height: 148)
+    static var hingeX: CGFloat { door.minX }
+
+    /// The letter slot and the hood over it.
+    static let slot = CGRect(x: 120, y: 318, width: 160, height: 13)
+    static let hood = CGRect(x: 110, y: 329, width: 180, height: 17)
+
+    /// The grey pole under the box.
+    static let post = CGRect(x: 182, y: 20, width: 36, height: 96)
+
+    /// A letter waiting in the slot sticks out this far below it.
+    static let peek = CGRect(x: 172, y: 305, width: 56, height: 38)
 }
 
 /// Small drawing helpers. Everything is drawn once per screen scale and cached as layer contents.
@@ -59,6 +61,25 @@ enum Paint {
         p.addLine(to: CGPoint(x: r.maxX, y: r.minY))
         p.closeSubpath()
         return p
+    }
+
+    /// A rectangle with a gently domed top of the given height.
+    static func dome(_ r: CGRect, _ height: CGFloat) -> CGPath {
+        let h = min(height, r.height), k: CGFloat = 0.5523
+        let p = CGMutablePath()
+        p.move(to: CGPoint(x: r.minX, y: r.minY))
+        p.addLine(to: CGPoint(x: r.minX, y: r.maxY - h))
+        p.addCurve(to: CGPoint(x: r.midX, y: r.maxY), control1: CGPoint(x: r.minX, y: r.maxY - h + h * k),
+                   control2: CGPoint(x: r.midX - r.width / 2 * k, y: r.maxY))
+        p.addCurve(to: CGPoint(x: r.maxX, y: r.maxY - h), control1: CGPoint(x: r.midX + r.width / 2 * k, y: r.maxY),
+                   control2: CGPoint(x: r.maxX, y: r.maxY - h + h * k))
+        p.addLine(to: CGPoint(x: r.maxX, y: r.minY))
+        p.closeSubpath()
+        return p
+    }
+
+    static func rounded(_ r: CGRect, _ radius: CGFloat) -> CGPath {
+        CGPath(roundedRect: r, cornerWidth: min(radius, r.width / 2), cornerHeight: min(radius, r.height / 2), transform: nil)
     }
 
     static func fill(_ ctx: CGContext, _ path: CGPath, _ color: CGColor) {

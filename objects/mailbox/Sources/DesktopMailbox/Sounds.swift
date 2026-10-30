@@ -4,7 +4,7 @@ import AppKit
 /// otherwise the sound is made in code, modelled on the real thing (sheet metal ringing, a hinge
 /// squeaking, paper crackling). Built once on first use. Nothing loops and nothing is scheduled.
 enum Sounds {
-    enum Name: String { case clunk, thud, creak, boing, rustle, drop, flick }
+    enum Name: String { case clunk, thud, creak, arrive, rustle, drop, seal }
 
     static var enabled: Bool {
         get { !UserDefaults.standard.bool(forKey: "soundOff") }
@@ -133,14 +133,16 @@ enum Sounds {
                 }
                 return panel.run(x)
             }
-        case .boing:
-            // The flag swinging up: a clack against its stop and a short spring wobble.
-            var stop = Panel([(1450, 80, 1), (2380, 120, 0.6), (3600, 200, 0.3)])
-            var spring = Resonator(165, bandwidth: 6)
-            return render(0.6) { t, _ in
-                let hit = t < 0.003 ? noise.next() : 0
-                let s = spring.run(hit) * (1 + 0.5 * sin(2 * .pi * 9 * t) * exp(-t * 4))
-                return stop.run(hit) * 1.2 + s * 6
+        case .arrive:
+            // A letter pushed through the slot: paper sliding on metal, then the hood flap clacking back.
+            var slide = Resonator(2600, bandwidth: 2600)
+            var flap = Panel([(1250, 70, 1), (2050, 110, 0.6), (3300, 180, 0.3), (640, 50, 0.5)])
+            var body = Panel(steel.map { ($0.freq, $0.bandwidth * 2, $0.amp * 0.4) })
+            return render(0.75) { t, _ in
+                let swish = t < 0.32 ? sin(Double.pi * t / 0.32) : 0
+                let hit = (t > 0.34 && t < 0.343) ? noise.next() : 0
+                let land = (t > 0.36 && t < 0.37) ? noise.next() * 0.5 : 0
+                return slide.run(noise.next() * swish) * 0.5 + flap.run(hit) * 1.3 + body.run(land)
             }
         case .rustle:
             // Paper unfolding: sparse crackles over a soft hiss, in two or three gestures.
@@ -160,10 +162,15 @@ enum Sounds {
                 let hit = t < 0.012 ? noise.next() * (1 - t / 0.012) : 0
                 return slap.run(hit) * 2 + panel.run(hit * 0.25)
             }
-        case .flick:
-            // A light tap on the flag.
-            var tick = Panel([(1450, 90, 1), (2380, 150, 0.5)])
-            return render(0.15) { t, _ in tick.run(t < 0.002 ? noise.next() : 0) }
+        case .seal:
+            // Wax cracking: a few dry snaps close together.
+            var snap = Panel([(1800, 900, 1), (3400, 1400, 0.7), (900, 500, 0.4)])
+            let snaps: [Double] = [0, 0.018, 0.031, 0.06]
+            return render(0.2) { t, _ in
+                var x = 0.0
+                for (i, s) in snaps.enumerated() where t >= s && t < s + 0.0025 { x += noise.next() * (1 - Double(i) * 0.2) }
+                return snap.run(x)
+            }
         }
     }
 
@@ -184,7 +191,7 @@ enum Sounds {
     #if DEBUG
     /// Writes every sound to a folder so they can be listened to side by side.
     static func export(to folder: URL) {
-        for name in [Name.clunk, .thud, .creak, .boing, .rustle, .drop, .flick] {
+        for name in [Name.clunk, .thud, .creak, .arrive, .rustle, .drop, .seal] {
             try? wav(make(name)).write(to: folder.appendingPathComponent("\(name.rawValue).wav"))
         }
     }

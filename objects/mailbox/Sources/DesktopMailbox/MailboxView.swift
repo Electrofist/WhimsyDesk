@@ -2,12 +2,13 @@ import AppKit
 import QuartzCore
 
 protocol MailboxViewDelegate: AnyObject {
-    func openLetter(_ id: String, replying: Bool)
+    /// `from` is where the letter starts on screen, if it was pulled from the slot.
+    func openLetter(_ id: String, replying: Bool, from: NSRect?)
     func showReplies()
 }
 
-/// The mailbox on the desktop. Layer-hosting: all art is cached in layers, and the display link
-/// only runs while the door or the flag is moving.
+/// The post box on the desktop. Layer-hosting: all art is cached in layers, and the display link
+/// only runs while the door is moving.
 final class MailboxView: NSView, NSDraggingSource {
     enum Item {
         case letter(Delivery)
@@ -25,7 +26,6 @@ final class MailboxView: NSView, NSDraggingSource {
     weak var delegate: MailboxViewDelegate?
 
     private var door = DoorModel()
-    private var flag = FlagModel()
     private var closingByClick = false
     private var link: CADisplayLink?
     private var lastTick: CFTimeInterval = 0
@@ -37,17 +37,21 @@ final class MailboxView: NSView, NSDraggingSource {
     private let interiorLayer = CALayer()
     private let itemsLayer = CALayer()
     private let bodyLayer = CALayer()
+    private let peekClip = CALayer()
+    private let peekLayer = CALayer()
+    private let hoodLayer = CALayer()
     private let doorLayer = CATransformLayer()
     private let doorFront = CALayer()
     private let doorShade = CALayer()
     private let doorBack = CALayer()
-    private let flagLayer = CALayer()
     private var itemLayers: [String: CALayer] = [:]
     private var slots: [(item: Item, rect: CGRect)] = []
     private var overflowRect: CGRect?
     private var renderedScale: CGFloat = 0
+    /// The letter sticking out of the slot, if any.
+    private var waitingID: String?
 
-    private enum Grab { case none, door(fraction: CGFloat), item(Item, CGRect), flag, overflow }
+    private enum Grab { case none, door(fraction: CGFloat), item(Item, CGRect), peek, overflow }
     private var grab = Grab.none
     private var downPoint = CGPoint.zero
     private var dragged = false
@@ -62,9 +66,7 @@ final class MailboxView: NSView, NSDraggingSource {
         registerForDraggedTypes([.fileURL])
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
-        setAccessibilityLabel("Mailbox")
-        flag.angle = post.unreadCount > 0 ? FlagModel.up : FlagModel.down
-        flag.target = flag.angle
+        setAccessibilityLabel("Post box")
         applyState()
     }
 
@@ -77,7 +79,8 @@ final class MailboxView: NSView, NSDraggingSource {
         let none: [String: CAAction] = ["position": NSNull(), "bounds": NSNull(), "transform": NSNull(),
                                         "opacity": NSNull(), "contents": NSNull(), "hidden": NSNull(),
                                         "sublayers": NSNull(), "frame": NSNull()]
-        for l in [rig, baseLayer, boxLayer, interiorLayer, itemsLayer, bodyLayer, doorFront, doorShade, doorBack, flagLayer] {
+        for l in [rig, baseLayer, boxLayer, interiorLayer, itemsLayer, bodyLayer, peekClip, peekLayer, hoodLayer,
+                  doorFront, doorShade, doorBack] {
             l.actions = none
         }
         doorLayer.actions = none
@@ -99,16 +102,29 @@ final class MailboxView: NSView, NSDraggingSource {
 
         itemsLayer.frame = full
         let mask = CAShapeLayer()
-        mask.path = Paint.arch(Geo.door)
+        mask.path = CGPath(rect: Geo.door, transform: nil)
         itemsLayer.mask = mask
         boxLayer.addSublayer(itemsLayer)
 
         bodyLayer.frame = full
         boxLayer.addSublayer(bodyLayer)
 
+        // A waiting letter shows below the slot and disappears into it.
+        peekClip.frame = CGRect(x: 0, y: 0, width: Geo.size.width, height: Geo.slot.maxY)
+        peekClip.masksToBounds = true
+        peekLayer.bounds = CGRect(origin: .zero, size: CGSize(width: Geo.peek.width, height: Geo.peek.height + 8))
+        peekLayer.position = CGPoint(x: Geo.peek.midX, y: Geo.peek.midY)
+        peekLayer.setAffineTransform(CGAffineTransform(rotationAngle: 0.06))
+        peekLayer.isHidden = true
+        peekClip.addSublayer(peekLayer)
+        boxLayer.addSublayer(peekClip)
+
+        hoodLayer.frame = full
+        boxLayer.addSublayer(hoodLayer)
+
         doorLayer.bounds = CGRect(origin: .zero, size: Geo.door.size)
-        doorLayer.anchorPoint = CGPoint(x: 0.5, y: 0)
-        doorLayer.position = CGPoint(x: Geo.door.midX, y: Geo.door.minY)
+        doorLayer.anchorPoint = CGPoint(x: 0, y: 0.5)
+        doorLayer.position = CGPoint(x: Geo.door.minX, y: Geo.door.midY)
         boxLayer.addSublayer(doorLayer)
 
         doorFront.frame = doorLayer.bounds
@@ -116,20 +132,13 @@ final class MailboxView: NSView, NSDraggingSource {
         doorShade.frame = doorFront.bounds
         doorShade.backgroundColor = Paint.hex(0x000000)
         doorShade.opacity = 0
-        doorShade.mask = CALayer()
-        doorShade.mask?.frame = doorFront.bounds
         doorFront.addSublayer(doorShade)
         doorLayer.addSublayer(doorFront)
 
         doorBack.frame = doorLayer.bounds
         doorBack.isDoubleSided = false
-        doorBack.transform = CATransform3DMakeRotation(.pi, 1, 0, 0)
+        doorBack.transform = CATransform3DMakeRotation(.pi, 0, 1, 0)
         doorLayer.addSublayer(doorBack)
-
-        flagLayer.bounds = CGRect(origin: .zero, size: Geo.flagSize)
-        flagLayer.anchorPoint = CGPoint(x: Geo.flagAnchor.x / Geo.flagSize.width, y: Geo.flagAnchor.y / Geo.flagSize.height)
-        flagLayer.position = Geo.flagPivot
-        rig.addSublayer(flagLayer)
     }
 
     override func viewDidChangeBackingProperties() {
@@ -150,26 +159,25 @@ final class MailboxView: NSView, NSDraggingSource {
         baseLayer.contents = MailboxArt.base(scale: scale)
         interiorLayer.contents = MailboxArt.interior(scale: scale)
         bodyLayer.contents = MailboxArt.body(scale: scale)
-        let front = MailboxArt.doorFront(scale: scale)
-        doorFront.contents = front
-        doorShade.mask?.contents = front
+        hoodLayer.contents = MailboxArt.hood(scale: scale)
+        doorFront.contents = MailboxArt.doorFront(scale: scale)
         doorBack.contents = MailboxArt.doorBack(scale: scale)
-        flagLayer.contents = MailboxArt.flag(scale: scale)
-        for l in [rig, baseLayer, boxLayer, interiorLayer, itemsLayer, bodyLayer, doorFront, doorShade, doorBack, flagLayer] {
+        for l in [rig, baseLayer, boxLayer, interiorLayer, itemsLayer, bodyLayer, peekClip, peekLayer, hoodLayer,
+                  doorFront, doorShade, doorBack] {
             l.contentsScale = scale
         }
-        doorShade.mask?.contentsScale = scale
         itemLayers.removeAll()
         itemsLayer.sublayers = nil
+        waitingID = nil
         CATransaction.commit()
         layoutItems()
+        updateWaiting(animated: false)
     }
 
     private func applyState() {
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        doorLayer.transform = CATransform3DMakeRotation(CGFloat(door.angle), 1, 0, 0)
-        doorShade.opacity = Float(sin(min(door.angle, .pi / 2)) * 0.5)
-        flagLayer.transform = CATransform3DMakeRotation(CGFloat(flag.angle), 0, 0, 1)
+        doorLayer.transform = CATransform3DMakeRotation(-CGFloat(door.angle), 0, 1, 0)
+        doorShade.opacity = Float(sin(min(door.angle, .pi / 2)) * 0.45)
         CATransaction.commit()
     }
 
@@ -179,22 +187,22 @@ final class MailboxView: NSView, NSDraggingSource {
         post.inbox.reversed().map { Item.letter($0) } + store.items.map { Item.file($0) }
     }
 
-    /// Two rows on the floor of the box: four in front, five smaller ones behind.
+    /// Four on the floor, four on the shelf.
     func layoutItems() {
         let items = allItems
         let d = Geo.door
-        let front = (count: 4, slot: CGFloat(44), size: CGFloat(40), y: d.minY + 3)
-        let back = (count: 5, slot: CGFloat(34), size: CGFloat(31), y: d.minY + 27)
+        let front = (count: 4, slot: CGFloat(42), size: CGFloat(38), y: d.minY + 4)
+        let back = (count: 4, slot: CGFloat(40), size: CGFloat(34), y: d.minY + 76)
         let capacity = front.count + back.count
         let shown = items.count > capacity ? capacity - 1 : items.count
+        let backCount = max(0, shown - front.count) + (items.count > shown ? 1 : 0)
 
         var newSlots: [(item: Item, rect: CGRect)] = []
         for (i, item) in items.prefix(shown).enumerated() {
-            let row = i < front.count ? front : back
-            let index = i < front.count ? i : i - front.count
-            // The overflow badge takes the last spot in the back row.
-            let backCount = shown - front.count + (items.count > shown ? 1 : 0)
-            let inRow = min(row.count, i < front.count ? min(shown, front.count) : backCount)
+            let isFront = i < front.count
+            let row = isFront ? front : back
+            let index = isFront ? i : i - front.count
+            let inRow = isFront ? min(shown, front.count) : backCount
             let start = d.midX - CGFloat(inRow) * row.slot / 2
             let rect = CGRect(x: start + CGFloat(index) * row.slot + (row.slot - row.size) / 2, y: row.y,
                               width: row.size, height: row.size)
@@ -204,7 +212,6 @@ final class MailboxView: NSView, NSDraggingSource {
 
         CATransaction.begin(); CATransaction.setDisableActions(true)
         var keep = Set<String>()
-        // Back row first so the front row is drawn over it.
         for (index, slot) in slots.enumerated().reversed() {
             let key = slot.item.key
             keep.insert(key)
@@ -221,16 +228,15 @@ final class MailboxView: NSView, NSDraggingSource {
         itemsLayer.sublayers?.filter { $0.name == "overflow" }.forEach { $0.removeFromSuperlayer() }
         overflowRect = nil
         if items.count > shown {
-            // The last spot in the back row.
-            let r = CGRect(x: d.midX + 1.5 * back.slot + (back.slot - back.size) / 2, y: back.y + 6,
-                           width: back.size, height: 22)
+            let start = d.midX - CGFloat(backCount) * back.slot / 2
+            let r = CGRect(x: start + CGFloat(backCount - 1) * back.slot + 1, y: back.y + 5, width: back.slot - 2, height: 20)
             let badge = CATextLayer()
             badge.name = "overflow"
             badge.actions = ["contents": NSNull(), "position": NSNull(), "bounds": NSNull()]
             badge.frame = r
-            badge.cornerRadius = 11
+            badge.cornerRadius = 10
             badge.backgroundColor = Paint.hex(0xF4EBD8, 0.92)
-            badge.foregroundColor = Paint.hex(0x2F4D74)
+            badge.foregroundColor = Paint.hex(0x8F2018)
             badge.font = NSFont.systemFont(ofSize: 12, weight: .bold)
             badge.fontSize = 12
             badge.alignmentMode = .center
@@ -267,6 +273,7 @@ final class MailboxView: NSView, NSDraggingSource {
 
     private func refreshToolTips() {
         removeAllToolTips()
+        if waitingID != nil { addToolTip(Geo.peek, owner: "A letter for you" as NSString, userData: nil) }
         guard door.isOpen else { return }
         for slot in slots {
             let tip: String
@@ -277,6 +284,81 @@ final class MailboxView: NSView, NSDraggingSource {
             addToolTip(slot.rect, owner: tip as NSString, userData: nil)
         }
         if let r = overflowRect { addToolTip(r, owner: "Open the Mailbox folder to see everything" as NSString, userData: nil) }
+    }
+
+    // MARK: The letter in the slot
+
+    /// The newest unread letter sticks out of the slot. Once everything is read, the slot is empty.
+    func updateWaiting(animated: Bool) {
+        let newest = post.inbox.last { !$0.read }
+        guard newest?.id != waitingID else { return }
+        waitingID = newest?.id
+        refreshToolTips()
+        let rest = CGPoint(x: Geo.peek.midX, y: Geo.peek.midY)
+        let hidden = CGPoint(x: rest.x, y: rest.y + Geo.peek.height)
+        guard let newest else {
+            if animated && !peekLayer.isHidden { slide(peekLayer, from: rest, to: CGPoint(x: rest.x, y: rest.y - 30), fade: true) }
+            else { peekLayer.isHidden = true }
+            return
+        }
+        let kind = post.letter(newest.id)?.kind ?? .note
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        peekLayer.contents = MailboxArt.envelope(kind: kind, read: false, size: Geo.peek.size, scale: renderedScale)
+        peekLayer.isHidden = false
+        peekLayer.opacity = 1
+        peekLayer.position = rest
+        CATransaction.commit()
+        if animated {
+            // Pushed in through the slot from outside, then it settles with a little bounce.
+            let drop = CAKeyframeAnimation(keyPath: "position.y")
+            drop.values = [hidden.y, rest.y - 3, rest.y + 1.5, rest.y].map { NSNumber(value: Double($0)) }
+            drop.keyTimes = [0, 0.55, 0.8, 1]
+            drop.duration = 0.5
+            drop.timingFunctions = [CAMediaTimingFunction(name: .easeIn), CAMediaTimingFunction(name: .easeOut),
+                                    CAMediaTimingFunction(name: .easeInEaseOut)]
+            peekLayer.add(drop, forKey: "arrive")
+        }
+    }
+
+    private func slide(_ l: CALayer, from: CGPoint, to: CGPoint, fade: Bool) {
+        let move = CABasicAnimation(keyPath: "position")
+        move.fromValue = NSValue(point: from)
+        move.toValue = NSValue(point: to)
+        let group = CAAnimationGroup()
+        var animations: [CAAnimation] = [move]
+        if fade {
+            let f = CABasicAnimation(keyPath: "opacity"); f.fromValue = 1; f.toValue = 0
+            animations.append(f)
+        }
+        group.animations = animations
+        group.duration = 0.25
+        group.timingFunction = CAMediaTimingFunction(name: .easeIn)
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { l.isHidden = true; l.position = from; l.opacity = 1 }
+        l.add(group, forKey: "leave")
+        CATransaction.setDisableActions(true)
+        l.position = to
+        l.opacity = fade ? 0 : 1
+        CATransaction.commit()
+    }
+
+    /// Where the waiting letter is, in screen coordinates.
+    private var peekScreenRect: NSRect? {
+        guard let window else { return nil }
+        return window.convertToScreen(convert(Geo.peek, to: nil))
+    }
+
+    /// A letter arrived: it slides into the slot and the box gives a little shake.
+    func mailArrived() {
+        layoutItems()
+        Sounds.play(.arrive, volume: 0.8)
+        updateWaiting(animated: true)
+        let shake = CAKeyframeAnimation(keyPath: "position.x")
+        shake.values = [0, -2.5, 2.5, -2, 1.5, -0.5, 0].map { NSNumber(value: $0) }
+        shake.isAdditive = true
+        shake.beginTime = CACurrentMediaTime() + 0.28
+        shake.duration = 0.4
+        rig.add(shake, forKey: "shake")
     }
 
     // MARK: Motion
@@ -296,21 +378,20 @@ final class MailboxView: NSView, NSDraggingSource {
             switch event {
             case .unlatched: break
             case .latched(let speed): Sounds.play(.clunk, volume: Float(min(1, 0.35 + speed / 6)))
-            case .hitStop(let speed): Sounds.play(.thud, volume: Float(min(1, 0.25 + speed / 7)))
+            case .hitStop(let speed): Sounds.play(.thud, volume: Float(min(1, 0.2 + speed / 8)))
             }
         }
         if closingByClick && door.angle < DoorModel.latchZone {
             door.handTarget = nil
             closingByClick = false
         }
-        flag.advance(dt)
         applyState()
         if door.isOpen != wasOpen {
             wasOpen = door.isOpen
             doorOpened(wasOpen)
         }
         let holding: Bool = { if case .door = grab { return dragged }; return false }()
-        if door.isAtRest && flag.isAtRest && !holding {
+        if door.isAtRest && !holding {
             l.invalidate()
             link = nil
         }
@@ -320,9 +401,8 @@ final class MailboxView: NSView, NSDraggingSource {
         if open {
             store.reconcile()
             layoutItems()
-            if !post.inbox.isEmpty { Sounds.play(.rustle, volume: 0.35) }
         } else {
-            removeAllToolTips()
+            refreshToolTips()
         }
     }
 
@@ -340,48 +420,24 @@ final class MailboxView: NSView, NSDraggingSource {
 
     func openDoor() { if door.angle < 0.3 { toggleDoor() } }
 
-    /// Raises the flag when there is unread mail and lowers it once everything is read.
-    func updateFlag() {
-        let target = post.unreadCount > 0 ? FlagModel.up : FlagModel.down
-        guard target != flag.target else { return }
-        flag.target = target
-        if target == FlagModel.up { Sounds.play(.boing, volume: 0.7) } else { Sounds.play(.flick, volume: 0.6) }
-        startTicking()
-    }
-
-    /// A letter arrived: the box shakes a little and the flag pops up.
-    func mailArrived() {
-        layoutItems()
-        let shake = CAKeyframeAnimation(keyPath: "position.x")
-        shake.values = [0, -3, 3, -2.5, 2, -1, 0].map { NSNumber(value: $0) }
-        shake.isAdditive = true
-        shake.duration = 0.45
-        rig.add(shake, forKey: "shake")
-        Sounds.play(.drop, volume: 0.8)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in self?.updateFlag() }
-    }
-
     // MARK: Hit testing
 
-    private var hingeY: CGFloat { Geo.hingeY }
-
     private func doorHit(_ p: CGPoint) -> Bool {
-        if door.angle < 0.25 { return Paint.arch(Geo.door).contains(p) }
-        let reach = Geo.door.height * CGFloat(cos(door.angle)) * 1.15
-        let y0 = min(hingeY, hingeY + reach) - 6, y1 = max(hingeY, hingeY + reach) + 6
-        return CGRect(x: Geo.door.minX - 20, y: y0, width: Geo.door.width + 40, height: y1 - y0).contains(p)
+        let d = Geo.door
+        if door.angle < 0.2 { return d.contains(p) }
+        // The open door, roughly as it looks in perspective.
+        let reach = d.width * CGFloat(cos(door.angle)) * 1.1
+        let x0 = min(d.minX, d.minX + reach) - 14, x1 = max(d.minX, d.minX + reach) + 14
+        let grow = d.height * 0.12 * CGFloat(sin(door.angle))
+        return CGRect(x: x0, y: d.minY - grow, width: x1 - x0, height: d.height + 2 * grow).contains(p)
     }
 
     private func bodyHit(_ p: CGPoint) -> Bool {
-        Paint.arch(Geo.mouth.insetBy(dx: -4, dy: -4)).contains(p) || Geo.post.contains(p)
+        Paint.dome(Geo.box.insetBy(dx: -2, dy: -2), Geo.domeHeight).contains(p) || Geo.post.contains(p)
     }
 
-    private func flagHit(_ p: CGPoint) -> Bool {
-        let a = CGFloat(flag.angle)
-        // The arm and flag, rotated about the pivot.
-        let local = CGPoint(x: p.x - Geo.flagPivot.x, y: p.y - Geo.flagPivot.y)
-        let u = CGPoint(x: local.x * cos(-a) - local.y * sin(-a), y: local.x * sin(-a) + local.y * cos(-a))
-        return CGRect(x: -10, y: -10, width: 64, height: 90).contains(u)
+    private func peekHit(_ p: CGPoint) -> Bool {
+        waitingID != nil && Geo.peek.insetBy(dx: -4, dy: -2).contains(p) && p.y < Geo.slot.maxY
     }
 
     private func slot(at p: CGPoint) -> (item: Item, rect: CGRect)? {
@@ -391,7 +447,7 @@ final class MailboxView: NSView, NSDraggingSource {
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         let p = convert(point, from: superview)
-        return doorHit(p) || bodyHit(p) || flagHit(p) ? self : nil
+        return doorHit(p) || bodyHit(p) ? self : nil
     }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
@@ -406,18 +462,17 @@ final class MailboxView: NSView, NSDraggingSource {
         }
         downPoint = p
         dragged = false
-        if flagHit(p) && !doorHit(p) {
-            grab = .flag
+        if peekHit(p) && !(door.angle > 0.2 && doorHit(p)) {
+            grab = .peek
         } else if door.isOpen, let r = overflowRect, r.contains(p) {
             grab = .overflow
         } else if let s = slot(at: p) {
             grab = .item(s.item, s.rect)
         } else if doorHit(p) {
-            let h = Geo.door.height
-            let f = door.angle < 0.25 ? max(0.35, (p.y - hingeY) / h) : 0.8
+            let f = door.angle < 0.2 ? max(0.4, (p.x - Geo.hingeX) / Geo.door.width) : 0.85
             grab = .door(fraction: min(1, f))
         } else if bodyHit(p) {
-            grab = .door(fraction: 0.8)
+            grab = .door(fraction: 0.85)
         } else {
             grab = .none
         }
@@ -430,7 +485,7 @@ final class MailboxView: NSView, NSDraggingSource {
         dragged = true
         switch grab {
         case .door(let f):
-            let c = max(-1, min(1, (p.y - hingeY) / (f * Geo.door.height)))
+            let c = max(-1, min(1, (p.x - Geo.hingeX) / (f * Geo.door.width)))
             door.handTarget = min(DoorModel.maxAngle, max(0, acos(Double(c))))
             closingByClick = false
             if first { Sounds.play(.creak, volume: 0.4) }
@@ -451,17 +506,20 @@ final class MailboxView: NSView, NSDraggingSource {
             } else {
                 toggleDoor()
             }
-        case .flag:
-            if !dragged {
-                flag.target = flag.target == FlagModel.up ? FlagModel.down : FlagModel.up
-                Sounds.play(flag.target == FlagModel.up ? .boing : .flick, volume: 0.6)
-                startTicking()
+        case .peek:
+            if let id = waitingID {
+                let rect = peekScreenRect
+                delegate?.openLetter(id, replying: false, from: rect)
             }
         case .item(let item, _):
             if !dragged {
                 switch item {
-                case .letter(let d): delegate?.openLetter(d.id, replying: false)
-                case .file(let f): if event.clickCount >= 2 { NSWorkspace.shared.open(store.url(of: f)) }
+                case .letter(let d):
+                    let r = slots.first { $0.item.key == item.key }?.rect
+                    let screen = r.flatMap { rect in window.map { $0.convertToScreen(convert(rect, to: nil)) } }
+                    delegate?.openLetter(d.id, replying: false, from: screen)
+                case .file(let f):
+                    if event.clickCount >= 2 { NSWorkspace.shared.open(store.url(of: f)) }
                 }
             }
         case .overflow:
@@ -471,6 +529,17 @@ final class MailboxView: NSView, NSDraggingSource {
         }
         grab = .none
         dragged = false
+    }
+
+    #if DEBUG
+    /// For test scripts: open the letter in the slot as if it were clicked.
+    func openWaiting(_ id: String) { delegate?.openLetter(id, replying: false, from: peekScreenRect) }
+    #endif
+
+    /// After a letter is opened: the slot letter is pulled out, and the floor shows it as read.
+    func letterTaken() {
+        layoutItems()
+        updateWaiting(animated: true)
     }
 
     // MARK: Dragging files out
@@ -526,14 +595,14 @@ final class MailboxView: NSView, NSDraggingSource {
         if let s = slot(at: p) {
             switch s.item {
             case .letter(let d):
-                menu.addItem(ActionItem("Read") { [weak self] in self?.delegate?.openLetter(d.id, replying: false) })
+                menu.addItem(ActionItem("Read") { [weak self] in self?.delegate?.openLetter(d.id, replying: false, from: nil) })
                 menu.addItem(ActionItem(post.reply(for: d.id) == nil ? "Write Back…" : "Edit My Reply…") { [weak self] in
-                    self?.delegate?.openLetter(d.id, replying: true)
+                    self?.delegate?.openLetter(d.id, replying: true, from: nil)
                 })
                 menu.addItem(ActionItem("Throw Away") { [weak self] in
                     self?.post.throwAway(d.id)
                     self?.layoutItems()
-                    self?.updateFlag()
+                    self?.updateWaiting(animated: true)
                 })
             case .file(let f):
                 let url = store.url(of: f)
@@ -544,6 +613,9 @@ final class MailboxView: NSView, NSDraggingSource {
                     self?.layoutItems()
                 })
             }
+            menu.addItem(.separator())
+        } else if let id = waitingID, peekHit(p) {
+            menu.addItem(ActionItem("Read") { [weak self] in self?.delegate?.openLetter(id, replying: false, from: self?.peekScreenRect) })
             menu.addItem(.separator())
         }
         menu.addItem(ActionItem(door.isOpen ? "Close the Door" : "Open the Door") { [weak self] in self?.toggleDoor() })

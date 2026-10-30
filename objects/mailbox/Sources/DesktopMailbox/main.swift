@@ -57,7 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MailboxViewDelegate {
         self.post = post
         post.start()
         view.layoutItems()
-        view.updateFlag()
+        view.updateWaiting(animated: false)
         #if DEBUG
         listenForTestCommands()
         #endif
@@ -72,18 +72,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MailboxViewDelegate {
             guard let self, let command = note.object as? String else { return }
             switch command {
             case "toggle": self.view?.toggleDoor()
+            case "slot": if let id = self.post?.inbox.last(where: { !$0.read })?.id { self.view?.openWaiting(id) }
             case "deliver": self.post?.deliverNow()
             case "close-letter": self.letterWindow?.putAway()
             default:
                 if command.hasPrefix("sounds:") { Sounds.export(to: URL(fileURLWithPath: String(command.dropFirst(7)))) }
-                if command.hasPrefix("read:") { self.openLetter(String(command.dropFirst(5)), replying: false) }
-                if command.hasPrefix("reply:") { self.openLetter(String(command.dropFirst(6)), replying: true) }
+                if command.hasPrefix("read:") { self.openLetter(String(command.dropFirst(5)), replying: false, from: nil) }
+                if command.hasPrefix("reply:") { self.openLetter(String(command.dropFirst(6)), replying: true, from: nil) }
             }
         }
     }
     #endif
 
-    func openLetter(_ id: String, replying: Bool) {
+    func openLetter(_ id: String, replying: Bool, from source: NSRect?) {
         guard let post, let letter = post.letter(id), let panel else { return }
         if let open = letterWindow, open.letterID == id {
             if replying && !open.replying { open.showReply() }
@@ -97,11 +98,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MailboxViewDelegate {
             self?.view?.layoutItems()
         }
         letterWindow = window
+        let isNew = post.inbox.first { $0.id == id }?.read == false
         if replying { window.showReply() }
-        window.present()
+        window.present(inEnvelope: isNew && !replying, from: source)
         post.markRead(id)
-        view?.layoutItems()
-        view?.updateFlag()
+        view?.letterTaken()
     }
 
     func showReplies() {
@@ -119,7 +120,7 @@ if let i = args.firstIndex(of: "--render-icon"), i + 1 < args.count {
     exit(0)
 }
 if let i = args.firstIndex(of: "--render-closed"), i + 1 < args.count {
-    if let image = MailboxArt.closedComposite(scale: 2, flagUp: true) {
+    if let image = MailboxArt.closedComposite(scale: 2, waiting: .note) {
         let rep = NSBitmapImageRep(cgImage: image)
         try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: args[i + 1]))
     }

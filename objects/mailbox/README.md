@@ -1,17 +1,22 @@
 # Desktop Mailbox
 
-A navy mailbox on a wooden post that lives on your desktop. Every now and then a letter arrives: a note, a movie for tonight, a book, a song, a few good words. The flag pops up when there is mail. You can write back.
+A red post box that lives on your desktop. Every now and then a letter arrives: a note, a movie for tonight, a book, a song, a few good words. It slides in through the slot and waits there, sticking out, until you read it. You can write back.
+
+<p align="center">
+  <img src="media/closed.png" alt="Desktop Mailbox: a red post box with a letter sticking out of its slot" height="360">
+  <img src="media/open.png" alt="The post box with its door open: letters and files on a shelf and on the floor" height="360">
+  <img src="media/letter-opening.png" alt="A letter sliding out of an opened green envelope" height="360">
+</p>
 
 It is also a hiding spot. Drop files in, close the door, and your desktop is clear.
 
 ## Using it
 
-- **Open the door:** click the mailbox. Or grab the door and pull it down. It falls open on its hinge and bounces on its stop.
-- **Close it:** click again, or push the door up. The latch catches it.
-- **Read a letter:** open the door and click an envelope. Unread ones have a wax seal.
+- **Open the door:** click the box. Or grab the door and swing it. It slows on its hinges and bounces off its stop.
+- **Close it:** click again, or push the door shut. The latch catches it.
+- **Read a letter:** click the letter sticking out of the slot. It comes out in its envelope: the wax seal pops, the flap opens and the letter slides out. Older letters are inside the box; open the door and click one.
 - **Write back:** press **Write back** on a letter. Your reply is kept on this Mac, in `~/Mailbox/.replies`. Nothing is sent anywhere.
 - **Hide files:** drag files or folders onto the mailbox. The door opens for you. Drag them back out, or right-click and choose **Put Back** to return a file to where it came from, even its old spot on the desktop.
-- **The flag:** it goes up when there is unread mail and down once you have read everything. Click it to flip it yourself.
 - **Move it:** hold Option and Command and drag.
 - **Everything else:** right-click the mailbox. Sound on or off, open the folder, see when more mail is coming, quit.
 
@@ -58,7 +63,7 @@ MAILBOX_DELIVERY_SECONDS=20 "build/Desktop Mailbox.app/Contents/MacOS/DesktopMai
 
 ## Sounds
 
-Every sound is made in code, so there are no audio files to license. To use a recording instead, put a WAV file in `Resources/Sounds/` with one of these names and rebuild: `clunk` (door shuts), `thud` (door falls open), `creak` (hinge), `boing` (flag goes up), `flick` (flag goes down), `rustle` (paper), `drop` (something lands inside).
+Every sound is made in code, so there are no audio files to license. To use a recording instead, put a WAV file in `Resources/Sounds/` with one of these names and rebuild: `clunk` (door shuts), `thud` (door hits its stop), `creak` (hinge), `arrive` (a letter comes through the slot), `seal` (the wax seal pops), `rustle` (paper), `drop` (something lands inside).
 
 ## Where things are kept
 
