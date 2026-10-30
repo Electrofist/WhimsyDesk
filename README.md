@@ -1,4 +1,4 @@
-<h1 align="center">Desktop Objects</h1>
+<h1 align="center">WhimsyDesk</h1>
 
 <p align="center">
   <img src=".github/assets/hero.gif" alt="Desktop Fridge on a Mac desktop: the door swings open, fog rolls out, and files are dragged inside" width="100%">

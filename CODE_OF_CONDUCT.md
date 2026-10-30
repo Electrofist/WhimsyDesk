@@ -1,6 +1,6 @@
 # Code of Conduct
 
-Desktop Objects is a friendly place for designers, developers and people who just like nice things on their desktop.
+WhimsyDesk is a friendly place for designers, developers and people who just like nice things on their desktop.
 
 ## Expected
 

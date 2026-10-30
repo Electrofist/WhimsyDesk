@@ -103,8 +103,8 @@ jobs:
           cp "dist/$BASE.dmg" "$STABLE"
           if ! gh release view downloads > /dev/null 2>&1; then
             gh release create downloads --target "$GITHUB_SHA" \
-              --title "Download Desktop Objects" --notes "Getting the downloads ready." --latest
+              --title "Download WhimsyDesk" --notes "Getting the downloads ready." --latest
           fi
           gh release upload downloads "$STABLE#version $VERSION, for $RUNS_ON" --clobber
           NOTARIZED="$NOTARIZED" scripts/release/downloads-page.sh > "$RUNNER_TEMP/downloads.md"
-          gh release edit downloads --title "Download Desktop Objects" --notes-file "$RUNNER_TEMP/downloads.md" --latest
+          gh release edit downloads --title "Download WhimsyDesk" --notes-file "$RUNNER_TEMP/downloads.md" --latest

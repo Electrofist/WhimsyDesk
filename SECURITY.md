@@ -1,6 +1,6 @@
 # Security
 
-Desktop Objects apps move files on your Mac, so bugs that could lose, expose or misplace files matter.
+WhimsyDesk apps move files on your Mac, so bugs that could lose, expose or misplace files matter.
 
 ## Report a problem
 

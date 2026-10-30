@@ -10,7 +10,7 @@ A little vending machine that stands on your desktop. Your files are the snacks,
 
 The art is a placeholder drawn in code for now. Painted art can replace it piece by piece; see `Resources/Art/README.md`.
 
-Made by [Electrofist](https://github.com/Electrofist). Part of [Desktop Objects](../../README.md).
+Made by [Electrofist](https://github.com/Electrofist). Part of [WhimsyDesk](../../README.md).
 
 ## Use it
 

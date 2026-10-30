@@ -1,6 +1,6 @@
-# Desktop Objects
+# WhimsyDesk
 
-An open source library of skeuomorphic macOS desktop objects that store files. Each object is a standalone AppKit app in `objects/<id>/`. Fridge and Drawer are the first two.
+WhimsyDesk (repo `desktop-objects`) is an open source library of skeuomorphic macOS desktop objects that store files. Each object is a standalone AppKit app in `objects/<id>/`. Released so far: fridge, drawer, mailbox, vending machine and its keypad version.
 
 ## Rules
 

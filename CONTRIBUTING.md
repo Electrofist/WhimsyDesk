@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping build Desktop Objects. There are three ways in:
+Thanks for helping build WhimsyDesk. There are three ways in:
 
 - **Add a new object** (an oven, a toolbox, a plant pot, anything).
 - **Improve an existing object** (a bug fix, a smoother animation, a better sound).

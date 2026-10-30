@@ -12,7 +12,7 @@ The art is a placeholder drawn in code for now. Painted art can replace it piece
 
 The keypad twin of [Desktop Vending Machine](../vending/README.md): same machine, but you type a code instead of pressing a button. Both can run at once; each keeps its own folder.
 
-Made by [Electrofist](https://github.com/Electrofist). Part of [Desktop Objects](../../README.md).
+Made by [Electrofist](https://github.com/Electrofist). Part of [WhimsyDesk](../../README.md).
 
 ## Use it
 

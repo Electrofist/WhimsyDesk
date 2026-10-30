@@ -4,7 +4,7 @@
 
 Write a sentence or two about your object.
 
-Made by [__AUTHOR__](https://github.com/__GITHUB__). Part of [Desktop Objects](../../README.md).
+Made by [__AUTHOR__](https://github.com/__GITHUB__). Part of [WhimsyDesk](../../README.md).
 
 ## Use it
 
