@@ -1,0 +1,63 @@
+[
+  {
+    "id": "welcome",
+    "welcome": true,
+    "from": "The Postmaster",
+    "kind": "note",
+    "body": "Hello, and welcome to your new mailbox.\n\nEvery now and then, when you least expect it, a letter will arrive. The flag goes up when there is mail. Some letters are notes, some are movies or books worth your evening, some are songs.\n\nYou can write back too. Your replies stay right here on your Mac.\n\nIt is also a good hiding spot. Drop files in, close the door, and your desktop is clear.",
+    "signoff": "Yours,\nThe Postmaster"
+  },
+  {
+    "id": "paterson",
+    "from": "A friend who likes slow films",
+    "kind": "movie",
+    "title": "Paterson (2016)",
+    "body": "Watch this one on a quiet night.\n\nIt is a week in the life of a bus driver who writes poems in a notebook. Nothing big happens, and that is the whole point. You will notice small things for days after.",
+    "signoff": "Make tea first."
+  },
+  {
+    "id": "totoro",
+    "from": "Someone who still believes in forest spirits",
+    "kind": "movie",
+    "title": "My Neighbor Totoro (1988)",
+    "body": "If you have had a long week, this is the cure.\n\nTwo sisters, a new house in the countryside, a bus shaped like a cat, and a big soft creature who waits in the rain. It is gentle from start to finish.",
+    "signoff": "Bring an umbrella."
+  },
+  {
+    "id": "little-prince",
+    "from": "A reader on the night train",
+    "kind": "book",
+    "title": "The Little Prince",
+    "body": "You can read it in one sitting, but it stays with you for years.\n\nA pilot lands in the desert and meets a small boy from a very small planet. It looks like a children's book. It is not only a children's book.",
+    "signoff": "Read it again if you already have."
+  },
+  {
+    "id": "here-comes-the-sun",
+    "from": "Your neighbour with the record player",
+    "kind": "song",
+    "title": "Here Comes the Sun",
+    "body": "Put this on the next time it has been grey for too long.\n\nTwo minutes in, you will be humming. Three minutes in, you will be looking out the window.",
+    "signoff": "Volume up."
+  },
+  {
+    "id": "patience",
+    "from": "Ralph Waldo Emerson, by way of a friend",
+    "kind": "quote",
+    "body": "\"Adopt the pace of nature: her secret is patience.\"\n\nI wrote this on a card and kept it on my desk for a year. Passing it on to you.",
+    "signoff": "Take your time."
+  },
+  {
+    "id": "walk",
+    "from": "Someone who noticed you have been busy",
+    "kind": "note",
+    "body": "This is your reminder to stand up.\n\nGo outside for ten minutes. No phone if you can manage it. Look at one tree properly. Come back.\n\nThe work will still be here.",
+    "signoff": "See you in ten."
+  },
+  {
+    "id": "postcard",
+    "from": "The Postmaster",
+    "kind": "note",
+    "body": "Quick question, no need to answer.\n\nWho was the last person you wrote a real letter to? Maybe today is a good day to write another one. You can practice on me. Press Write back.",
+    "signoff": "Still yours,\nThe Postmaster"
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "id": "mailbox",
+  "name": "Desktop Mailbox",
+  "tagline": "Every now and then, a letter arrives.",
+  "description": "A navy mailbox on a wooden post. Handpicked letters arrive at random times, the flag pops up, and you can write back. It also hides your files: drop them in and close the door.",
+  "author": {
+    "name": "Krrish Parmar",
+    "github": "Electrofist"
+  },
+  "version": "1.0",
+  "minMacOS": "14.0",
+  "license": "MIT",
+  "storesFilesIn": "~/Mailbox",
+  "build": {
+    "command": "./build.sh",
+    "app": "build/Desktop Mailbox.app"
+  },
+  "accent": "#D8432F",
+  "screenshots": [
+    "media/closed.png",
+    "media/open.png"
+  ]
+}
