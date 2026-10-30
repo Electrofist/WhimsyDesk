@@ -16,6 +16,8 @@ final class VendingView: NSView {
     private let itemsLayer = CALayer()
     private let frontCoils = CALayer()
     private let labelsLayer = CALayer()
+    /// A file that has left its coil falls here, in front of the coils and shelf edges.
+    private let dropLayer = CALayer()
     private let glassLayer = CALayer()
     private let flapHolder = CALayer()
     private let flapLayer = CALayer()
@@ -47,6 +49,19 @@ final class VendingView: NSView {
     private var lastTick: CFTimeInterval = 0
     /// Lock or sleep: everything holds still where it is until it ends.
     private var paused = false
+
+    /// The code being typed on the keypad.
+    private var entryLetter: String?
+    private var entryDigit: Int?
+    /// A coil is turning or a file is falling; the keypad waits.
+    private var vending = false
+    /// The key held down under the mouse, as an index into `Geo.keys`.
+    private var heldKey: Int?
+
+    /// The tray flap: how far it has swung out (radians) and how fast.
+    private var flapAngle = 0.0
+    private var flapSpeed = 0.0
+    private var flapMoving = false
 
     // MARK: Size
 
@@ -95,7 +110,7 @@ final class VendingView: NSView {
         rig.position = .zero
         root.addSublayer(rig)
 
-        for l in [shadowLayer, cabinetLayer, backCoils, itemsLayer, frontCoils, labelsLayer] {
+        for l in [shadowLayer, cabinetLayer, backCoils, itemsLayer, frontCoils, labelsLayer, dropLayer] {
             l.frame = full
             rig.addSublayer(l)
         }
@@ -103,15 +118,17 @@ final class VendingView: NSView {
         trayLayer.frame = Geo.tray
 
         // Files show only through the window and the tray opening.
-        let mask = CAShapeLayer()
         let openings = CGMutablePath()
         openings.addRect(Geo.glass)
         openings.addRect(Geo.tray)
-        mask.path = openings
-        itemsLayer.mask = mask
         var perspective = CATransform3DIdentity
         perspective.m34 = -1 / 600
-        itemsLayer.sublayerTransform = perspective
+        for l in [itemsLayer, dropLayer] {
+            let mask = CAShapeLayer()
+            mask.path = openings
+            l.mask = mask
+            l.sublayerTransform = perspective
+        }
 
         let labelMask = CAShapeLayer()
         labelMask.path = CGPath(rect: Geo.glass, transform: nil)
@@ -155,7 +172,7 @@ final class VendingView: NSView {
         displayLayer.frame = Geo.display
         rig.addSublayer(displayLayer)
 
-        for l in [rig, shadowLayer, cabinetLayer, trayLayer, backCoils, itemsLayer, frontCoils, labelsLayer, glassLayer,
+        for l in [rig, shadowLayer, cabinetLayer, trayLayer, backCoils, itemsLayer, frontCoils, labelsLayer, dropLayer, glassLayer,
                   flapHolder, flapLayer, panelLayer, displayLayer] + coilBackLayers + coilFrontLayers + keyLayers + labelLayers {
             l.actions = Self.still
         }
@@ -202,7 +219,7 @@ final class VendingView: NSView {
             l.contentsRect = CGRect(x: (f.minX - p.minX) / p.width, y: 1 - (f.maxY - p.minY) / p.height,
                                     width: f.width / p.width, height: f.height / p.height)
         }
-        for l in [rig, shadowLayer, cabinetLayer, trayLayer, backCoils, itemsLayer, frontCoils, labelsLayer, glassLayer,
+        for l in [rig, shadowLayer, cabinetLayer, trayLayer, backCoils, itemsLayer, frontCoils, labelsLayer, dropLayer, glassLayer,
                   flapHolder, flapLayer, panelLayer, displayLayer] + coilBackLayers + coilFrontLayers + keyLayers + labelLayers {
             l.contentsScale = scale
         }
@@ -215,7 +232,7 @@ final class VendingView: NSView {
     // MARK: Files in coils and in the tray
 
     /// Puts each file's icon in its coil or in the tray. Files that are moving are left alone.
-    func layoutItems() {
+    func layoutItems(animated: Bool = false) {
         let tray = store.trayItems
         CATransaction.begin(); CATransaction.setDisableActions(true)
         var keep = Set<String>()
@@ -228,7 +245,16 @@ final class VendingView: NSView {
             if let slot = item.slot, let i = Geo.index(of: slot) {
                 place(l, in: Geo.iconRect(i))
             } else if let n = tray.firstIndex(of: item) {
+                let before = l.position
                 place(l, in: Geo.traySpot(n, of: tray.count), pose: Self.trayPose(item.name))
+                if animated && before != l.position && before != .zero {
+                    // The others in the tray shuffle along to make room.
+                    let slide = CABasicAnimation(keyPath: "position")
+                    slide.fromValue = NSValue(point: before)
+                    slide.duration = 0.22
+                    slide.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                    l.add(slide, forKey: "slide")
+                }
             }
         }
         for (name, l) in itemLayers where !keep.contains(name) {
@@ -298,10 +324,15 @@ final class VendingView: NSView {
     }
 
     @objc private func tick(_ l: CADisplayLink) {
-        let dt = lastTick == 0 ? 1.0 / 60 : min(0.05, l.timestamp - lastTick)
+        var dt = lastTick == 0 ? 1.0 / 60 : min(0.05, l.timestamp - lastTick)
         lastTick = l.timestamp
+        #if DEBUG
+        dt *= Self.slowMotion
+        #endif
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        motions.removeAll { $0.step(dt) }
+        // A motion may start another one (a landing knocks the flap), so step a copy.
+        let finished = Set(motions.filter { $0.step(dt) }.map(ObjectIdentifier.init))
+        motions.removeAll { finished.contains(ObjectIdentifier($0)) }
         CATransaction.commit()
         if motions.isEmpty {
             l.invalidate()
@@ -367,6 +398,175 @@ final class VendingView: NSView {
         }
     }
 
+    // MARK: Keypad
+
+    /// A key was pressed: letters pick a row, digits a coil, OK vends.
+    func press(_ key: Geo.Key) {
+        guard !vending else { return }
+        switch key {
+        case .letter(let l):
+            entryLetter = l
+            entryDigit = nil
+            say(["\(l)_", ""], for: 8)
+        case .digit(let d):
+            guard let l = entryLetter else { say(["--", ""]); return }
+            entryDigit = d
+            let code = "\(l)\(d)"
+            say([code, store.item(in: code).map { Self.displayName($0.name) } ?? ""], for: 8)
+        case .clear:
+            entryLetter = nil
+            entryDigit = nil
+            idleWork?.cancel()
+            showDisplay(idleLines)
+        case .ok:
+            guard let l = entryLetter, let d = entryDigit else {
+                Sounds.play(.error, volume: 0.3)
+                say(["--", ""])
+                return
+            }
+            entryLetter = nil
+            entryDigit = nil
+            vend("\(l)\(d)")
+        }
+    }
+
+    private func keyIndex(at p: CGPoint) -> Int? {
+        Geo.keys.firstIndex { $0.rect.insetBy(dx: -1.5, dy: -1.5).contains(p) }
+    }
+
+    private func showKey(_ index: Int, down: Bool) {
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        keyLayers[index].isHidden = !down
+        CATransaction.commit()
+    }
+
+    // MARK: Vending
+
+    /// The heart of it: the coil turns once and pushes the file forward until it tips off the
+    /// shelf, falls, lands in the tray with a knock and a bounce, and the flap swings and settles.
+    func vend(_ code: String) {
+        guard !vending else { return }
+        guard let i = Geo.index(of: code) else {
+            Sounds.play(.error, volume: 0.3)
+            say(["--", ""])
+            return
+        }
+        guard store.item(in: code) != nil, let item = store.vend(code), let l = itemLayers[item.name] else {
+            Sounds.play(.error, volume: 0.3)
+            say(["EMPTY", ""])
+            return
+        }
+        select(nil)
+        vending = true
+        moving.insert(item.name)
+        Sounds.play(.beep, volume: 0.3)
+        say([code, Self.displayName(item.name)], for: 30)
+
+        let start = coilAngles[i], rest = Geo.iconRect(i)
+        let tray = store.trayItems
+        let spot = Geo.traySpot(tray.firstIndex(of: item) ?? max(0, tray.count - 1), of: tray.count)
+        let landing = Self.trayPose(item.name)
+        let turn = 0.9, gravity = 2400.0, step = 1.0 / 240
+        let x0 = Double(rest.midX), floor = Double(spot.minY)
+        let top = Double(Geo.glass.minY), bottom = Double(Geo.tray.maxY)
+        let drift = Double(landing.tilt) > 0 ? 0.18 : -0.18
+        var t = -0.14, leftover = 0.0
+        var falling = false, landed = false, bounces = 0
+        var y = Double(rest.minY), vy = 0.0, tip = 0.4, tipSpeed = 1.6, fallTime = 0.0
+
+        run { [weak self] dt in
+            guard let self else { return true }
+            t += dt
+            if t < 0 { return false }
+            if !falling {
+                if t - dt < 0 { Sounds.play(.motor, volume: 0.55) }
+                // One full turn of the spiral, easing in and out. The file rides forward on it
+                // and starts to lean as it runs out of wire.
+                let e = Self.easeInOut(t / turn)
+                self.turnCoil(i, to: start - CGFloat(e) * 2 * .pi)
+                let lean = e > 0.72 ? (e - 0.72) / 0.28 * 0.4 : 0
+                // Past the last loop of wire it is in front of everything behind the glass.
+                if e > 0.8 && l.superlayer !== self.dropLayer { self.dropLayer.addSublayer(l) }
+                self.place(l, in: rest, pose: Pose(scale: CGFloat(1 + 0.14 * e), tip: CGFloat(lean)))
+                if t >= turn {
+                    falling = true
+                    self.refreshLabels()
+                    self.layoutItems(animated: true)
+                }
+                return false
+            }
+
+            leftover += dt
+            while leftover >= step && !landed {
+                leftover -= step
+                fallTime += step
+                vy -= gravity * step
+                y += vy * step
+                tip = min(0.9, tip + tipSpeed * step)
+                tipSpeed += 2 * step
+                if y <= floor {
+                    y = floor
+                    let impact = -vy
+                    if impact > 90 && bounces < 3 {
+                        Sounds.play(.thunk, volume: Float(min(0.9, 0.15 + impact / 1800)))
+                        self.knockFlap(impact * 0.0021)
+                        vy = impact * 0.27
+                        bounces += 1
+                    } else {
+                        vy = 0
+                        landed = true
+                    }
+                }
+            }
+            // Out of sight between the window and the tray, it slides over to its place in the tray.
+            let k = Self.easeInOut((top - y) / (top - bottom))
+            let x = x0 + (Double(spot.midX) - x0) * k
+            let pose = Pose(scale: CGFloat(1.14 + (1 - 1.14) * k),
+                            tip: CGFloat(tip + (Double(landing.tip) - tip) * k),
+                            tilt: CGFloat(drift * min(1, fallTime * 3) * (1 - k) + Double(landing.tilt) * k))
+            self.place(l, in: CGRect(x: x - Double(Geo.iconSize) / 2, y: y, width: Double(Geo.iconSize), height: Double(Geo.iconSize)),
+                       pose: pose)
+            if landed && !self.flapMoving {
+                self.itemsLayer.addSublayer(l)
+                self.moving.remove(item.name)
+                self.vending = false
+                self.layoutItems()
+                self.say([code, Self.displayName(item.name)])
+                return true
+            }
+            return false
+        }
+    }
+
+    /// The flap hangs from its top edge. A knock swings it out; it falls back, taps its frame and settles.
+    private func knockFlap(_ speed: Double) {
+        flapSpeed += speed
+        guard !flapMoving else { return }
+        flapMoving = true
+        let step = 1.0 / 240
+        var leftover = 0.0
+        run { [weak self] dt in
+            guard let self else { return true }
+            leftover += dt
+            while leftover >= step {
+                leftover -= step
+                self.flapSpeed += (-150 * self.flapAngle - 5.5 * self.flapSpeed) * step
+                self.flapAngle += self.flapSpeed * step
+                if self.flapAngle < 0 {
+                    if self.flapSpeed < -0.35 { Sounds.play(.flap, volume: Float(min(0.5, 0.1 - self.flapSpeed * 0.12))) }
+                    self.flapAngle = 0
+                    self.flapSpeed = self.flapSpeed < -0.25 ? -self.flapSpeed * 0.3 : 0
+                }
+            }
+            self.flapLayer.transform = CATransform3DMakeRotation(-CGFloat(self.flapAngle), 1, 0, 0)
+            if self.flapAngle == 0 && self.flapSpeed == 0 {
+                self.flapMoving = false
+                return true
+            }
+            return false
+        }
+    }
+
     private func refuseFull() {
         let shake = CAKeyframeAnimation(keyPath: "position.x")
         shake.values = [0, -2.5, 2.5, -2, 1.5, -0.8, 0].map { NSNumber(value: $0) }
@@ -376,6 +576,7 @@ final class VendingView: NSView {
         let rattle = shake.copy() as! CAKeyframeAnimation
         rattle.values = [0, -0.8, 0.8, -0.5, 0.3, 0].map { NSNumber(value: $0) }
         rig.add(rattle, forKey: "full")
+        Sounds.play(.rattle, volume: 0.4)
         say(["SOLD OUT", ""])
     }
 
@@ -433,6 +634,36 @@ final class VendingView: NSView {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    // MARK: Mouse
+
+    override func mouseDown(with event: NSEvent) {
+        let p = scene(convert(event.locationInWindow, from: nil))
+        if let k = keyIndex(at: p) {
+            // Only the keys press. The key goes down with the mouse and comes up with it.
+            heldKey = k
+            showKey(k, down: true)
+            Sounds.play(.click, volume: 0.35)
+        }
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let k = heldKey else { return }
+        let p = scene(convert(event.locationInWindow, from: nil))
+        showKey(k, down: keyIndex(at: p) == k)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        let p = scene(convert(event.locationInWindow, from: nil))
+        if let k = heldKey {
+            showKey(k, down: false)
+            heldKey = nil
+            if keyIndex(at: p) == k { press(Geo.keys[k].key) }
+        }
+    }
+
+    /// Selection comes with the next step; for now, nothing is selected.
+    private func select(_ name: String?) {}
+
     // MARK: Dropping files in
 
     private func fileURLs(_ info: NSDraggingInfo) -> [URL] {
@@ -455,7 +686,21 @@ final class VendingView: NSView {
     }
 
     #if DEBUG
+    /// For test scripts: 0.1 plays every motion ten times slower.
+    static var slowMotion = 1.0
+
     /// For test scripts: put files in as if they were dropped on the glass.
     func storeForTest(_ urls: [URL]) { storeFiles(urls) }
+
+    /// For test scripts: press a key by its label (A, 1, CLR, OK), as a click would.
+    func keyForTest(_ label: String) {
+        guard let k = Geo.keys.firstIndex(where: { $0.key.label == label }) else { return }
+        showKey(k, down: true)
+        Sounds.play(.click, volume: 0.35)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
+            self?.showKey(k, down: false)
+            self?.press(Geo.keys[k].key)
+        }
+    }
     #endif
 }

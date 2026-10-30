@@ -55,12 +55,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     #if DEBUG
     /// Debug builds only: drive the machine from a script, since clicks cannot reach a window at
-    /// desktop level. Commands: store:<path>.
+    /// desktop level. Commands: store:<path>, key:<label>, vend:<code>,
+    /// slow:<factor>, sounds:<folder>.
     private func listenForTestCommands() {
         DistributedNotificationCenter.default().addObserver(forName: Notification.Name("io.github.electrofist.vending.test"),
                                                             object: nil, queue: .main) { [weak self] note in
             guard let self, let view = self.view, let command = note.object as? String else { return }
             if command.hasPrefix("store:") { view.storeForTest([URL(fileURLWithPath: String(command.dropFirst(6)))]) }
+            if command.hasPrefix("key:") { view.keyForTest(String(command.dropFirst(4))) }
+            if command.hasPrefix("slow:") { VendingView.slowMotion = Double(command.dropFirst(5)) ?? 1 }
+            if command.hasPrefix("vend:") { view.vend(String(command.dropFirst(5))) }
+            if command.hasPrefix("sounds:") { Sounds.export(to: URL(fileURLWithPath: String(command.dropFirst(7)))) }
         }
     }
     #endif
