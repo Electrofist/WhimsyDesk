@@ -1,6 +1,6 @@
 # Releasing
 
-Each object is released on its own, as a DMG and a zip on the [Releases](https://github.com/Electrofist/desktop-objects/releases) page.
+Each object is released on its own, as a DMG and a zip on the [Releases](https://github.com/Electrofist/whimsydesk/releases) page.
 
 ## Release an object
 

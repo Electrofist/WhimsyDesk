@@ -25,12 +25,12 @@ To install it, open the Extension Manager in Phoenix Code (the building-block ic
 
 ## 1. Get your own copy
 
-1. Open [github.com/Electrofist/desktop-objects](https://github.com/Electrofist/desktop-objects) and click **Fork**. This makes your own copy on GitHub.
-2. Download your copy. In Phoenix Code: **Start Project, Get from Git**, paste `https://github.com/your-username/desktop-objects.git` and pick a folder. Or in Terminal (replace `your-username`):
+1. Open [github.com/Electrofist/whimsydesk](https://github.com/Electrofist/whimsydesk) and click **Fork**. This makes your own copy on GitHub.
+2. Download your copy. In Phoenix Code: **Start Project, Get from Git**, paste `https://github.com/your-username/whimsydesk.git` and pick a folder. Or in Terminal (replace `your-username`):
 
 ```sh
-git clone https://github.com/your-username/desktop-objects.git
-cd desktop-objects
+git clone https://github.com/your-username/whimsydesk.git
+cd whimsydesk
 ```
 
 ## 2. Create your object

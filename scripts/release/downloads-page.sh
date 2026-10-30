@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-REPO="${GITHUB_REPOSITORY:-Electrofist/desktop-objects}"
+REPO="${GITHUB_REPOSITORY:-Electrofist/whimsydesk}"
 RAW="https://raw.githubusercontent.com/$REPO/main"
 ASSETS="$(gh api "repos/$REPO/releases/tags/downloads" --jq '.assets')"
 
