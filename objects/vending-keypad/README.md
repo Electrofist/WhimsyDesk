@@ -1,4 +1,4 @@
-<p align="center"><img src="media/logo.png" alt="Vending Machine" width="420"></p>
+<p align="center"><img src="media/logo.png" alt="Vending Machine 2" width="420"></p>
 
 # Desktop Vending Machine Keypad
 
