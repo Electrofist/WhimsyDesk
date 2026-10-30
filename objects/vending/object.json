@@ -2,7 +2,7 @@
   "id": "vending",
   "name": "Desktop Vending Machine",
   "tagline": "Your files, on spiral coils. Pick one and it drops.",
-  "description": "A retro snack machine that stands on your desktop. Work in progress.",
+  "description": "A retro snack machine that stands on your desktop. Drop files on the glass and each one waits on its own spiral coil. Type its code on the keypad, the coil turns, and the file drops into the tray for you to take out.",
   "author": {
     "name": "Krrish Parmar",
     "github": "Electrofist"
