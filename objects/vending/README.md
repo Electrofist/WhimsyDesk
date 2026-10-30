@@ -2,6 +2,10 @@
 
 A little vending machine that stands on your desktop. Your files are the snacks, each standing on a shelf behind the glass with its name on a tag. Press the button under one and it is pushed off the shelf and drops into the bin.
 
+<p align="center">
+  <img src="media/hero.gif" alt="Files dropped onto the vending machine stand on its shelves, then a red button is pressed and a file drops into the bin" width="520">
+</p>
+
 The art is a placeholder drawn in code for now. Painted art can replace it piece by piece; see `Resources/Art/README.md`.
 
 Made by [Electrofist](https://github.com/Electrofist). Part of [Desktop Objects](../../README.md).

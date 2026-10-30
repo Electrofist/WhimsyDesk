@@ -15,5 +15,9 @@
     "command": "./build.sh",
     "app": "build/Desktop Vending Machine.app"
   },
-  "accent": "#FFC92E"
+  "accent": "#FFC92E",
+  "screenshots": [
+    "media/closed.png",
+    "media/hero.gif"
+  ]
 }
