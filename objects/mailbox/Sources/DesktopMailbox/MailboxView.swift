@@ -44,6 +44,7 @@ final class MailboxView: NSView, NSDraggingSource {
     private let doorFront = CALayer()
     private let doorShade = CALayer()
     private let doorBack = CALayer()
+    private let doorEdge = CALayer()
     private var itemLayers: [String: CALayer] = [:]
     private var slots: [(item: Item, rect: CGRect)] = []
     private var overflowRect: CGRect?
@@ -93,7 +94,7 @@ final class MailboxView: NSView, NSDraggingSource {
 
         boxLayer.frame = full
         var perspective = CATransform3DIdentity
-        perspective.m34 = -1 / 800
+        perspective.m34 = -1 / 1100
         boxLayer.sublayerTransform = perspective
         rig.addSublayer(boxLayer)
 
@@ -135,10 +136,24 @@ final class MailboxView: NSView, NSDraggingSource {
         doorFront.addSublayer(doorShade)
         doorLayer.addSublayer(doorFront)
 
+        // A real door has thickness: the back face sits behind the front, joined by an edge.
+        let thickness: CGFloat = 7
         doorBack.frame = doorLayer.bounds
         doorBack.isDoubleSided = false
-        doorBack.transform = CATransform3DMakeRotation(.pi, 0, 1, 0)
+        doorBack.transform = CATransform3DRotate(CATransform3DMakeTranslation(0, 0, -thickness), .pi, 0, 1, 0)
         doorLayer.addSublayer(doorBack)
+        doorEdge.actions = ["contents": NSNull(), "transform": NSNull(), "position": NSNull(), "bounds": NSNull()]
+        doorEdge.bounds = CGRect(x: 0, y: 0, width: thickness, height: Geo.door.height)
+        doorEdge.anchorPoint = CGPoint(x: 0, y: 0.5)
+        doorEdge.position = CGPoint(x: Geo.door.width, y: Geo.door.height / 2)
+        doorEdge.transform = CATransform3DMakeRotation(.pi / 2, 0, 1, 0)
+        doorEdge.backgroundColor = Paint.hex(0x7E1F16)
+        let lip = CAGradientLayer()
+        lip.frame = doorEdge.bounds
+        lip.startPoint = CGPoint(x: 0, y: 0.5); lip.endPoint = CGPoint(x: 1, y: 0.5)
+        lip.colors = [Paint.hex(0xE0685A), Paint.hex(0x9A2A1F), Paint.hex(0x5E140E)]
+        doorEdge.addSublayer(lip)
+        doorLayer.addSublayer(doorEdge)
     }
 
     override func viewDidChangeBackingProperties() {
@@ -630,6 +645,26 @@ final class MailboxView: NSView, NSDraggingSource {
         let next = NSMenuItem(title: post.nextDeliveryText, action: nil, keyEquivalent: "")
         next.isEnabled = false
         menu.addItem(next)
+        let pace = NSMenuItem(title: "Letters", action: nil, keyEquivalent: "")
+        let paceMenu = NSMenu()
+        for option in DeliveryPace.allCases {
+            if option == .paused { paceMenu.addItem(.separator()) }
+            let item = ActionItem(option.title) { [weak self] in self?.post.setPace(option) }
+            item.state = DeliveryPace.current == option ? .on : .off
+            paceMenu.addItem(item)
+        }
+        paceMenu.addItem(.separator())
+        let note = NSMenuItem(title: "Handpicked. Never ads, never paid for.", action: nil, keyEquivalent: "")
+        note.isEnabled = false
+        paceMenu.addItem(note)
+        pace.submenu = paceMenu
+        menu.addItem(pace)
+        if post.readCount > 0 {
+            menu.addItem(ActionItem("Throw Away Read Letters") { [weak self] in
+                self?.post.throwAwayRead()
+                self?.layoutItems()
+            })
+        }
         let sound = ActionItem("Sound") { Sounds.enabled.toggle() }
         sound.state = Sounds.enabled ? .on : .off
         menu.addItem(sound)

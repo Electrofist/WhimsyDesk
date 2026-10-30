@@ -6,7 +6,7 @@ import Foundation
 struct DoorModel {
     enum Event { case unlatched, latched(speed: Double), hitStop(speed: Double) }
 
-    static let maxAngle = 100 * Double.pi / 180
+    static let maxAngle = 96 * Double.pi / 180
     static let latchZone = 5 * Double.pi / 180
 
     var angle = 0.0

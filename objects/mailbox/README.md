@@ -18,11 +18,13 @@ It is also a hiding spot. Drop files in, close the door, and your desktop is cle
 - **Write back:** press **Write back** on a letter. Your reply is kept on this Mac, in `~/Mailbox/.replies`. Nothing is sent anywhere.
 - **Hide files:** drag files or folders onto the mailbox. The door opens for you. Drag them back out, or right-click and choose **Put Back** to return a file to where it came from, even its old spot on the desktop.
 - **Move it:** hold Option and Command and drag.
+- **How often letters come:** right-click, then **Letters**. About once a day, a few times a week, about once a week, or paused.
+- **Clean up:** press **Throw away** on a letter, or right-click and choose **Throw Away Read Letters**.
 - **Everything else:** right-click the mailbox. Sound on or off, open the folder, see when more mail is coming, quit.
 
 ## How the mail works
 
-All letters ship inside the app, in [`Resources/letters.json`](Resources/letters.json). There is no internet, no account and no tracking. The first letter arrives on first launch. After that, a new one arrives at a random time, usually within a day, during the daytime. Each letter comes once. When all of them have arrived, the deliveries stop.
+All letters ship inside the app, in [`Resources/letters.json`](Resources/letters.json). They are picked by hand. They are never ads, and nobody pays to be in them. There is no internet, no account and no tracking. The first letter arrives on first launch. After that, a new one arrives at a random time during the daytime, as often as you choose. Each letter comes once. When all of them have arrived, the deliveries stop.
 
 The mailbox keeps one alarm for the next delivery and does nothing else while you are not touching it.
 

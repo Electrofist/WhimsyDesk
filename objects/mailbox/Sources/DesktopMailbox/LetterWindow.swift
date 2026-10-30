@@ -20,6 +20,7 @@ final class LetterWindow: NSPanel, NSTextViewDelegate {
     private let text = NSTextView()
     private let primary = NSButton()
     private let secondary = NSButton()
+    private let discard = NSButton()
     private(set) var replying = false
     private var stage: CALayer?
 
@@ -116,6 +117,14 @@ final class LetterWindow: NSPanel, NSTextViewDelegate {
             button.target = self
             paper.addSubview(button)
         }
+        discard.frame = CGRect(x: s.width / 2 - 45, y: 2, width: 90, height: 22)
+        discard.isBordered = false
+        discard.attributedTitle = NSAttributedString(string: "Throw away", attributes: [
+            .font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor(srgbRed: 0.45, green: 0.4, blue: 0.32, alpha: 0.9),
+            .underlineStyle: NSUnderlineStyle.single.rawValue])
+        discard.target = self
+        discard.action = #selector(throwAway)
+        paper.addSubview(discard)
         primary.layer?.backgroundColor = Paint.hex(0x8F2018)
         secondary.layer?.borderWidth = 1.2
         secondary.layer?.borderColor = Paint.hex(0x8F2018, 0.5)
@@ -140,6 +149,7 @@ final class LetterWindow: NSPanel, NSTextViewDelegate {
         text.string = body
         text.isEditable = false
         text.isSelectable = true
+        discard.isHidden = false
         let hasReply = post.reply(for: letter.id) != nil
         setTitles(primary: hasReply ? "Your reply" : "Write back", secondary: "Put away")
         text.scrollToBeginningOfDocument(nil)
@@ -149,6 +159,7 @@ final class LetterWindow: NSPanel, NSTextViewDelegate {
         replying = true
         paper.mode = .replying
         text.isEditable = true
+        discard.isHidden = true
         text.string = post.reply(for: letter.id) ?? "\(LetterWindow.greeting(for: letter.from))\n\n"
         setTitles(primary: "Keep reply", secondary: "Never mind")
         makeFirstResponder(text)
@@ -179,6 +190,12 @@ final class LetterWindow: NSPanel, NSTextViewDelegate {
         } else {
             showReply()
         }
+    }
+
+    /// Removes the letter from the mailbox for good.
+    @objc private func throwAway() {
+        post.throwAway(letter.id)
+        putAway()
     }
 
     @objc private func secondaryPressed() {

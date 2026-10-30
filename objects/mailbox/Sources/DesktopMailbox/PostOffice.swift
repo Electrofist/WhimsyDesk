@@ -20,6 +20,35 @@ struct Delivery: Codable, Equatable {
     var read: Bool
 }
 
+/// How often letters come. Chosen from the right-click menu.
+enum DeliveryPace: String, CaseIterable {
+    case often, sometimes, rarely, paused
+
+    var title: String {
+        switch self {
+        case .often: return "About Once a Day"
+        case .sometimes: return "A Few Times a Week"
+        case .rarely: return "About Once a Week"
+        case .paused: return "Pause Deliveries"
+        }
+    }
+
+    /// Hours from now, before the daytime rule is applied.
+    var hours: ClosedRange<Double>? {
+        switch self {
+        case .often: return 6...30
+        case .sometimes: return 30...72
+        case .rarely: return 120...216
+        case .paused: return nil
+        }
+    }
+
+    static var current: DeliveryPace {
+        get { DeliveryPace(rawValue: UserDefaults.standard.string(forKey: "deliveryPace") ?? "") ?? .often }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: "deliveryPace") }
+    }
+}
+
 /// Delivers letters at random times, all offline. Keeps one one-shot alarm for the next delivery
 /// and nothing else: no polling, no network.
 final class PostOffice {
@@ -58,7 +87,7 @@ final class PostOffice {
         if delivered.isEmpty, let welcome = letters.first(where: { $0.welcome == true }) ?? letters.first {
             deliver(welcome, announce: false)
         }
-        if let due = nextDelivery, due <= Date() {
+        if DeliveryPace.current != .paused, let due = nextDelivery, due <= Date() {
             deliverRandom(announce: false)
         }
         if nextDelivery == nil || nextDelivery! <= Date() { scheduleNext() }
@@ -76,6 +105,21 @@ final class PostOffice {
     func markRead(_ id: String) {
         guard let i = inbox.firstIndex(where: { $0.id == id }), !inbox[i].read else { return }
         inbox[i].read = true
+        save()
+    }
+
+    /// Changes how often letters come and picks a new time for the next one.
+    func setPace(_ pace: DeliveryPace) {
+        DeliveryPace.current = pace
+        scheduleNext()
+        arm()
+    }
+
+    var readCount: Int { inbox.filter(\.read).count }
+
+    /// Removes every letter that has been read.
+    func throwAwayRead() {
+        inbox.removeAll { $0.read }
         save()
     }
 
@@ -120,13 +164,13 @@ final class PostOffice {
 
     /// Somewhere between 6 and 30 hours from now, during the day (9:00 to 21:00).
     private func scheduleNext() {
-        guard hasLettersLeft else { nextDelivery = nil; save(); return }
+        guard hasLettersLeft, let hours = DeliveryPace.current.hours else { nextDelivery = nil; save(); return }
         if let testInterval {
             nextDelivery = Date().addingTimeInterval(testInterval)
             save()
             return
         }
-        var date = Date().addingTimeInterval(TimeInterval.random(in: 6 * 3600...30 * 3600))
+        var date = Date().addingTimeInterval(TimeInterval.random(in: hours.lowerBound * 3600...hours.upperBound * 3600))
         let cal = Calendar.current
         let hour = cal.component(.hour, from: date)
         if hour < 9 || hour >= 21 {
@@ -159,11 +203,13 @@ final class PostOffice {
 
     /// A friendly line for the menu.
     var nextDeliveryText: String {
+        if DeliveryPace.current == .paused { return "Deliveries are paused" }
         guard hasLettersLeft, let due = nextDelivery else { return "All letters delivered" }
         let cal = Calendar.current
         if testInterval != nil { return "Next letter in a few seconds" }
         if cal.isDateInToday(due) { return due.timeIntervalSinceNow < 3 * 3600 ? "The mail carrier is close by" : "More mail later today" }
         if cal.isDateInTomorrow(due) { return "More mail tomorrow" }
+        if due.timeIntervalSinceNow > 4 * 86400 { return "More mail next week" }
         return "More mail soon"
     }
 
