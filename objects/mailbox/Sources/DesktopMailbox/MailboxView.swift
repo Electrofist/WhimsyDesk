@@ -577,10 +577,9 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         } else if doorHit(p) {
             let f = door.angle < 0.2 ? max(0.4, (p.x - Geo.hingeX) / Geo.door.width) : 0.85
             grab = .door(fraction: min(1, f))
-        } else if bodyHit(p) {
-            // The rest of the box does not open the door. Dragging it moves the box.
-            beginMove()
         } else {
+            // The rest of the box does nothing: only the door opens the door,
+            // and moving needs Option and Command.
             grab = .none
         }
     }
