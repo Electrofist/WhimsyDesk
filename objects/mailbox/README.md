@@ -21,7 +21,7 @@ It is also a hiding spot. Drop files in, close the door, and your desktop is cle
 - **Take it back:** drag it out, or right-click and choose **Put Back** to return it to where it came from, even its old spot on the desktop.
 - **Move it:** hold Option and Command and drag.
 - **Resize it:** hold Option and drag up to grow it or down to shrink it.
-- **Taller or shorter pole:** hold Shift and drag up or down.
+- **Taller or shorter pole:** hold Command and drag up or down. Or right-click and choose **Pole Height**.
 - **How often letters come:** right-click, then **Letters**. About once a day, a few times a week, about once a week, or paused.
 - **Clean up:** press **Throw away** on a letter, or right-click and choose **Throw Away Read Letters**.
 - **Everything else:** right-click the mailbox. Sound on or off, open the folder, see when more mail is coming, quit.

@@ -555,15 +555,17 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
 
     override func mouseDown(with event: NSEvent) {
         let p = scene(convert(event.locationInWindow, from: nil))
-        if event.modifierFlags.contains([.option, .command]) {
+        // Read the keys held right now as well as the event's, in case another app rewrites them.
+        let keys = event.modifierFlags.union(NSEvent.modifierFlags).intersection([.option, .command, .shift])
+        if keys.contains([.option, .command]) {
             beginMove()
             return
         }
-        if event.modifierFlags.contains(.shift) && (bodyHit(p) || doorHit(p)) {
+        if (keys == .command || keys == .shift) && (bodyHit(p) || doorHit(p)) {
             grab = .pole(start: NSEvent.mouseLocation, extra: poleExtra)
             return
         }
-        if event.modifierFlags.contains(.option) && (bodyHit(p) || doorHit(p)) {
+        if keys == .option && (bodyHit(p) || doorHit(p)) {
             grab = .resize(start: NSEvent.mouseLocation, scale: userScale)
             return
         }
@@ -661,6 +663,9 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
     }
 
     #if DEBUG
+    /// For test scripts: change the pole length as a Shift-drag would.
+    func poleForTest(_ extra: CGFloat) { applyPole(extra) }
+
     /// For test scripts: put files in as if they were dropped on the box.
     func postForTest(_ urls: [URL]) { openDoor(); store(urls) }
 
@@ -905,6 +910,22 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
                 self?.layoutItems()
             })
         }
+        let heights = NSMenuItem(title: "Pole Height", action: nil, keyEquivalent: "")
+        let heightMenu = NSMenu()
+        for (name, extra) in [("Short", CGFloat(0)), ("Medium", 80), ("Tall", 160), ("Very Tall", 260)] {
+            let item = ActionItem(name) { [weak self] in
+                self?.applyPole(extra)
+                UserDefaults.standard.set(Double(extra), forKey: "poleExtra")
+            }
+            item.state = abs(poleExtra - extra) < 1 ? .on : .off
+            heightMenu.addItem(item)
+        }
+        heightMenu.addItem(.separator())
+        let tip = NSMenuItem(title: "Or hold Command and drag", action: nil, keyEquivalent: "")
+        tip.isEnabled = false
+        heightMenu.addItem(tip)
+        heights.submenu = heightMenu
+        menu.addItem(heights)
         let sound = ActionItem("Sound") { Sounds.enabled.toggle() }
         sound.state = Sounds.enabled ? .on : .off
         menu.addItem(sound)

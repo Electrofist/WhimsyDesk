@@ -79,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MailboxViewDelegate {
             default:
                 if command.hasPrefix("sounds:") { Sounds.export(to: URL(fileURLWithPath: String(command.dropFirst(7)))) }
                 if command.hasPrefix("post:") { self.view?.postForTest([URL(fileURLWithPath: String(command.dropFirst(5)))]) }
+                if command.hasPrefix("pole:") { self.view?.poleForTest(CGFloat(Double(command.dropFirst(5)) ?? 0)) }
                 if command.hasPrefix("select:") { self.view?.selectForTest(Int(command.dropFirst(7)) ?? 0) }
                 if command.hasPrefix("read:") { self.openLetter(String(command.dropFirst(5)), replying: false, from: nil) }
                 if command.hasPrefix("reply:") { self.openLetter(String(command.dropFirst(6)), replying: true, from: nil) }
