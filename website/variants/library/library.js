@@ -82,6 +82,9 @@ const paintField = paintCover;
 
 /* ---------- Cards ---------- */
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// Makers with a site of their own.
+const SITES = { 'Krrish Parmar': 'https://krisby.in' };
+const by = a => SITES[a] ? `<a href="${SITES[a]}">${esc(a)}</a>` : esc(a);
 const macos = v => 'macOS ' + String(v).replace(/\.0$/, '') + '+';
 
 function card(o) {
@@ -99,7 +102,7 @@ function card(o) {
       <h3 class="card__name"><a href="${esc(PAGES[o.id] || o.source)}">${esc(o.name)}</a></h3>
       <p class="card__tag">${esc(o.tagline)}</p>
       <div class="card__foot">
-        <span class="card__by">by ${esc(o.author)}</span>
+        <span class="card__by">by ${by(o.author)}</span>
         ${action}
       </div>
     </div>
@@ -149,7 +152,7 @@ function renderSpotlight() {
     <div class="spotlight__body">
       <p class="spotlight__label">In the spotlight</p>
       <h3 class="spotlight__name" id="spot-title">${esc(o.name)}</h3>
-      <p class="spotlight__by">by ${esc(o.author)} · ${esc(macos(o.minMacOS))} · Free</p>
+      <p class="spotlight__by">by ${by(o.author)} · ${esc(macos(o.minMacOS))} · Free</p>
       <p class="spotlight__desc">${esc(o.description)}</p>
       ${extras[o.id] ? extras[o.id]() : ''}
       <div class="spotlight__actions">${action}<a class="quiet" href="${esc(PAGES[o.id] || o.source)}">More about it</a></div>

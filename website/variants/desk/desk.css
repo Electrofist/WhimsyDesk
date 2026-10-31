@@ -159,6 +159,8 @@
 .dk-ground a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 3px; }
 .dk-legal { display: flex; justify-content: space-between; gap: 32px; padding: 22px 0 30px; border-top: 1px solid rgba(241, 243, 232, .1); font-size: 13px; line-height: 1.5; color: rgba(241, 243, 232, .45); }
 .dk-legal p { margin: 0; }
+.dk-legal a { color: rgba(241, 243, 232, .75); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.dk-legal a:hover { color: #fff; }
 .dk-legal p + p { text-align: right; max-width: 34em; }
 
 /* ======================================================================

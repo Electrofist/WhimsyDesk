@@ -49,6 +49,13 @@ KIND = {
 esc = html.escape
 
 
+# Makers with a site of their own.
+SITES = {'Krrish Parmar': 'https://krisby.in'}
+
+
+def maker(name):
+    return f'<a href="{SITES[name]}">{esc(name)}</a>' if name in SITES else esc(name)
+
 def load_objects():
     text = open(os.path.join(SITE, 'objects.js')).read()
     return json.loads(text[text.index('['):text.rindex(']') + 1])
@@ -101,7 +108,7 @@ def app_jsonld(o, url):
         'license': 'https://opensource.org/licenses/MIT',
         'isAccessibleForFree': True,
         'offers': {'@type': 'Offer', 'price': '0', 'priceCurrency': 'USD'},
-        'author': {'@type': 'Person', 'name': o['author'], 'url': f"https://github.com/{o['github']}"},
+        'author': {'@type': 'Person', 'name': o['author'], 'url': SITES.get(o['author'], f"https://github.com/{o['github']}")},
         'publisher': {'@type': 'Organization', 'name': 'WhimsyDesk', 'url': BASE},
         'codeRepository': o['source'],
     }
@@ -205,7 +212,7 @@ def object_page(o, others):
         <dt>Works on</dt><dd>macOS {esc(o['minMacOS'].removesuffix('.0'))} or later, Apple silicon and Intel</dd>
         <dt>Price</dt><dd>Free. No ads, no accounts, no tracking in the app</dd>
         <dt>Licence</dt><dd>MIT, open source</dd>
-        <dt>Made by</dt><dd>{esc(o['author'])}</dd>
+        <dt>Made by</dt><dd>{maker(o['author'])}</dd>
       </dl>
     </section>
 

@@ -262,6 +262,9 @@
 }
 .card__foot { margin-top: auto; padding-top: 18px; display: flex; align-items: center; gap: 10px; }
 .card__by { flex: 1; min-width: 0; font-size: 13px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The maker link sits above the card's own link. */
+.card__by a, .spotlight__by a { position: relative; z-index: 2; color: inherit; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.card__by a:hover, .spotlight__by a:hover { color: var(--ink); }
 .card__get {
   position: relative;
   z-index: 2;
