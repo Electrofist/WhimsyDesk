@@ -49,6 +49,11 @@ KIND = {
 esc = html.escape
 
 
+# Objects with a Windows beta: the installer from the GitHub pre-release.
+WINDOWS_BETA = {
+    'fridge': 'https://github.com/Electrofist/WhimsyDesk/releases/download/windows-fridge-beta.1/Desktop-Fridge-Setup.exe',
+}
+
 # Makers with a site of their own.
 SITES = {'Krrish Parmar': 'https://krisby.in'}
 
@@ -147,6 +152,9 @@ def object_page(o, others):
     feat_html = '\n'.join(f'        <li>{f}</li>' for f in feats)
     get = (f'<a class="btn btn--olive" href="{esc(o["download"])}">Download {esc(o["name"])}</a>'
            if o.get('download') else '<span class="btn btn--soon">Coming soon</span>')
+    win = WINDOWS_BETA.get(o['id'])
+    if win:
+        get += f'<a class="btn btn--line-dark" href="{esc(win)}">Windows beta</a>'
     more = '\n'.join(
         f'        <li><a href="../{SLUGS[x["id"]]}/"><img src="../{esc(x["icon"])}" alt="" width="48" height="48" loading="lazy"><span><b>{esc(x["name"])}</b>{esc(x["tagline"])}</span></a></li>'
         for x in others if x['id'] in SLUGS)
@@ -210,7 +218,7 @@ def object_page(o, others):
       <h2 id="facts">At a glance</h2>
       <dl class="facts">
         <dt>Keeps files in</dt><dd><code>{esc(o['folder'])}</code>, a normal folder you can open in Finder</dd>
-        <dt>Works on</dt><dd>macOS {esc(o['minMacOS'].removesuffix('.0'))} or later, Apple silicon and Intel</dd>
+        <dt>Works on</dt><dd>macOS {esc(o['minMacOS'].removesuffix('.0'))} or later, Apple silicon and Intel{'. Windows 10 and 11 in beta' if o['id'] in WINDOWS_BETA else ''}</dd>
         <dt>Price</dt><dd>Free. No ads, no accounts, no tracking in the app</dd>
         <dt>Licence</dt><dd>MIT, open source</dd>
         <dt>Made by</dt><dd>{maker(o['author'])}</dd>
