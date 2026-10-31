@@ -611,3 +611,9 @@
   .rules__hl, .rule__fill, .rule__check path, .stepper__ring, .stepper__disc, .stepper__fill, .drop__sheet, .btn, .stage__art { transition: none; }
   .panel, .drop__file, .stage__obj.is-landing, .drop.is-dragging { animation: none; }
 }
+
+/* A plain list of every object page, in the footer. */
+.foot__objects .lib-list { list-style: none; margin: 40px auto 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; max-width: 900px; font-size: 14px; }
+.foot__objects .lib-list a { color: var(--mute); text-decoration: none; }
+.foot__objects .lib-list a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.foot__objects .lib-list b { color: var(--ink); font-weight: 600; }

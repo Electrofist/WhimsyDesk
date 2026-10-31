@@ -6,6 +6,11 @@ import letters from '../../letters.js';
 const SPOTLIGHT = 'mailbox';   // the one object shown large at the top; change the id to feature another
 const PAGE = 12;               // cards shown before "Show more"
 // A real screenshot of each object on a desktop, for its card. Objects without one show their art.
+// Each object's own page on the site (built by scripts/website-seo.py).
+const PAGES = {
+  fridge: 'desktop-fridge/', drawer: 'desktop-drawer/', mailbox: 'desktop-mailbox/',
+  vending: 'desktop-vending-machine/', 'vending-keypad': 'desktop-vending-machine-keypad/',
+};
 const SHOTS = {
   fridge: 'media/shots/fridge.webp',
   mailbox: 'media/shots/mailbox.webp',
@@ -91,7 +96,7 @@ function card(o) {
       <div class="card__front"><span class="card__label">${o.ready ? 'Free' : 'Coming soon'} · v${esc(o.version)}</span></div>
     </div>
     <div class="card__body">
-      <h3 class="card__name"><a href="${esc(o.source)}">${esc(o.name)}</a></h3>
+      <h3 class="card__name"><a href="${esc(PAGES[o.id] || o.source)}">${esc(o.name)}</a></h3>
       <p class="card__tag">${esc(o.tagline)}</p>
       <div class="card__foot">
         <span class="card__by">by ${esc(o.author)}</span>
@@ -147,7 +152,7 @@ function renderSpotlight() {
       <p class="spotlight__by">by ${esc(o.author)} · ${esc(macos(o.minMacOS))} · Free</p>
       <p class="spotlight__desc">${esc(o.description)}</p>
       ${extras[o.id] ? extras[o.id]() : ''}
-      <div class="spotlight__actions">${action}<a class="quiet" href="${esc(o.source)}">View source</a></div>
+      <div class="spotlight__actions">${action}<a class="quiet" href="${esc(PAGES[o.id] || o.source)}">More about it</a></div>
     </div>`;
   const canvas = el.querySelector('canvas');
   if (canvas) paintCover(canvas, o.accent, o.id + '-spot');

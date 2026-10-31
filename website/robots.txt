@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://whimsydesk.art/sitemap.xml
