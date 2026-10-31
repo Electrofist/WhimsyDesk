@@ -81,8 +81,6 @@ h3 { margin: 0; font-size: 27px; line-height: 1.1; letter-spacing: -0.025em; }
 }
 .pill__mark { display: flex; align-items: center; gap: 8px; font: 700 18px/1 var(--logo); letter-spacing: 0; text-decoration: none; }
 .pill__spark { width: 12px; height: 12px; color: #f1be5b; shape-rendering: crispEdges; }
-/* The keycap mark. Grandstander's letters sit high in their line, so the keycap rises to meet them. */
-.pill__key { flex: none; width: 26px; height: 26px; margin: -4px 0; position: relative; top: -2.5px; }
 .pill__mark { line-height: 1; }
 .pill__links { display: flex; gap: 2px; }
 .pill__links a { text-decoration: none; font-size: 13.5px; padding: 6px 11px; border-radius: 999px; color: #d9dbd2; }
