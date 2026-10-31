@@ -337,10 +337,69 @@ function buildFiles() {
     s.innerHTML = icons[f.kind];
     s.tabIndex = -1;
     s.setAttribute('aria-label', `${f.name}, in the fridge. Press to put it back on the desktop.`);
-    s.addEventListener('click', e => { e.stopPropagation(); putBack(f); });
+    s.addEventListener('click', e => {
+      e.stopPropagation();
+      if (s.dataset.dragged) { delete s.dataset.dragged; return; }   // that was a drag, not a tap
+      putBack(f);
+    });
     shelf.appendChild(s);
     state.get(f.id).shelfEl = s;
+    enablePullOut(s, f);
   });
+}
+
+// Drag a file off the shelf and out of the fridge: it lands on the desktop where you let go.
+// Let go over the fridge again and it goes back in. A tap still puts it back where it came from.
+function enablePullOut(s, f) {
+  let start = null;
+  s.addEventListener('pointerdown', e => {
+    if (!fridge.classList.contains('is-open')) return;
+    start = { px: e.clientX, py: e.clientY, out: false };
+    s.setPointerCapture(e.pointerId);
+  });
+  s.addEventListener('pointermove', e => {
+    if (!start) return;
+    const st = state.get(f.id), el = st.el;
+    if (!start.out) {
+      if (Math.hypot(e.clientX - start.px, e.clientY - start.py) < 6) return;
+      start.out = true;
+      s.dataset.dragged = '1';
+      st.stored = false;
+      delete s.dataset.full;
+      el.classList.remove('is-stored');
+      el.classList.add('is-dragging');
+      s.style.opacity = '0';   // hidden but still holding the pointer; the shelf closes up on release
+    }
+    // Follow the pointer, in the desktop's own unscaled pixels.
+    const r = screen.getBoundingClientRect();
+    el.style.left = (e.clientX - r.left) / S - el.offsetWidth / 2 + 'px';
+    el.style.top = (e.clientY - r.top) / S - 34 + 'px';
+    clearTimeout(closeTimer);
+    fridge.classList.toggle('is-near', inside(e.clientX, e.clientY, fridgeRect()));
+  });
+  const end = e => {
+    if (!start) return;
+    const out = start.out; start = null;
+    if (!out) return;
+    const st = state.get(f.id), el = st.el;
+    el.classList.remove('is-dragging');
+    fridge.classList.remove('is-near');
+    s.style.opacity = '';
+    relayoutShelf();
+    if (e.type !== 'pointercancel' && inside(e.clientX, e.clientY, fridgeRect())) { store(f); return; }
+    if (e.type === 'pointercancel') { place(el, [st.x, st.y]); }
+    else {
+      // Keep it on the desktop.
+      const x = parseFloat(el.style.left), y = parseFloat(el.style.top);
+      st.x = clamp(x, 0, L.dw - el.offsetWidth); st.y = clamp(y, 30, L.dh - 90);
+      place(el, [st.x, st.y]);
+    }
+    update();
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(() => setOpen(false), reduce ? 300 : 700);
+  };
+  s.addEventListener('pointerup', end);
+  s.addEventListener('pointercancel', end);
 }
 
 // The desktop wallpaper: the same sky, as the computer would draw it, in a few dithered blues.
