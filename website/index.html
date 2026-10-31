@@ -43,6 +43,8 @@
   <link rel="apple-touch-icon" href="media/apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="variants/library/library.css">
+  <link rel="stylesheet" href="variants/desk/desk.css">
+  <link rel="stylesheet" href="variants/rules/rules.css">
 </head>
 <body>
   <a class="skip" href="#objects">Skip to the objects</a>
@@ -146,185 +148,8 @@
         </label>
       </div>
       <p class="library__count" id="lib-count" aria-live="polite"></p>
-      <div class="library__grid" id="lib-grid"></div>
-      <div class="library__more"><button type="button" class="button button--ghost" id="lib-more" hidden>Show more</button></div>
-      <p class="library__empty" id="lib-empty" hidden>Nothing matches that yet. Maybe it is yours to make.</p>
-    </section>
-
-    <!-- The rules every object follows. Rows after Arc's Onboarding Checklist, the drawn tick after Bencho's Checklist,
-         the sliding hover after Motion Primitives' Animated Background. See CREDITS.md. -->
-    <section class="rules" aria-labelledby="rules-title">
-      <div class="rules__intro">
-        <p class="dot-label">House rules</p>
-        <h2 id="rules-title">Gentle with your files, every time.</h2>
-        <p>Every object in the library follows the same five rules. They are part of the guide, and each object is checked against them before it is added.</p>
-        <a class="rules__more" href="https://github.com/Electrofist/whimsydesk/blob/main/CONTRIBUTING.md">Read the rules</a>
-      </div>
-      <div class="rules__board" id="rules-board">
-        <span class="rules__hl" aria-hidden="true"></span>
-        <ol class="rules__list">
-          <li class="rule">
-            <span class="rule__no" aria-hidden="true">01</span>
-            <span class="rules__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2h8.5A1.5 1.5 0 0 1 21 9.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M12 10.5v5m-2.2-2.2L12 15.5l2.2-2.2"/></svg></span>
-            <div class="rule__text"><h3>Moved, never lost</h3><p>Files go into one plain folder you can open in Finder. Nothing is copied or deleted behind your back.</p></div>
-            <span class="rule__check" aria-hidden="true"><span class="rule__fill"></span><svg viewBox="0 0 16 16"><path pathLength="1" d="M3.8 8.4l2.9 2.9 5.6-6.4"/></svg></span>
-          </li>
-          <li class="rule">
-            <span class="rule__no" aria-hidden="true">02</span>
-            <span class="rules__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h8a4.5 4.5 0 0 1 0 9H7"/><path d="M11 5L8 8l3 3"/></svg></span>
-            <div class="rule__text"><h3>Put Back works</h3><p>Every file can go back to where it came from, even after a restart.</p></div>
-            <span class="rule__check" aria-hidden="true"><span class="rule__fill"></span><svg viewBox="0 0 16 16"><path pathLength="1" d="M3.8 8.4l2.9 2.9 5.6-6.4"/></svg></span>
-          </li>
-          <li class="rule">
-            <span class="rule__no" aria-hidden="true">03</span>
-            <span class="rules__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4.5a7.5 7.5 0 1 0 5 12.5 6.5 6.5 0 0 1-5-12.5z"/></svg></span>
-            <div class="rule__text"><h3>Quiet at rest</h3><p>No timers or animation while nobody is touching it. Easy on your battery.</p></div>
-            <span class="rule__check" aria-hidden="true"><span class="rule__fill"></span><svg viewBox="0 0 16 16"><path pathLength="1" d="M3.8 8.4l2.9 2.9 5.6-6.4"/></svg></span>
-          </li>
-          <li class="rule">
-            <span class="rule__no" aria-hidden="true">04</span>
-            <span class="rules__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5a11.5 11.5 0 0 1 16 0M7 13a7 7 0 0 1 10 0M10 16.5a3 3 0 0 1 4 0"/><path d="M4.5 4.5l15 15"/></svg></span>
-            <div class="rule__text"><h3>No network, no tracking</h3><p>The apps never go online. No analytics, ads, accounts or paywalls inside them. Ever.</p></div>
-            <span class="rule__check" aria-hidden="true"><span class="rule__fill"></span><svg viewBox="0 0 16 16"><path pathLength="1" d="M3.8 8.4l2.9 2.9 5.6-6.4"/></svg></span>
-          </li>
-          <li class="rule">
-            <span class="rule__no" aria-hidden="true">05</span>
-            <span class="rules__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 8L4.5 12l4 4M15.5 8l4 4-4 4M13.5 5.5l-3 13"/></svg></span>
-            <div class="rule__text"><h3>Free and open source</h3><p>MIT licence. Read it, change it, share it.</p></div>
-            <span class="rule__check" aria-hidden="true"><span class="rule__fill"></span><svg viewBox="0 0 16 16"><path pathLength="1" d="M3.8 8.4l2.9 2.9 5.6-6.4"/></svg></span>
-          </li>
-        </ol>
-      </div>
-    </section>
-
-    <!-- Make your own: the real template, its real card, and four steps. -->
-    <section class="build" id="make" aria-labelledby="make-title">
-      <div class="build__inner">
-        <header class="build__head">
-          <div>
-            <p class="dot-label dot-label--dark">For makers</p>
-            <h2 id="make-title">Make your own object.</h2>
-            <p class="build__lede">Start from a template that already opens, closes, holds files and puts them back. Bring two pictures and the template does the rest. About 15 minutes, no Swift needed.</p>
-          </div>
-          <div class="build__cta">
-            <a class="btn btn--olive" href="https://github.com/Electrofist/whimsydesk/blob/main/docs/make-your-own.md">Read the guide</a>
-            <a class="btn btn--line" href="https://github.com/Electrofist/whimsydesk/tree/main/templates/object">Browse the template</a>
-          </div>
-        </header>
-
-        <!-- Stepper and code blocks after Arc's Stepper and Code Block, the drop target after Arc's File Dropzone.
-             Dropped pictures stay in the browser. See CREDITS.md. -->
-        <div class="bench">
-          <ol class="stepper" role="tablist" aria-label="Four steps" aria-orientation="vertical">
-            <li class="stepper__item" data-status="current">
-              <button class="stepper__head" type="button" role="tab" id="step-tab-1" aria-controls="step-panel-1" aria-selected="true">
-                <span class="stepper__marker" aria-hidden="true"><span class="stepper__ring"></span><span class="stepper__disc"><span class="stepper__no">1</span><svg class="stepper__check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span></span>
-                <span class="stepper__text"><span class="stepper__label">Copy the template</span><span class="stepper__desc">Fork the repo and make your object.</span></span>
-              </button>
-              <span class="stepper__line" aria-hidden="true"><span class="stepper__fill"></span></span>
-            </li>
-            <li class="stepper__item" data-status="upcoming">
-              <button class="stepper__head" type="button" role="tab" id="step-tab-2" aria-controls="step-panel-2" aria-selected="false" tabindex="-1">
-                <span class="stepper__marker" aria-hidden="true"><span class="stepper__ring"></span><span class="stepper__disc"><span class="stepper__no">2</span><svg class="stepper__check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span></span>
-                <span class="stepper__text"><span class="stepper__label">Draw two pictures</span><span class="stepper__desc">Try yours here before you build.</span></span>
-              </button>
-              <span class="stepper__line" aria-hidden="true"><span class="stepper__fill"></span></span>
-            </li>
-            <li class="stepper__item" data-status="upcoming">
-              <button class="stepper__head" type="button" role="tab" id="step-tab-3" aria-controls="step-panel-3" aria-selected="false" tabindex="-1">
-                <span class="stepper__marker" aria-hidden="true"><span class="stepper__ring"></span><span class="stepper__disc"><span class="stepper__no">3</span><svg class="stepper__check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span></span>
-                <span class="stepper__text"><span class="stepper__label">Put it on your desktop</span><span class="stepper__desc">Build it and run it.</span></span>
-              </button>
-              <span class="stepper__line" aria-hidden="true"><span class="stepper__fill"></span></span>
-            </li>
-            <li class="stepper__item" data-status="upcoming">
-              <button class="stepper__head" type="button" role="tab" id="step-tab-4" aria-controls="step-panel-4" aria-selected="false" tabindex="-1">
-                <span class="stepper__marker" aria-hidden="true"><span class="stepper__ring"></span><span class="stepper__disc"><span class="stepper__no">4</span><svg class="stepper__check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span></span>
-                <span class="stepper__text"><span class="stepper__label">Send it in</span><span class="stepper__desc">Open a pull request.</span></span>
-              </button>
-            </li>
-          </ol>
-
-          <div class="bench__main">
-            <figure class="stage" id="stage">
-              <canvas aria-hidden="true"></canvas>
-              <div class="stage__bar" aria-hidden="true"><b>Finder</b><span>File</span><span>Edit</span><span>View</span></div>
-              <button class="stage__obj" id="stage-obj" type="button" aria-pressed="false" aria-label="Your object. Closed. Press to open.">
-                <img class="stage__art stage__art--closed" id="art-closed" src="media/template/closed.png" alt="">
-                <img class="stage__art stage__art--open" id="art-open" src="media/template/open.png" alt="">
-              </button>
-              <figcaption class="stage__cap"><span class="stage__tag" id="stage-tag">The template crate</span><span class="stage__hint">Click it to open</span></figcaption>
-            </figure>
-
-            <div class="panels">
-              <div class="panel" role="tabpanel" id="step-panel-1" aria-labelledby="step-tab-1">
-                <div class="code">
-                  <div class="code__head"><span class="code__file"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z"/><path d="M5 6.5l2 1.5-2 1.5M8.5 10h2.5"/></svg>Terminal<span class="code__lang">sh</span></span><button class="copy" type="button"><span class="copy__label">Copy</span></button></div>
-<pre class="code__pre"><code><i># Fork github.com/Electrofist/whimsydesk, then:</i>
-git clone https://github.com/<s>your-username</s>/whimsydesk.git
-cd whimsydesk
-scripts/new-object.sh <s>"Toaster"</s> <s>your-username</s></code></pre>
-                </div>
-                <p class="panel__note">Using Phoenix Code? Choose <b>File, New Desktop Object</b> instead. It does the same thing.</p>
-              </div>
-
-              <div class="panel" role="tabpanel" id="step-panel-2" aria-labelledby="step-tab-2" hidden>
-                <div class="drop" id="drop">
-                  <svg class="drop__edge" aria-hidden="true"><rect x="0.5" y="0.5" rx="16" ry="16"/></svg>
-                  <span class="drop__wash" aria-hidden="true"></span>
-                  <label class="drop__trigger" for="drop-input">
-                    <span class="drop__sheets" aria-hidden="true"><span class="drop__sheet" data-sheet="back"></span><span class="drop__sheet" data-sheet="side"></span><span class="drop__sheet" data-sheet="front"><svg viewBox="0 0 16 16"><path d="M8 4.5v7M4.5 8h7"/></svg></span></span>
-                    <span class="drop__label">Drop your closed.png and open.png</span>
-                    <span class="drop__hint">or click to choose them. They stay in your browser.</span>
-                  </label>
-                  <input class="sr-only" id="drop-input" type="file" accept="image/png,image/*" multiple>
-                </div>
-                <ul class="drop__files" id="drop-files"></ul>
-                <p class="drop__error" id="drop-error" role="alert" hidden></p>
-                <p class="panel__note">Same size for both, transparent background, exported at 2x. <button class="link-btn" id="drop-reset" type="button" hidden>Back to the crate</button></p>
-              </div>
-
-              <div class="panel" role="tabpanel" id="step-panel-3" aria-labelledby="step-tab-3" hidden>
-                <div class="code">
-                  <div class="code__head"><span class="code__file"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z"/><path d="M5 6.5l2 1.5-2 1.5M8.5 10h2.5"/></svg>Terminal<span class="code__lang">sh</span></span><button class="copy" type="button"><span class="copy__label">Copy</span></button></div>
-<pre class="code__pre"><code>cd objects/<s>toaster</s>
-bash build.sh run</code></pre>
-                </div>
-                <p class="panel__note">The first build takes a minute or two. Your object appears at the lower left of your screen, behind your windows. Click it, drop a file on it, and right-click a file inside for Put Back.</p>
-              </div>
-
-              <div class="panel" role="tabpanel" id="step-panel-4" aria-labelledby="step-tab-4" hidden>
-                <div class="code">
-                  <div class="code__head"><span class="code__file"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z"/><path d="M5 6.5l2 1.5-2 1.5M8.5 10h2.5"/></svg>Terminal<span class="code__lang">sh</span></span><button class="copy" type="button"><span class="copy__label">Copy</span></button></div>
-<pre class="code__pre"><code>scripts/check-objects.sh
-git checkout -b <s>add-toaster</s>
-git add objects/<s>toaster</s> .github/CODEOWNERS
-git commit -m <s>"Add Toaster"</s>
-git push -u origin <s>add-toaster</s></code></pre>
-                </div>
-                <p class="panel__note">Then open your fork on GitHub and choose <b>Compare &amp; pull request</b>. GitHub checks and builds your object for you.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <aside class="studio">
-          <span class="studio__mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/></svg></span>
-          <p><b>Using Phoenix Code?</b> Desktop Objects Studio shows your art, icon and card while you work, and marks mistakes in object.json as you type.</p>
-          <a href="https://github.com/Electrofist/desktop-objects-phoenix">Get the extension</a>
-        </aside>
-      </div>
-    </section>
-  </main>
-
-  <footer class="foot" aria-labelledby="foot-title">
-    <h2 id="foot-title">Give your files somewhere nice to live.</h2>
-    <div class="actions">
-      <a class="button" href="https://github.com/Electrofist/whimsydesk/releases/download/downloads/Desktop-Fridge.dmg">Download Desktop Fridge</a>
-      <a class="quiet" href="https://github.com/Electrofist/whimsydesk/releases/download/downloads/Desktop-Drawer.dmg">or the drawer</a>
-    </div>
-    <nav class="foot__objects" aria-label="Every object">
-      <!-- seo:objects -->
+      <div class="library__grid" id="lib-grid">
+        <!-- seo:objects -->
       <ul class="lib-list">
         <li><a href="desktop-drawer/"><b>Desktop Drawer</b>: A wooden drawer under your desktop for everything you are not using right now.</a></li>
         <li><a href="desktop-fridge/"><b>Desktop Fridge</b>: Drag files in, shut the door, forget about them.</a></li>
@@ -333,22 +158,297 @@ git push -u origin <s>add-toaster</s></code></pre>
         <li><a href="desktop-vending-machine/"><b>Desktop Vending Machine</b>: Your files on little shelves. Press a button and one drops.</a></li>
       </ul>
       <!-- /seo:objects -->
-    </nav>
-    <nav class="foot__links" aria-label="More">
-      <a href="https://github.com/Electrofist/whimsydesk">GitHub</a>
-      <a href="https://github.com/Electrofist/whimsydesk/blob/main/docs/faq.md">FAQ</a>
-      <a href="https://github.com/Electrofist/whimsydesk/blob/main/LICENSE">MIT licence</a>
-      <a href="#make">Make your own</a>
-    </nav>
-    <p class="foot__credits">WhimsyDesk is free and open source. Started by Krrish Parmar, made with Phoenix Code.<br>
-      Sky: John Constable, <i>Cloud Study</i>, 1822, Yale Center for British Art, Paul Mellon Collection. Public domain.<br>
-      Letters: public domain, via Project Gutenberg.</p>
-    <div class="meadow" aria-hidden="true">
-      <canvas id="meadow"></canvas>
+      </div>
+      <div class="library__more"><button type="button" class="button button--ghost" id="lib-more" hidden>Show more</button></div>
+      <p class="library__empty" id="lib-empty" hidden>Nothing matches that yet. Maybe it is yours to make.</p>
+    </section>
+
+    <!-- House rules: each rule shown as a small piece of the Mac. Styles in variants/rules/rules.css. -->
+    <section class="rv rv--bento" id="rules" aria-labelledby="rules-title">
+      <header class="rv-head rv-head--center">
+        <p class="dot-label">House rules</p>
+        <h2 id="rules-title">Gentle with your files, every time.</h2>
+        <p class="rv-lede">Every object in the library follows the same five rules. They are part of the guide, and each object is checked against them before it is added.</p>
+        <a class="rv-more" href="https://github.com/Electrofist/whimsydesk/blob/main/CONTRIBUTING.md">Read the rules<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9M8.5 4l4 4-4 4"/></svg></a>
+      </header>
+      <ul class="bt-grid">
+        <li class="bt bt--wide">
+          <div class="bt-vis" aria-hidden="true">
+            <div class="bt-finder">
+              <div class="bt-finder__bar"><span class="bt-dots"><i></i><i></i><i></i></span><span>Fridge</span></div>
+              <div class="bt-finder__files">
+                <span><img src="media/loose/pdf.png" alt="">Invoice.pdf</span>
+                <span><img src="media/loose/photo.png" alt="">Beach.jpg</span>
+                <span><img src="media/loose/folder.png" alt="">Projects</span>
+              </div>
+              <div class="bt-finder__path">Macintosh HD &rsaquo; Users &rsaquo; you &rsaquo; <b>Fridge</b></div>
+            </div>
+          </div>
+          <div class="bt-txt"><span class="rv-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2h8.5A1.5 1.5 0 0 1 21 9.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M12 10.5v5m-2.2-2.2L12 15.5l2.2-2.2"/></svg></span><h3>Moved, never lost</h3><p>Files go into one plain folder you can open in Finder. Nothing is copied or deleted behind your back.</p></div>
+        </li>
+        <li class="bt">
+          <div class="bt-vis" aria-hidden="true">
+            <div class="bt-menu">
+              <span class="bt-menu__file"><img src="media/loose/photo.png" alt="">Beach.jpg</span>
+              <span>Open</span>
+              <span class="is-on">Put Back</span>
+            </div>
+          </div>
+          <div class="bt-txt"><span class="rv-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 8h8a4.5 4.5 0 0 1 0 9H7"/><path d="M11 5L8 8l3 3"/></svg></span><h3>Put Back works</h3><p>Every file can go back to where it came from, even after a restart.</p></div>
+        </li>
+        <li class="bt">
+          <div class="bt-vis" aria-hidden="true">
+            <div class="bt-meter">
+              <div class="bt-meter__top"><b>Energy</b><span>At rest</span></div>
+              <svg viewBox="0 0 200 60" preserveAspectRatio="none"><path class="bt-meter__busy" d="M0 50 L20 50 L28 18 L36 42 L44 26 L52 50 L60 50"/><path class="bt-meter__flat" d="M60 50 H200"/></svg>
+              <div class="bt-meter__foot"><span>Opened a file</span><span>Nothing running</span></div>
+            </div>
+          </div>
+          <div class="bt-txt"><span class="rv-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14.5 4.5a7.5 7.5 0 1 0 5 12.5 6.5 6.5 0 0 1-5-12.5z"/></svg></span><h3>Quiet at rest</h3><p>No timers or animation while nobody is touching it. Easy on your battery.</p></div>
+        </li>
+        <li class="bt">
+          <div class="bt-vis" aria-hidden="true">
+            <dl class="bt-stats">
+              <div><dt>Network</dt><dd>None</dd></div>
+              <div><dt>Analytics</dt><dd>None</dd></div>
+              <div><dt>Accounts</dt><dd>None</dd></div>
+            </dl>
+          </div>
+          <div class="bt-txt"><span class="rv-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 9.5a11.5 11.5 0 0 1 16 0M7 13a7 7 0 0 1 10 0M10 16.5a3 3 0 0 1 4 0"/><path d="M4.5 4.5l15 15"/></svg></span><h3>No network, no tracking</h3><p>The apps never go online. No analytics, ads, accounts or paywalls inside them. Ever.</p></div>
+        </li>
+        <li class="bt">
+          <div class="bt-vis" aria-hidden="true">
+            <div class="bt-repo">
+              <span class="bt-repo__name"><svg viewBox="0 0 16 16"><path d="M3 2.5h8.5v11H4.5A1.5 1.5 0 0 1 3 12V2.5zM3 12a1.5 1.5 0 0 1 1.5-1.5h7"/></svg>Electrofist / <b>whimsydesk</b></span>
+              <span class="bt-repo__tags"><i>Public</i><i>MIT licence</i><i>Swift</i></span>
+            </div>
+          </div>
+          <div class="bt-txt"><span class="rv-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8.5 8L4.5 12l4 4M15.5 8l4 4-4 4M13.5 5.5l-3 13"/></svg></span><h3>Free and open source</h3><p>MIT licence. Read it, change it, share it.</p></div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Make your own: pick how you build, then four steps. Pictures dropped in step 2 stay in the browser. -->
+    <section class="build mk" id="make" aria-labelledby="make-title">
+      <div class="mk__inner">
+        <header class="mk__head">
+          <div>
+            <p class="dot-label dot-label--dark">For makers</p>
+            <h2 id="make-title">Make your own object.</h2>
+          </div>
+          <div>
+            <p class="mk__lede">Start from a template that already opens, closes, holds files and puts them back. Bring two pictures and the template does the rest. About 15 minutes, no Swift needed.</p>
+            <div class="mk__cta">
+              <a class="btn btn--olive" href="https://github.com/Electrofist/whimsydesk/blob/main/docs/make-your-own.md">Read the guide</a>
+              <a class="btn btn--line" href="https://github.com/Electrofist/whimsydesk/tree/main/templates/object">Browse the template</a>
+            </div>
+          </div>
+        </header>
+
+        <fieldset class="mk-paths" id="mk-paths">
+          <legend>How do you want to build it?</legend>
+          <label class="mk-path">
+            <input type="radio" name="mk-path" value="phoenix" checked>
+            <span class="mk-path__icon mk-path__icon--phoenix" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/></svg></span>
+            <span class="mk-path__text"><b>Phoenix Code <em>Recommended</em></b><span>A free editor with a panel that shows your object while you make it.</span></span>
+          </label>
+          <label class="mk-path">
+            <input type="radio" name="mk-path" value="terminal">
+            <span class="mk-path__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M7.5 9.5l3 2.5-3 2.5M12.5 15h4"/></svg></span>
+            <span class="mk-path__text"><b>Terminal and your editor</b><span>Copy a few commands. Any code editor works.</span></span>
+          </label>
+          <label class="mk-path">
+            <input type="radio" name="mk-path" value="ai">
+            <span class="mk-path__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 4l1.6 4.4L16 10l-4.4 1.6L10 16l-1.6-4.4L4 10l4.4-1.6zM17.5 13.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span>
+            <span class="mk-path__text"><b>An AI assistant</b><span>Paste one prompt into Claude Code, Codex or Cursor. It does the steps with you.</span></span>
+          </label>
+        </fieldset>
+
+        <ol class="mk-steps">
+          <li class="mk-step">
+            <span class="mk-step__no" aria-hidden="true">1</span>
+            <h3>Copy the template</h3>
+            <div class="mk-pane" data-for="phoenix">
+              <div class="mk-text"><p>Fork <a href="https://github.com/Electrofist/whimsydesk">whimsydesk</a> on GitHub to get your own copy. Then in Phoenix Code, get your fork, add the extension, and make your object.</p><p class="mk-note">No Phoenix Code yet? <a href="https://phcode.dev">Get it free at phcode.dev</a>.</p></div>
+              <div class="mk-aside"><ol class="mk-route"><li><span>Start Project</span><i aria-hidden="true">&rsaquo;</i><span>Get from Git</span><i aria-hidden="true">&rsaquo;</i><span>paste your fork</span></li><li><span>Extension Manager</span><i aria-hidden="true">&rsaquo;</i><span>Desktop Objects Studio</span><i aria-hidden="true">&rsaquo;</i><span>Install</span></li><li><span>File</span><i aria-hidden="true">&rsaquo;</i><span>New Desktop Object</span></li></ol></div>
+            </div>
+            <div class="mk-pane" data-for="terminal">
+              <div class="mk-text"><p>Fork the repo on GitHub, then make your object from the template. Replace the name and username with yours.</p></div>
+              <div class="mk-aside"><div class="code mk-code">
+                <div class="mk-code__head"><span>Terminal</span><button class="copy" type="button"><span class="copy__label">Copy</span></button></div>
+<pre><code><i># Fork github.com/Electrofist/whimsydesk, then:</i>
+git clone https://github.com/<s>your-username</s>/whimsydesk.git
+cd whimsydesk
+scripts/new-object.sh <s>"Toaster"</s> <s>your-username</s></code></pre>
+              </div></div>
+            </div>
+            <div class="mk-pane" data-for="ai">
+              <div class="mk-text"><p>Fork <a href="https://github.com/Electrofist/whimsydesk">whimsydesk</a> on GitHub. Then open your AI assistant in an empty folder and paste this prompt. Change the name and username first.</p><p class="mk-note">Works with any assistant that can run commands on your Mac, like Claude Code, Codex or Cursor.</p></div>
+              <div class="mk-aside"><div class="code mk-code mk-code--prompt">
+                <div class="mk-code__head"><span>Prompt</span><button class="copy" type="button"><span class="copy__label">Copy</span></button></div>
+<pre><code>I want to make a new object for WhimsyDesk, an open source library of Mac desktop objects that hold files: https://github.com/Electrofist/whimsydesk
+
+My object is called <s>Toaster</s> and my GitHub username is <s>your-username</s>.
+
+Please:
+1. Clone my fork, https://github.com/<s>your-username</s>/whimsydesk, into this folder.
+2. Read docs/make-your-own.md and CONTRIBUTING.md, and follow them.
+3. Run scripts/new-object.sh "<s>Toaster</s>" <s>your-username</s>
+4. Build and run it with: cd objects/<s>toaster</s> &amp;&amp; bash build.sh run
+5. Wait while I put closed.png and open.png in objects/<s>toaster</s>/Art. Then rebuild it and help me set look.itemsArea in object.json so files sit inside the open picture.
+6. Help me write the tagline, description and README in plain words.
+7. Run scripts/check-objects.sh and fix everything it lists.
+
+Keep the house rules: files are moved, never lost. Put Back works. Nothing runs while nobody touches the object. No network or tracking. Ask me before anything you are unsure about.</code></pre>
+              </div></div>
+            </div>
+          </li>
+          <li class="mk-step">
+            <span class="mk-step__no" aria-hidden="true">2</span>
+            <h3>Draw two pictures</h3>
+            <div class="mk-pane">
+              <div class="mk-text">
+                <p>One <b>closed.png</b> and one <b>open.png</b>. Same size, transparent background, exported at 2x.</p>
+                <p>Try them here first. Drop both on the crate and yours takes its place.</p>
+                <p class="mk-note" data-for="phoenix">In Phoenix Code, the Studio panel shows your art as you work. Drag the files area over your open picture to set where files sit.</p>
+                <p class="mk-note" data-for="terminal">Put them in your object's Art folder, keeping the names.</p>
+                <p class="mk-note" data-for="ai">Put them in your object's Art folder and tell your assistant they are there.</p>
+              </div>
+              <div class="mk-aside"><div class="mk-try" id="stage">
+                <canvas aria-hidden="true" hidden></canvas>
+                <div class="mk-try__drop" id="drop">
+                  <button class="mk-try__obj" id="stage-obj" type="button" aria-pressed="false" aria-label="Your object. Closed. Press to open.">
+                    <img class="mk-try__art mk-try__art--closed" id="art-closed" src="media/template/closed.png" alt="" draggable="false">
+                    <img class="mk-try__art mk-try__art--open" id="art-open" src="media/template/open.png" alt="" draggable="false">
+                  </button>
+                  <p class="mk-try__veil" aria-hidden="true"><span>Drop closed.png and open.png</span></p>
+                </div>
+                <div class="mk-try__bar">
+                  <p class="mk-try__name"><b id="stage-tag">The template crate</b><span class="stage__hint">Click it to open</span></p>
+                  <label class="mk-try__pick" for="drop-input">Choose two pictures</label>
+                </div>
+                <ul class="mk-try__files" id="drop-files" aria-live="polite"></ul>
+                <p class="mk-try__warn" id="drop-error" role="alert" hidden></p>
+                <p class="mk-try__foot"><span>Stays in your browser. Never uploaded.</span><button class="link-btn" id="drop-reset" type="button" hidden>Back to the crate</button></p>
+                <input class="sr-only" id="drop-input" type="file" accept="image/png,image/*" multiple>
+              </div></div>
+            </div>
+          </li>
+          <li class="mk-step">
+            <span class="mk-step__no" aria-hidden="true">3</span>
+            <h3>Put it on your desktop</h3>
+            <div class="mk-pane" data-for="phoenix">
+              <div class="mk-text"><p>Open the terminal panel in Phoenix Code and run these two lines.</p><p class="mk-note">The first build takes a minute or two. Your object appears at the lower left of your screen, behind your windows. Click it, drop a file on it, and right-click a file inside for Put Back.</p></div>
+              <div class="mk-aside"><div class="code mk-code">
+                <div class="mk-code__head"><span>Terminal</span><button class="copy" type="button"><span class="copy__label">Copy</span></button></div>
+<pre><code>cd objects/<s>toaster</s>
+bash build.sh run</code></pre>
+              </div></div>
+            </div>
+            <div class="mk-pane" data-for="terminal">
+              <div class="mk-text"><p>Build it and run it.</p><p class="mk-note">The first build takes a minute or two. Your object appears at the lower left of your screen, behind your windows. Click it, drop a file on it, and right-click a file inside for Put Back.</p></div>
+              <div class="mk-aside"><div class="code mk-code">
+                <div class="mk-code__head"><span>Terminal</span><button class="copy" type="button"><span class="copy__label">Copy</span></button></div>
+<pre><code>cd objects/<s>toaster</s>
+bash build.sh run</code></pre>
+              </div></div>
+            </div>
+            <div class="mk-pane" data-for="ai">
+              <div class="mk-text"><p>Your assistant builds and runs it for you. When your pictures are in, ask it to rebuild.</p><p class="mk-note">Your object appears at the lower left of your screen, behind your windows. Click it, drop a file on it, and right-click a file inside for Put Back.</p></div>
+              <div class="mk-aside"><div class="code mk-code mk-code--prompt">
+                <div class="mk-code__head"><span>Prompt</span><button class="copy" type="button"><span class="copy__label">Copy</span></button></div>
+<pre><code>My pictures are in objects/<s>toaster</s>/Art. Rebuild it, run it, and help me set where files sit in the open picture.</code></pre>
+              </div></div>
+            </div>
+          </li>
+          <li class="mk-step">
+            <span class="mk-step__no" aria-hidden="true">4</span>
+            <h3>Send it in</h3>
+            <div class="mk-pane" data-for="phoenix">
+              <div class="mk-text"><p>Mistakes in object.json are marked as you type. When it looks right, use the Git panel to commit <b>objects/toaster</b> and <b>.github/CODEOWNERS</b> on a new branch, and push.</p><p class="mk-note">Then open your fork on GitHub and choose <b>Compare &amp; pull request</b>. GitHub checks and builds your object for you.</p></div>
+              <div class="mk-aside"><ol class="mk-route"><li><span>Git panel</span><i aria-hidden="true">&rsaquo;</i><span>New branch</span><i aria-hidden="true">&rsaquo;</i><span>add-toaster</span></li><li><span>Commit</span><i aria-hidden="true">&rsaquo;</i><span>objects/toaster, .github/CODEOWNERS</span></li><li><span>Push</span></li></ol></div>
+            </div>
+            <div class="mk-pane" data-for="terminal">
+              <div class="mk-text"><p>Check your card, then send a pull request.</p><p class="mk-note">Then open your fork on GitHub and choose <b>Compare &amp; pull request</b>. GitHub checks and builds your object for you.</p></div>
+              <div class="mk-aside"><div class="code mk-code">
+                <div class="mk-code__head"><span>Terminal</span><button class="copy" type="button"><span class="copy__label">Copy</span></button></div>
+<pre><code>scripts/check-objects.sh
+git checkout -b <s>add-toaster</s>
+git add objects/<s>toaster</s> .github/CODEOWNERS
+git commit -m <s>"Add Toaster"</s>
+git push -u origin <s>add-toaster</s></code></pre>
+              </div></div>
+            </div>
+            <div class="mk-pane" data-for="ai">
+              <div class="mk-text"><p>Ask your assistant to check it and send it in.</p><p class="mk-note">GitHub checks and builds your object for you, and the pull request shows anything to fix.</p></div>
+              <div class="mk-aside"><div class="code mk-code mk-code--prompt">
+                <div class="mk-code__head"><span>Prompt</span><button class="copy" type="button"><span class="copy__label">Copy</span></button></div>
+<pre><code>Run scripts/check-objects.sh and fix what it lists. Then commit objects/<s>toaster</s> and .github/CODEOWNERS on a new branch called add-<s>toaster</s>, push it, and open a pull request to Electrofist/whimsydesk.</code></pre>
+              </div></div>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <!-- The footer: a pixel dusk over the hills. The links sit on the dark ground. -->
+  <footer class="foot dk-foot" aria-labelledby="foot-title">
+    <div class="dk-dusk">
+      <canvas class="dk-dusk__wall" id="dk-dusk-wall" aria-hidden="true"></canvas>
+      <div class="dk-dusk__top">
+        <h2 id="foot-title">Give your files somewhere nice to live.</h2>
+        <p class="dk-dusk__sub">Free, open source objects for your Mac desktop.</p>
+        <div class="dk-dusk__cta">
+          <a class="btn btn--olive" href="#objects">Browse the library</a>
+          <a class="btn dk-ghbtn" href="https://github.com/Electrofist/whimsydesk"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.51-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>Star on GitHub</a>
+        </div>
+      </div>
+
+      <div class="dk-ground" id="dk-ground">
+        <div class="dk-cols">
+          <div class="dk-brand">
+            <a class="dk-logo" href="./"><svg class="dk-mark" viewBox="0 0 7 7" aria-hidden="true"><path d="M3 0h1v2h-1zM3 5h1v2h-1zM0 3h2v1H0zM5 3h2v1H5zM2 2h3v3H2z" fill="currentColor"/></svg>WhimsyDesk</a>
+            <p>Little objects that sit on your Mac desktop and hold your files.</p>
+          </div>
+          <nav class="dk-col" aria-label="Library">
+            <h3>Library</h3>
+            <ul>
+              <li><a href="#objects">All objects</a></li>
+              <li><a href="#rules">House rules</a></li>
+              <li><a href="https://github.com/Electrofist/whimsydesk/blob/main/docs/faq.md">FAQ</a></li>
+            </ul>
+          </nav>
+          <nav class="dk-col" aria-label="Makers">
+            <h3>Makers</h3>
+            <ul>
+              <li><a href="#make">Make your own</a></li>
+              <li><a href="https://github.com/Electrofist/whimsydesk/blob/main/docs/make-your-own.md">The guide</a></li>
+              <li><a href="https://github.com/Electrofist/whimsydesk/tree/main/templates/object">The template</a></li>
+              <li><a href="https://github.com/Electrofist/desktop-objects-phoenix">Desktop Objects Studio</a></li>
+            </ul>
+          </nav>
+          <nav class="dk-col" aria-label="Project">
+            <h3>Project</h3>
+            <ul>
+              <li><a href="https://github.com/Electrofist/whimsydesk">GitHub</a></li>
+              <li><a href="https://github.com/Electrofist/whimsydesk/releases">Releases</a></li>
+              <li><a href="https://github.com/Electrofist/whimsydesk/blob/main/CONTRIBUTING.md">Contributing</a></li>
+              <li><a href="https://github.com/Electrofist/whimsydesk/blob/main/LICENSE">MIT licence</a></li>
+            </ul>
+          </nav>
+        </div>
+        <div class="dk-legal">
+          <p>&copy; 2026 WhimsyDesk. Started by Krrish Parmar. Made with Phoenix Code.</p>
+          <p>Sky: John Constable, <i>Cloud Study</i>, 1822, Yale Center for British Art. Letters via Project Gutenberg. Both public domain.</p>
+        </div>
+      </div>
     </div>
+    <div class="meadow" hidden><canvas id="meadow"></canvas></div>
   </footer>
 
   <script src="main.js" type="module"></script>
   <script src="variants/library/library.js" type="module"></script>
+  <script src="variants/desk/desk.js" type="module"></script>
 </body>
 </html>
