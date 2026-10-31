@@ -91,6 +91,7 @@ struct App {
     note_face: String,
     power_notify: Vec<HPOWERNOTIFY>,
     present_failed: bool,
+    position_retries: HashMap<PathBuf, u32>,
 }
 
 thread_local! {
@@ -105,6 +106,10 @@ fn with_app<R>(f: impl FnOnce(&mut App) -> R) -> Option<R> {
         Ok(mut guard) => guard.as_mut().map(f),
         Err(_) => None,
     })
+}
+
+fn with_ticker_value<R>(f: impl FnOnce(&Ticker) -> R) -> Option<R> {
+    TICKER.with(|t| t.borrow().as_ref().map(f))
 }
 
 fn with_ticker(f: impl FnOnce(&Ticker)) {
@@ -189,7 +194,26 @@ fn fridge_root() -> PathBuf {
         return p;
     }
     let home = shell::known_folder(&FOLDERID_Profile).or_else(|| env_path("USERPROFILE")).unwrap_or_else(|| PathBuf::from("C:\\"));
-    home.join("Fridge")
+    let classic = home.join("Fridge");
+    // When OneDrive syncs the Desktop, keep the fridge beside it inside OneDrive. Moving a file in
+    // then stays inside OneDrive; from a OneDrive Desktop to a plain folder, OneDrive treats the
+    // move as a delete and asks about removing the file everywhere.
+    let desktop = desktop_dir();
+    let Some(parent) = desktop.parent().map(Path::to_path_buf) else { return classic };
+    if fridge_core::store::same_path(&parent, &home) {
+        return classic;
+    }
+    let beside = parent.join("Fridge");
+    if classic.join(FridgeStore::INDEX_NAME).exists() && !beside.exists() {
+        match fridge_core::store::move_item(&classic, &beside) {
+            Ok(()) => log::line(&format!("moved the fridge folder next to the Desktop: {}", beside.display())),
+            Err(e) => {
+                log::line(&format!("could not move the fridge folder into OneDrive ({e}); keeping {}", classic.display()));
+                return classic;
+            }
+        }
+    }
+    beside
 }
 
 fn desktop_dir() -> PathBuf {
@@ -258,6 +282,7 @@ unsafe fn start() -> Result<(), String> {
     let assets = Arc::new(assets);
 
     let root = fridge_root();
+    log::line(&format!("fridge folder: {} (desktop {})", root.display(), desktop_dir().display()));
     let store = FridgeStore::open(&root, desktop_dir())
         .map_err(|e| format!("Desktop Fridge could not open its folder:\n{}\n\n{e}", root.display()))?;
     let notes = DoorNotesStore::open(&root);
@@ -358,6 +383,7 @@ unsafe fn start() -> Result<(), String> {
             note_face,
             power_notify: Vec::new(),
             present_failed: false,
+            position_retries: HashMap::new(),
         })
     });
 
@@ -411,12 +437,27 @@ impl App {
     }
 
     /// Draw if something changed, and run the frame clock only while something moves.
-    fn refresh(&mut self) {
-        if self.model.take_dirty() {
+    fn schedule(&mut self, delay: f64, task: Task) {
+        let id = self.next_timer;
+        self.next_timer += 1;
+        self.tasks.insert(id, task);
+        let ms = (delay * 1000.0).round().max(1.0) as u32;
+        unsafe {
+            SetTimer(Some(self.hwnd), id, ms, None);
+        }
+    }
+
+    /// Draw if something changed, and run the frame clock only while something moves.
+    /// While the clock runs, only its ticks draw (at most 60 a second), so a fast mouse sending
+    /// hundreds of moves a second cannot make the fridge redraw hundreds of times.
+    fn refresh(&mut self, from_tick: bool) {
+        let animating = self.model.is_animating();
+        let clock_running = with_ticker_value(|t| t.is_running()).unwrap_or(false);
+        if (from_tick || !(animating && clock_running)) && self.model.take_dirty() {
             self.present();
         }
-        let animating = self.model.is_animating();
-        let hz = if self.model.wants_high_rate() { 120 } else { 60 };
+        // Software drawing: 60 a second is smooth and leaves the CPU cool.
+        let hz = 60;
         let last_tick = &mut self.last_tick;
         with_ticker(|t| {
             if animating && !t.is_running() {
@@ -467,13 +508,7 @@ impl App {
                     self.present();
                 }
                 Effect::SaveSettings => self.save_settings(),
-                Effect::Schedule { delay, task } => {
-                    let id = self.next_timer;
-                    self.next_timer += 1;
-                    self.tasks.insert(id, task);
-                    let ms = (delay * 1000.0).round().max(1.0) as u32;
-                    SetTimer(Some(self.hwnd), id, ms, None);
-                }
+                Effect::Schedule { delay, task } => self.schedule(delay, task),
                 // The rest are handled in `perform` below, outside the borrow.
                 _ => {}
             }
@@ -483,18 +518,22 @@ impl App {
 
 /// Carries out effects in order, including any they lead to, then redraws.
 fn run_effects(effects: Vec<Effect>) {
+    perform_all(effects);
+    with_app(|a| a.refresh(false));
+}
+
+fn perform_all(effects: Vec<Effect>) {
     let mut queue: VecDeque<Effect> = effects.into();
     while let Some(e) = queue.pop_front() {
         queue.extend(perform(e));
     }
-    with_app(|a| a.refresh());
 }
 
 fn perform(effect: Effect) -> Vec<Effect> {
     match effect {
         Effect::BeginItemDrag { id, path } => return begin_item_drag(&id, &path),
         Effect::ConfirmMoveAll { title, message } => {
-            with_app(|a| a.refresh());
+            with_app(|a| a.refresh(false));
             if dialog::confirm(HWND::default(), &title, &message, "Move to Desktop") {
                 return with_app(|a| a.model.move_everything_to_desktop()).unwrap_or_default();
             }
@@ -735,7 +774,8 @@ fn on_tick() {
         a.last_tick = now;
         a.model.tick(dt, wall_now())
     });
-    run_effects(fx.unwrap_or_default());
+    perform_all(fx.unwrap_or_default());
+    with_app(|a| a.refresh(true));
 }
 
 unsafe fn on_timer(hwnd: HWND, id: usize) {
@@ -745,7 +785,26 @@ unsafe fn on_timer(hwnd: HWND, id: usize) {
     let _ = KillTimer(Some(hwnd), id);
     let Some(task) = with_app(|a| a.tasks.remove(&id)).flatten() else { return };
     match task {
-        Task::RestoreDesktopPosition { path, position } => shell::set_desktop_icon_position(&path, position),
+        Task::RestoreDesktopPosition { path, position } => {
+            if shell::set_desktop_icon_position(&path, position) {
+                log::line(&format!("icon put back at {position:?}: {}", path.display()));
+                with_app(|a| a.position_retries.remove(&path));
+            } else {
+                // Explorer may not show the file yet. Try again for about six seconds.
+                let tries = with_app(|a| {
+                    let n = a.position_retries.entry(path.clone()).or_insert(0);
+                    *n += 1;
+                    *n
+                })
+                .unwrap_or(99);
+                if tries < 12 {
+                    with_app(|a| a.schedule(0.5, Task::RestoreDesktopPosition { path, position }));
+                } else {
+                    log::line(&format!("could not put the icon back at {position:?}: {}", path.display()));
+                    with_app(|a| a.position_retries.remove(&path));
+                }
+            }
+        }
         task => {
             let fx = with_app(|a| a.model.run_task(task)).unwrap_or_default();
             run_effects(fx);
@@ -810,6 +869,7 @@ fn on_drop_done() {
                 .into_iter()
                 .map(|f| {
                     let pos = if dnd::on_desktop(&f, &desktop) { shell::desktop_icon_position(&f) } else { None };
+                    log::line(&format!("storing {} (desktop icon at {:?})", f.display(), pos));
                     (f, pos)
                 })
                 .collect();
@@ -826,7 +886,7 @@ fn begin_item_drag(id: &str, path: &Path) -> Vec<Effect> {
     let prepared = with_app(|a| {
         a.model.item_drag_started(id);
         a.dragging_out = true;
-        a.refresh();
+        a.refresh(false);
         (a.icons.get(path).cloned(), (64.0 * a.model.window.scale()).round() as i32)
     });
     let Some((icon, px)) = prepared else { return Vec::new() };
@@ -855,7 +915,7 @@ fn open_editor(request: &EditorRequest) {
             right: (cx + tw * s / 2.0).round() as i32,
             bottom: (cy + th * s / 2.0).round() as i32,
         };
-        a.refresh();
+        a.refresh(false);
         (a.hwnd, rect, (NOTE_FONT_SIZE as f64 * s).round() as i32, a.note_face.clone())
     });
     if let Some((hwnd, rect, font_px, face)) = placed {

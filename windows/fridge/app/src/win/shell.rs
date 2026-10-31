@@ -163,14 +163,16 @@ pub fn desktop_icon_position(path: &Path) -> Option<(f64, f64)> {
 }
 
 /// Puts the icon back where it sat. With auto-arrange on, Explorer moves it again; that is fine.
-pub fn set_desktop_icon_position(path: &Path, position: (f64, f64)) {
+/// True when the icon was found and positioned.
+pub fn set_desktop_icon_position(path: &Path, position: (f64, f64)) -> bool {
     unsafe {
-        let Ok(view) = desktop_view() else { return };
-        let Some(pidl) = find_item(&view, path) else { return };
+        let Ok(view) = desktop_view() else { return false };
+        let Some(pidl) = find_item(&view, path) else { return false };
         let pt = POINT { x: position.0.round() as i32, y: position.1.round() as i32 };
         let list = [pidl as *const ITEMIDLIST];
-        let _ = view.SelectAndPositionItems(1, list.as_ptr(), Some(&pt), SVSI_POSITIONITEM.0 as u32);
+        let ok = view.SelectAndPositionItems(1, list.as_ptr(), Some(&pt), SVSI_POSITIONITEM.0 as u32).is_ok();
         CoTaskMemFree(Some(pidl as *const _));
+        ok
     }
 }
 

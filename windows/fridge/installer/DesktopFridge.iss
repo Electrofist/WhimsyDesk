@@ -61,9 +61,9 @@ Filename: "{app}\DesktopFridge.exe"; Description: "Open Desktop Fridge now"; Fla
 Filename: "{sys}\taskkill.exe"; Parameters: "/IM DesktopFridge.exe /F"; Flags: runhidden; RunOnceId: "StopFridge"
 
 [UninstallDelete]
-; Settings and the log. Your stored files in %USERPROFILE%\Fridge are left alone.
+; Settings and the log. Your stored files in the Fridge folder are left alone.
 Type: filesandordirs; Name: "{userappdata}\WhimsyDesk\Desktop Fridge"
 Type: filesandordirs; Name: "{localappdata}\WhimsyDesk\Desktop Fridge"
 
 [Messages]
-FinishedLabel=Desktop Fridge is installed. It sits on your desktop, behind your windows: press Win+D or minimise your windows to see it.%n%nYour files go into the Fridge folder in your user folder. Uninstalling never deletes them.
+FinishedLabel=Desktop Fridge is installed. It sits on your desktop, behind your windows: press Win+D or minimise your windows to see it.%n%nYour files go into a Fridge folder next to your Desktop folder (inside OneDrive if OneDrive syncs your Desktop). Uninstalling never deletes them.

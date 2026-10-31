@@ -236,7 +236,13 @@ impl DoorDriver {
 
     /// Frame delta from the OS; nonsense values become one 60 Hz frame.
     pub fn tick(&mut self, frame_delta: f64) {
-        let dt = if frame_delta <= 0.0 || frame_delta > 0.1 { 1.0 / 60.0 } else { frame_delta };
+        // Real elapsed time, so a slow frame does not put the door in slow motion. Longer gaps
+        // (the PC was busy, or the loop just started) count as a quarter second at most.
+        let mut dt = if frame_delta <= 0.0 { 1.0 / 60.0 } else { frame_delta.min(0.25) };
+        while dt > DoorPhysics::MAX_FRAME_DELTA {
+            self.physics.advance(DoorPhysics::MAX_FRAME_DELTA);
+            dt -= DoorPhysics::MAX_FRAME_DELTA;
+        }
         self.physics.advance(dt);
         if self.auto_swing {
             if let Some(target) = self.physics.hand_target {

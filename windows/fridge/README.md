@@ -48,7 +48,7 @@ Put Back moves a file to the folder it came from (or the Desktop if that folder 
 
 ## Where things go
 
-- Files in the fridge: `%USERPROFILE%\Fridge`. They are ordinary files; open the folder any time.
+- Files in the fridge: a `Fridge` folder next to your Desktop folder. That is `%USERPROFILE%\Fridge`, or inside OneDrive when OneDrive syncs your Desktop, so moving a file in never looks like a delete to OneDrive. They are ordinary files; open the folder any time from the right-click menu.
 - Notes and magnets: `.fridge-notes.json` and `.magnets` in the same folder.
 - Position and size: `%APPDATA%\WhimsyDesk\Desktop Fridge\settings.json`.
 - Start with Windows adds a `Desktop Fridge` value under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
