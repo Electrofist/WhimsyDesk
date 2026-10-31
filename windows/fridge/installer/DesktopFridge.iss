@@ -7,6 +7,9 @@
 #ifndef AppVersion
   #define AppVersion "0.1.0"
 #endif
+#ifndef Build
+  #define Build "local"
+#endif
 #ifndef SourceDir
   #define SourceDir "..\target\release"
 #endif
@@ -14,7 +17,7 @@
 [Setup]
 AppId={{8F3D2A61-5C4B-4E7A-9B1D-6A2F0C9E4D17}
 AppName=Desktop Fridge
-AppVersion={#AppVersion}
+AppVersion={#AppVersion} (build {#Build})
 AppPublisher=WhimsyDesk
 AppPublisherURL=https://whimsydesk.art
 AppSupportURL=https://github.com/Electrofist/WhimsyDesk
@@ -24,7 +27,7 @@ DisableProgramGroupPage=yes
 DisableDirPage=yes
 PrivilegesRequired=lowest
 OutputDir=output
-OutputBaseFilename=Desktop-Fridge-Setup
+OutputBaseFilename=Desktop-Fridge-Setup-{#Build}
 SetupIconFile=..\app\icon.ico
 UninstallDisplayIcon={app}\DesktopFridge.exe
 UninstallDisplayName=Desktop Fridge
