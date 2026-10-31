@@ -8,11 +8,12 @@ fn main() {
     for (label, release_like) in [("1 MB stack", 1usize << 20)] {
         let dir = dir.clone();
         let r = std::thread::Builder::new()
-            .stack_size(release_like)
+            .stack_size(release_like / 4)
             .spawn(move || {
                 let assets = Arc::new(Assets::load(&dir).expect("assets"));
                 eprintln!("assets loaded");
-                let mut renderer = Renderer::new(assets, 1.25, true);
+                let dark = std::env::args().nth(1).as_deref() == Some("dark");
+                let mut renderer = Renderer::new(assets, 1.25, dark);
                 eprintln!("renderer made {:?}", renderer.size());
                 let f = renderer.render(&SceneState::default());
                 eprintln!("first frame {}x{}", f.width, f.height);

@@ -32,7 +32,13 @@ impl Surface {
                 let _ = DeleteDC(self.dc);
             }
         }
-        *self = Surface::new();
+        // Reset field by field. `*self = Surface::new()` would run Drop on the old value, which
+        // calls release again: endless recursion and a stack overflow on the first draw.
+        self.dc = HDC::default();
+        self.bitmap = HBITMAP::default();
+        self.old = HGDIOBJ::default();
+        self.bits = std::ptr::null_mut();
+        self.size = (0, 0);
     }
 
     fn ensure(&mut self, w: i32, h: i32) -> bool {
@@ -63,7 +69,11 @@ impl Surface {
                 return false;
             };
             let old = SelectObject(dc, bitmap.into());
-            *self = Surface { dc, bitmap, old, bits: bits as *mut u8, size: (w, h) };
+            self.dc = dc;
+            self.bitmap = bitmap;
+            self.old = old;
+            self.bits = bits as *mut u8;
+            self.size = (w, h);
         }
         true
     }
