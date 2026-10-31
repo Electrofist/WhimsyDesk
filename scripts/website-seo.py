@@ -173,9 +173,9 @@ def object_page(o, others):
   <meta property="og:image" content="{BASE}{img}">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#ffffff">
-  <link rel="icon" href="../media/favicon-32.png" sizes="32x32" type="image/png">
-  <link rel="icon" href="../media/favicon-192.png" sizes="192x192" type="image/png">
-  <link rel="apple-touch-icon" href="../media/apple-touch-icon.png">
+  <link rel="icon" href="../media/favicon-32.png?v=2" sizes="32x32" type="image/png">
+  <link rel="icon" href="../media/favicon-192.png?v=2" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="../media/apple-touch-icon.png?v=2">
   <link rel="preload" href="../fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../object-page.css">
   <script type="application/ld+json">{json.dumps(app_jsonld(o, url), ensure_ascii=False)}</script>
