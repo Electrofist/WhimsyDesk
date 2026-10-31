@@ -6,7 +6,9 @@ WhimsyDesk (repo `desktop-objects`) is an open source library of skeuomorphic ma
 
 - Do not change an existing object's code or behavior unless the task explicitly asks for it. The fridge and drawer are finished pieces.
 - Every object follows the rules in `CONTRIBUTING.md`: files moved never lost, Put Back works, quiet at rest, desktop level, no network or tracking, original art, standalone.
-- Nothing commercial: no paywalls, pricing, ads, analytics or tracking.
+- Nothing commercial: no paywalls, pricing or ads.
+- The apps never track: no analytics, tracking or network calls in any object.
+- The website (whimsydesk.art) may use visitor analytics (Google Analytics, Microsoft Clarity) to see its traffic. Analytics stay on the website only.
 - Do not document a feature as available until it exists.
 - The Phoenix Code extension lives in a separate repo.
 
