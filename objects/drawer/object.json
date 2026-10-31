@@ -4,7 +4,7 @@
   "tagline": "A wooden drawer under your desktop for everything you are not using right now.",
   "description": "A worn wooden drawer with a cup pull that slides out from the bottom of the screen, with weight, bumpers and soft wooden sounds. Put Back returns files to where they were.",
   "author": { "name": "Krrish Parmar", "github": "Electrofist" },
-  "version": "1.2",
+  "version": "1.3",
   "minMacOS": "14.0",
   "license": "MIT",
   "storesFilesIn": "~/Desktop Drawer",
