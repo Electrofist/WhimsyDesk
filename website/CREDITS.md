@@ -12,7 +12,7 @@ Other material:
 
 - **Sky:** John Constable, *Cloud Study*, 1822. Yale Center for British Art, Paul Mellon Collection. Public domain.
 - **Letters:** public domain, via Project Gutenberg.
-- **Fonts:** Instrument Serif and Instrument Sans (The Instrument Serif and Instrument Sans Project Authors), and Caveat (The Caveat Project Authors). All under the SIL Open Font License 1.1, in `fonts/`.
+- **Fonts:** Instrument Serif and Instrument Sans (The Instrument Serif and Instrument Sans Project Authors), Caveat (The Caveat Project Authors), and Grandstander for the logo (The Grandstander Project Authors). All under the SIL Open Font License 1.1, in `fonts/`.
 
 ## MIT License
 

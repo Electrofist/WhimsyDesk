@@ -149,7 +149,7 @@
 /* The ground: plain footer columns on the dark front hill. */
 .dk-ground { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
 .dk-cols { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)); gap: 40px; padding: 8px 0 56px; }
-.dk-logo { display: inline-flex; align-items: center; gap: 9px; font: 600 19px/1 var(--sans); letter-spacing: -0.02em; color: #fff; text-decoration: none; }
+.dk-logo { display: inline-flex; align-items: center; gap: 9px; font: 700 21px/1 var(--logo); letter-spacing: 0; color: #fff; text-decoration: none; }
 .dk-mark { width: 13px; height: 13px; color: #f1be5b; shape-rendering: crispEdges; }
 .dk-brand p { margin: 14px 0 0; max-width: 21em; font-size: 14.5px; line-height: 1.55; color: rgba(241, 243, 232, .62); }
 .dk-col h3 { margin: 0 0 16px; font: 600 13px/1 var(--sans); color: #fff; }

@@ -11,6 +11,12 @@
   font-display: swap;
 }
 @font-face {
+  font-family: "Grandstander";
+  src: url("fonts/grandstander.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
   font-family: "Caveat";
   src: url("fonts/caveat.woff2") format("woff2");
   font-weight: 400 700;
@@ -27,6 +33,7 @@
   --serif: "Instrument Serif", Georgia, serif;
   --sans: "Instrument Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   /* The display face for headings. One place to swap it. */
+  --logo: "Grandstander", "Instrument Sans", -apple-system, sans-serif;
   --display: "Instrument Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --hand: "Caveat", "Bradley Hand", cursive;
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
@@ -72,7 +79,7 @@ h3 { margin: 0; font-size: 27px; line-height: 1.1; letter-spacing: -0.025em; }
   box-shadow: 0 10px 30px -12px rgba(26, 29, 26, .45);
   white-space: nowrap;
 }
-.pill__mark { display: flex; align-items: center; gap: 8px; font: 600 17px/1 var(--display); letter-spacing: -0.02em; text-decoration: none; }
+.pill__mark { display: flex; align-items: center; gap: 8px; font: 700 18px/1 var(--logo); letter-spacing: 0; text-decoration: none; }
 .pill__spark { width: 12px; height: 12px; color: #f1be5b; shape-rendering: crispEdges; }
 .pill__links { display: flex; gap: 2px; }
 .pill__links a { text-decoration: none; font-size: 13.5px; padding: 6px 11px; border-radius: 999px; color: #d9dbd2; }
