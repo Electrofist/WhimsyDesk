@@ -10,6 +10,9 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=icon.ico");
     println!("cargo:rerun-if-changed=DesktopFridge.manifest");
+    // A short build id in the log, so it is clear which build is running.
+    let build = env::var("GITHUB_SHA").map(|s| s.chars().take(7).collect::<String>()).unwrap_or_else(|_| "local".into());
+    println!("cargo:rustc-env=FRIDGE_BUILD={build}");
 
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let host = env::var("HOST").unwrap_or_default();

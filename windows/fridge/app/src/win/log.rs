@@ -16,7 +16,7 @@ pub fn start() {
         let _ = std::fs::create_dir_all(dir);
     }
     let _ = std::fs::rename(&p, p.with_file_name("fridge.old.log"));
-    line(&format!("Desktop Fridge {} starting", env!("CARGO_PKG_VERSION")));
+    line(&format!("Desktop Fridge {} (build {}) starting", env!("CARGO_PKG_VERSION"), env!("FRIDGE_BUILD")));
 }
 
 pub fn line(text: &str) {
