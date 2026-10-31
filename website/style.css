@@ -145,7 +145,7 @@ h1 {
   width: var(--w, 200px);
   pointer-events: auto;
   cursor: grab;
-  touch-action: none;
+  touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
   will-change: transform;
@@ -186,7 +186,7 @@ h1 {
     0 12px 24px -12px rgba(20, 35, 55, .35);
   user-select: none;
   -webkit-user-select: none;
-  touch-action: none;
+  touch-action: pan-y;   /* a vertical swipe scrolls the page; sideways drags still move files */
 }
 .wallpaper { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
 .menubar {

@@ -428,6 +428,8 @@ function enableDrag(el, f) {
     const s = start; start = null;
     el.classList.remove('is-dragging');
     fridge.classList.remove('is-near');
+    // The page scrolled instead: put the file back, do not store it.
+    if (e.type === 'pointercancel') { el.style.left = s.x + 'px'; el.style.top = s.y + 'px'; setOpen(false); return; }
     if (!s.moved) return store(f);                       // a click or tap also stores it
     if (inside(e.clientX, e.clientY, fridgeRect())) store(f);
     else { el.style.left = s.x + 'px'; el.style.top = s.y + 'px'; setOpen(false); }
