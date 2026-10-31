@@ -209,6 +209,7 @@ final class ObjectView: NSView, NSDraggingSource {
     override func menu(for event: NSEvent) -> NSMenu? {
         let point = convert(event.locationInWindow, from: nil)
         let menu = NSMenu()
+        menu.autoenablesItems = false   // so isEnabled below is respected
         if isOpen, let index = itemIndex(at: point) {
             let name = store.items[index].name
             menu.addItem(action("Open", #selector(openItem(_:)), name))
@@ -222,6 +223,10 @@ final class ObjectView: NSView, NSDraggingSource {
         }
         menu.addItem(action("Open \(ObjectInfo.folderName) Folder", #selector(openFolder)))
         menu.addItem(.separator())
+        // Greyed out when the object is empty.
+        let moveAll = action("Move Everything to Desktop", #selector(moveEverythingToDesktop))
+        moveAll.isEnabled = !store.items.isEmpty
+        menu.addItem(moveAll)
         let quit = NSMenuItem(title: "Quit \(ObjectInfo.name)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         quit.target = NSApp
         menu.addItem(quit)
@@ -257,6 +262,35 @@ final class ObjectView: NSView, NSDraggingSource {
     @objc private func putBackAll() {
         for item in store.items { store.putBack(item) }
         needsDisplay = true
+    }
+
+    /// Asks first, then moves every stored file onto the Desktop.
+    /// Files are moved, never copied or deleted. Any that fail stay inside.
+    @objc private func moveEverythingToDesktop() {
+        let items = store.items.filter { !$0.name.hasPrefix(".") }
+        guard !items.isEmpty else { return }
+
+        let confirm = NSAlert()
+        confirm.messageText = "Move everything to your Desktop?"
+        let files = items.count == 1 ? "1 file" : "All \(items.count) files"
+        let verb = items.count == 1 ? "goes" : "go"
+        confirm.informativeText = "\(files) in the \(ObjectInfo.folderName) \(verb) back onto your Desktop."
+        confirm.addButton(withTitle: "Move to Desktop")   // first button is the default
+        confirm.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        guard confirm.runModal() == .alertFirstButtonReturn else { return }
+
+        // Keep going past failures and count them for one message at the end.
+        var failed = 0
+        for item in items where store.moveToDesktop(item) == nil { failed += 1 }
+        needsDisplay = true
+
+        if failed > 0 {
+            let problem = NSAlert()
+            problem.messageText = failed == 1 ? "1 file could not be moved." : "\(failed) files could not be moved."
+            problem.informativeText = "They are still inside the \(ObjectInfo.folderName)."
+            problem.runModal()
+        }
     }
 
     @objc private func openFolder() { NSWorkspace.shared.open(store.folder) }

@@ -580,6 +580,7 @@ final class DrawerView: NSView, NSDraggingSource {
     override func menu(for event: NSEvent) -> NSMenu? {
         let p = convert(event.locationInWindow, from: nil)
         let menu = NSMenu()
+        menu.autoenablesItems = false
         if controller?.isInteractive == true, let i = itemIndex(at: p) {
             let name = store.items[i].name
             menu.addItem(menuItem("Put Back on Desktop", #selector(putBackOne(_:)), name))
@@ -589,6 +590,9 @@ final class DrawerView: NSView, NSDraggingSource {
         menu.addItem(menuItem("Put Everything Back", #selector(putBackAll)))
         menu.addItem(menuItem("Open Drawer Folder", #selector(openFolder)))
         menu.addItem(.separator())
+        let moveAll = menuItem("Move Everything to Desktop", #selector(moveAllToDesktop))
+        moveAll.isEnabled = !store.items.isEmpty
+        menu.addItem(moveAll)
         let quit = NSMenuItem(title: "Quit Desktop Drawer", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         quit.target = NSApp
         menu.addItem(quit)
@@ -617,6 +621,26 @@ final class DrawerView: NSView, NSDraggingSource {
     }
 
     @objc private func putBackAll() { putBack(store.items.map(\.name)) }
+
+    @objc private func moveAllToDesktop() {
+        let count = store.items.count
+        guard count > 0 else { return }
+        let alert = NSAlert()
+        alert.messageText = "Move everything to your Desktop?"
+        alert.informativeText = (count == 1 ? "The file in the drawer goes back onto your Desktop." : "All \(count) files in the drawer go back onto your Desktop.")
+        alert.addButton(withTitle: "Move to Desktop")
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate()
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        store.moveAllToDesktop { [weak self] failed in
+            self?.refresh()
+            guard failed > 0 else { return }
+            let notice = NSAlert()
+            notice.messageText = failed == 1 ? "1 file could not be moved." : "\(failed) files could not be moved."
+            notice.informativeText = "They are still in the drawer."
+            notice.runModal()
+        }
+    }
 
     @objc private func openFolder() { NSWorkspace.shared.open(store.folderURL) }
 }

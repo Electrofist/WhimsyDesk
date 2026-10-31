@@ -935,6 +935,9 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         sound.state = Sounds.enabled ? .on : .off
         menu.addItem(sound)
         menu.addItem(.separator())
+        let everything = ActionItem("Move Everything to Desktop") { [weak self] in self?.moveEverythingToDesktop() }
+        everything.isEnabled = store.items.contains { !$0.name.hasPrefix(".") }
+        menu.addItem(everything)
         menu.addItem(ActionItem("Quit Desktop Vending Machine") { NSApp.terminate(nil) })
         return menu
     }
@@ -946,6 +949,36 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         layoutItems(animated: true)
         idleWork?.cancel()
         showDisplay(idleText)
+    }
+
+    /// Asks first, then moves every file in the machine onto the Desktop, with the same
+    /// bookkeeping as Put Back. Anything that cannot move stays inside and is counted at the end.
+    private func moveEverythingToDesktop() {
+        store.reconcile()
+        let items = store.items.filter { !$0.name.hasPrefix(".") }
+        guard !items.isEmpty else { return }
+        let confirm = NSAlert()
+        confirm.messageText = "Move everything to your Desktop?"
+        confirm.informativeText = (items.count == 1 ? "The file in the vending machine goes back onto your Desktop." : "All \(items.count) files in the vending machine go back onto your Desktop.")
+        confirm.addButton(withTitle: "Move to Desktop")
+        confirm.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        guard confirm.runModal() == .alertFirstButtonReturn else { return }
+        let desktop = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first ?? FileStore.desktop
+        select(nil)
+        var failed = 0
+        for item in items {
+            if moving.contains(item.name) || store.putBack(item, to: desktop) == nil { failed += 1 }
+        }
+        layoutItems(animated: true)
+        idleWork?.cancel()
+        showDisplay(idleText)
+        guard failed > 0 else { return }
+        let problem = NSAlert()
+        problem.messageText = failed == 1 ? "1 file could not be moved." : "\(failed) files could not be moved."
+        problem.informativeText = "They are still in the vending machine."
+        problem.addButton(withTitle: "OK")
+        problem.runModal()
     }
 
     // MARK: Dropping files in

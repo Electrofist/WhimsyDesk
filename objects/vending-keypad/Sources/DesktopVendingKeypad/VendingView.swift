@@ -965,17 +965,47 @@ final class VendingView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         sound.state = Sounds.enabled ? .on : .off
         menu.addItem(sound)
         menu.addItem(.separator())
+        let toDesktop = ActionItem("Move Everything to Desktop") { [weak self] in self?.moveEverythingToDesktop() }
+        toDesktop.isEnabled = !store.items.isEmpty
+        menu.addItem(toDesktop)
         menu.addItem(ActionItem("Quit Desktop Vending Machine Keypad") { NSApp.terminate(nil) })
         return menu
     }
 
-    /// Sends files back where they came from. A file in the middle of falling finishes first.
-    private func putBack(_ items: [StoredItem]) {
+    /// Sends files back where they came from, or into a destination folder if one is given.
+    /// A file in the middle of falling finishes first. Returns how many stayed inside.
+    @discardableResult
+    private func putBack(_ items: [StoredItem], to destination: URL? = nil) -> Int {
         select(nil)
-        for item in items where !moving.contains(item.name) { store.putBack(item) }
+        var left = 0
+        for item in items {
+            if moving.contains(item.name) || store.putBack(item, to: destination) == nil { left += 1 }
+        }
         layoutItems(animated: true)
         idleWork?.cancel()
         showDisplay(idleText)
+        return left
+    }
+
+    /// Asks first, then moves every stored file and folder onto the Desktop.
+    private func moveEverythingToDesktop() {
+        store.reconcile()
+        let items = store.items.filter { !$0.name.hasPrefix(".") }
+        guard !items.isEmpty else { return }
+        let confirm = NSAlert()
+        confirm.messageText = "Move everything to your Desktop?"
+        confirm.informativeText = (items.count == 1 ? "The file in the vending machine goes back onto your Desktop." : "All \(items.count) files in the vending machine go back onto your Desktop.")
+        confirm.addButton(withTitle: "Move to Desktop")
+        confirm.addButton(withTitle: "Cancel")
+        guard confirm.runModal() == .alertFirstButtonReturn else { return }
+        guard let desktop = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first else { return }
+        let left = putBack(items, to: desktop)
+        guard left > 0 else { return }
+        let failed = NSAlert()
+        failed.messageText = left == 1 ? "1 file could not be moved." : "\(left) files could not be moved."
+        failed.informativeText = "They are still in the vending machine."
+        failed.addButton(withTitle: "OK")
+        failed.runModal()
     }
 
     // MARK: Dropping files in

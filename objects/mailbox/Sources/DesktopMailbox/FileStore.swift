@@ -89,6 +89,20 @@ final class FileStore {
         return target
     }
 
+    /// Moves an item onto the Desktop, wherever it came from. Hidden bookkeeping is never moved.
+    @discardableResult
+    func moveToDesktop(_ item: StoredItem) -> URL? {
+        guard !item.name.hasPrefix(".") else { return nil }
+        let desktop = (fm.urls(for: .desktopDirectory, in: .userDomainMask).first ?? FileStore.desktop).standardizedFileURL
+        let target = uniqueURL(in: desktop, name: item.name)
+        do { try fm.moveItem(at: url(of: item), to: target) } catch {
+            NSLog("Could not move \(item.name) to the Desktop: \(error)")
+            return nil
+        }
+        forget(item)
+        return target
+    }
+
     /// Drops an item from the index without touching files (used when it was dragged out).
     func forget(_ item: StoredItem) {
         items.removeAll { $0.name == item.name }

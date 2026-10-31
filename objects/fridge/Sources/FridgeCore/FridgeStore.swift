@@ -141,6 +141,28 @@ public final class FridgeStore {
         return RestoreResult(destination: destination, desktopPosition: position)
     }
 
+    /// Moves an item onto ~/Desktop whatever folder it came from. Same naming and index update as `restore`.
+    public func moveToDesktop(_ entry: FridgeEntry) throws -> RestoreResult {
+        let source = url(for: entry)
+        guard fm.fileExists(atPath: source.path) else {
+            removeEntry(id: entry.id)
+            throw FridgeError.notFound
+        }
+
+        let originalURL = URL(fileURLWithPath: entry.originalPath)
+        let desktop = desktopDirectory
+        let destination = uniqueURL(in: desktop, name: originalURL.lastPathComponent)
+        try fm.moveItem(at: source, to: destination)
+        removeEntry(id: entry.id)
+
+        var position: (x: Double, y: Double)?
+        if let x = entry.originalX, let y = entry.originalY,
+           originalURL.deletingLastPathComponent().standardizedFileURL.path == desktop.standardizedFileURL.path {
+            position = (x, y)
+        }
+        return RestoreResult(destination: destination, desktopPosition: position)
+    }
+
     /// Forget an entry without touching files (used when a drag moved the file elsewhere).
     public func removeEntry(id: UUID) {
         entries.removeAll { $0.id == id }

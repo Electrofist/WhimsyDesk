@@ -16,7 +16,10 @@ final class ObjectStore {
     private(set) var items: [StoredItem] = []
     private let fm = FileManager.default
     private var indexURL: URL { folder.appendingPathComponent(".index.json") }
-    private var desktop: URL { fm.homeDirectoryForCurrentUser.appendingPathComponent("Desktop", isDirectory: true) }
+    private var desktop: URL {
+        fm.urls(for: .desktopDirectory, in: .userDomainMask).first
+            ?? fm.homeDirectoryForCurrentUser.appendingPathComponent("Desktop", isDirectory: true)
+    }
 
     init(folderName: String) {
         folder = fm.homeDirectoryForCurrentUser
@@ -60,11 +63,25 @@ final class ObjectStore {
         if !(fm.fileExists(atPath: parent.path, isDirectory: &isDirectory) && isDirectory.boolValue) {
             parent = desktop
         }
-        let target = uniqueURL(in: parent, name: original.lastPathComponent)
+        return move(item, into: parent, name: original.lastPathComponent)
+    }
+
+    /// Moves an item onto the Desktop, whatever folder it came from.
+    /// Hidden bookkeeping files (names starting with ".") are never moved.
+    @discardableResult
+    func moveToDesktop(_ item: StoredItem) -> URL? {
+        guard !item.name.hasPrefix(".") else { return nil }
+        return move(item, into: desktop, name: item.name)
+    }
+
+    /// Shared by Put Back and Move to Desktop: moves the file out under a unique name,
+    /// then drops it from the index. If the move fails the file stays inside and stays listed.
+    private func move(_ item: StoredItem, into parent: URL, name: String) -> URL? {
+        let target = uniqueURL(in: parent, name: name)
         do {
             try fm.moveItem(at: url(of: item), to: target)
         } catch {
-            NSLog("Could not put back \(item.name): \(error)")
+            NSLog("Could not move out \(item.name): \(error)")
             return nil
         }
         forget(item)

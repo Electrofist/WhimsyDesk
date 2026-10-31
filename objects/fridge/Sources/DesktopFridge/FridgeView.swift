@@ -578,6 +578,9 @@ final class FridgeView: NSView, NSDraggingSource {
             guard let self = self else { return }
             NSWorkspace.shared.open(self.store.root)
         })
+        let moveAll = ActionMenuItem("Move Everything to Desktop") { [weak self] in self?.moveEverythingToDesktop() }
+        if store.entries.isEmpty { moveAll.action = nil }   // greyed out when the fridge is empty
+        menu.addItem(moveAll)
         menu.addItem(ActionMenuItem("Quit Desktop Fridge") { NSApp.terminate(nil) })
         NSMenu.popUpContextMenu(menu, with: event, for: self)
     }
@@ -593,6 +596,40 @@ final class FridgeView: NSView, NSDraggingSource {
             }
         } catch {
             items.remove(id: entry.id)
+        }
+    }
+
+    private func moveEverythingToDesktop() {
+        let count = store.entries.count
+        guard count > 0 else { return }
+        let confirm = NSAlert()
+        confirm.messageText = "Move everything to your Desktop?"
+        confirm.informativeText = (count == 1 ? "The file in the fridge goes back onto your Desktop." : "All \(count) files in the fridge go back onto your Desktop.")
+        confirm.addButton(withTitle: "Move to Desktop")
+        confirm.addButton(withTitle: "Cancel")
+        NSApp.activate()
+        guard confirm.runModal() == .alertFirstButtonReturn else { return }
+
+        var failed = 0
+        for entry in store.entries {
+            do {
+                let result = try store.moveToDesktop(entry)
+                items.remove(id: entry.id)
+                if let position = result.desktopPosition {
+                    finder.setDesktopPosition(ofItemNamed: result.destination.lastPathComponent, x: position.x, y: position.y)
+                }
+            } catch FridgeError.notFound {
+                items.remove(id: entry.id)   // already gone; the store has forgotten it
+            } catch {
+                failed += 1   // the file stays in the fridge and keeps its spot
+            }
+        }
+
+        if failed > 0 {
+            let alert = NSAlert()
+            alert.messageText = failed == 1 ? "1 file could not be moved." : "\(failed) files could not be moved."
+            alert.informativeText = failed == 1 ? "It is still in the fridge." : "They are still in the fridge."
+            alert.runModal()
         }
     }
 

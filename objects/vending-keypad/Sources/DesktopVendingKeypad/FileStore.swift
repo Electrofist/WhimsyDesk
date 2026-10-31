@@ -103,15 +103,16 @@ final class FileStore {
     }
 
     /// Moves an item back to where it came from, or to the Desktop if that folder is gone.
+    /// With a destination, moves it into that folder instead.
     @discardableResult
-    func putBack(_ item: StoredItem) -> URL? {
+    func putBack(_ item: StoredItem, to destination: URL? = nil) -> URL? {
         let original = URL(fileURLWithPath: item.originalPath)
-        var parent = original.deletingLastPathComponent()
+        var parent = destination ?? original.deletingLastPathComponent()
         var isDirectory: ObjCBool = false
         if !(fm.fileExists(atPath: parent.path, isDirectory: &isDirectory) && isDirectory.boolValue) {
             parent = FileStore.desktop
         }
-        let target = uniqueURL(in: parent, name: original.lastPathComponent)
+        let target = uniqueURL(in: parent, name: destination == nil ? original.lastPathComponent : item.name)
         do { try fm.moveItem(at: url(of: item), to: target) } catch {
             NSLog("Could not put back \(item.name): \(error)")
             return nil

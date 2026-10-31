@@ -991,8 +991,37 @@ final class MailboxView: NSView, NSDraggingSource, QLPreviewPanelDataSource {
         sound.state = Sounds.enabled ? .on : .off
         menu.addItem(sound)
         menu.addItem(.separator())
+        if store.items.contains(where: { !$0.name.hasPrefix(".") }) {
+            menu.addItem(ActionItem("Move Everything to Desktop") { [weak self] in self?.moveEverythingToDesktop() })
+        } else {
+            let empty = NSMenuItem(title: "Move Everything to Desktop", action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            menu.addItem(empty)
+        }
         menu.addItem(ActionItem("Quit Desktop Mailbox") { NSApp.terminate(nil) })
         return menu
+    }
+
+    /// Moves every stored file onto the Desktop after asking. Letters and replies stay.
+    private func moveEverythingToDesktop() {
+        store.reconcile()
+        let files = store.items.filter { !$0.name.hasPrefix(".") }
+        guard !files.isEmpty else { layoutItems(); return }
+        let ask = NSAlert()
+        ask.messageText = "Move everything to your Desktop?"
+        ask.informativeText = (files.count == 1 ? "The file in the mailbox goes back onto your Desktop. Your letters stay." : "All \(files.count) files in the mailbox go back onto your Desktop. Your letters stay.")
+        ask.addButton(withTitle: "Move to Desktop")
+        ask.addButton(withTitle: "Cancel")
+        guard ask.runModal() == .alertFirstButtonReturn else { return }
+        let failed = files.filter { store.moveToDesktop($0) == nil }.count
+        layoutItems()
+        if failed > 0 {
+            let note = NSAlert()
+            note.messageText = failed == 1 ? "1 file could not be moved." : "\(failed) files could not be moved."
+            note.informativeText = "They are still in the mailbox."
+            note.addButton(withTitle: "OK")
+            note.runModal()
+        }
     }
 }
 

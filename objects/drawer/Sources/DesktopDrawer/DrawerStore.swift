@@ -99,7 +99,17 @@ final class DrawerStore {
     /// Moves items back to where they came from (Desktop if that's gone) and, best effort,
     /// restores the Finder icon position via AppleScript.
     func putBack(_ names: [String], done: @escaping () -> Void) {
+        moveOut(names, toDesktop: false) { _ in done() }
+    }
+
+    /// Moves every item in the drawer straight onto the Desktop. Reports how many could not be moved.
+    func moveAllToDesktop(_ done: @escaping (_ failed: Int) -> Void) {
+        moveOut(items.map(\.name), toDesktop: true, done: done)
+    }
+
+    private func moveOut(_ names: [String], toDesktop: Bool, done: @escaping (_ failed: Int) -> Void) {
         queue.async { [self] in
+            var failed = 0
             let desktopPath = desktop.standardizedFileURL.path
             var placements: [(String, [Double])] = []
             for name in names {
@@ -108,12 +118,13 @@ final class DrawerStore {
                 let entry = index[name]
                 var destination = desktop
                 var isDir: ObjCBool = false
-                if let dir = entry?.originalDirectory, fm.fileExists(atPath: dir, isDirectory: &isDir), isDir.boolValue {
+                if !toDesktop, let dir = entry?.originalDirectory, fm.fileExists(atPath: dir, isDirectory: &isDir), isDir.boolValue {
                     destination = URL(fileURLWithPath: dir, isDirectory: true)
                 }
                 let target = uniqueURL(named: entry?.originalName ?? name, in: destination)
                 do { try fm.moveItem(at: source, to: target) } catch {
                     NSLog("DesktopDrawer: could not put back \(name): \(error)")
+                    failed += 1
                     continue
                 }
                 index[name] = nil
@@ -122,7 +133,7 @@ final class DrawerStore {
                 }
             }
             saveIndex()
-            DispatchQueue.main.async { self.reload(done) }
+            DispatchQueue.main.async { self.reload { done(failed) } }
             for (name, position) in placements { FinderScript.setPosition(of: name, to: position) }
         }
     }
