@@ -10,6 +10,7 @@
 
 mod cursor;
 mod dialog;
+mod log;
 mod dnd;
 mod editor;
 mod popup;
@@ -89,6 +90,7 @@ struct App {
     dragging_out: bool,
     note_face: String,
     power_notify: Vec<HPOWERNOTIFY>,
+    present_failed: bool,
 }
 
 thread_local! {
@@ -128,13 +130,17 @@ fn wall_now() -> f64 {
 }
 
 pub fn run() {
+    log::start();
+    log::install_panic_hook();
     unsafe {
         // The manifest asks for this too; calling it covers a build without the manifest.
         let _ = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
         SetLastError(WIN32_ERROR(0));
         let mutex = CreateMutexW(None, true, w!("Local\\WhimsyDesk.DesktopFridge"));
         if GetLastError() == ERROR_ALREADY_EXISTS {
-            return; // already running
+            log::line("another copy is already running; this one exits");
+            dialog::fatal("Desktop Fridge is already running.\n\nIf you cannot see it, quit it from Task Manager (Details tab, DesktopFridge.exe) and open it again.");
+            return;
         }
         if OleInitialize(None).is_err() {
             dialog::fatal("Desktop Fridge could not start (OLE is not available).");
@@ -148,7 +154,10 @@ pub fn run() {
                     DispatchMessageW(&msg);
                 }
             }
-            Err(message) => dialog::fatal(&message),
+            Err(message) => {
+                log::line(&format!("start failed: {message}"));
+                dialog::fatal(&message)
+            }
         }
         // Drop the state (drop target, sounds, cursors) before COM goes away.
         APP.with(|a| a.borrow_mut().take());
@@ -241,6 +250,7 @@ fn icon_px(dpi_scale: f64) -> i32 {
 
 unsafe fn start() -> Result<(), String> {
     let dir = assets_dir();
+    log::line(&format!("assets: {}", dir.display()));
     let assets = Assets::load(&dir).map_err(|e| {
         format!("Desktop Fridge could not find its pictures and sounds.\n\nKeep the \"assets\" folder next to DesktopFridge.exe.\n\n{e}")
     })?;
@@ -256,6 +266,10 @@ unsafe fn start() -> Result<(), String> {
 
     let monitors = shell::monitors();
     let mut geom = initial_geom(&settings, &monitors);
+    for m in &monitors {
+        log::line(&format!("monitor: bounds {:?} work {:?} scale {}", m.bounds, m.work, m.dpi_scale));
+    }
+    log::line(&format!("window: origin {:?} dpi {} user {}", geom.origin, geom.dpi_scale, geom.user_scale));
 
     let instance = GetModuleHandleW(None).map_err(|e| e.to_string())?;
     let class = WNDCLASSEXW {
@@ -335,6 +349,7 @@ unsafe fn start() -> Result<(), String> {
             dragging_out: false,
             note_face,
             power_notify: Vec::new(),
+            present_failed: false,
         })
     });
 
@@ -361,6 +376,7 @@ unsafe fn start() -> Result<(), String> {
     });
     let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
     let _ = SetWindowPos(hwnd, Some(HWND_BOTTOM), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    log::line(&format!("shown; icons host found: {}", shell::desktop_icons_host().is_some()));
     run_effects(Vec::new());
     Ok(())
 }
@@ -371,7 +387,15 @@ impl App {
     fn present(&mut self) {
         let scene = self.model.scene();
         let frame = self.renderer.render(&scene);
-        self.surface.present(self.hwnd, self.model.window.origin, self.model.window.size(), frame);
+        let size = self.model.window.size();
+        if !self.surface.present(self.hwnd, self.model.window.origin, size, frame) && !self.present_failed {
+            // Log once: a failed present leaves the window invisible.
+            self.present_failed = true;
+            log::line(&format!(
+                "could not draw: window {:?} at {:?}, frame {}x{}, error {:?}",
+                size, self.model.window.origin, frame.width, frame.height, windows::core::Error::from_thread()
+            ));
+        }
     }
 
     /// Draw if something changed, and run the frame clock only while something moves.

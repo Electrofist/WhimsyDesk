@@ -64,6 +64,21 @@ jobs:
           "@ | Set-Content -Encoding utf8 "$out/README.txt"
           Compress-Archive -Path $out -DestinationPath Desktop-Fridge-Windows.zip -Force
 
+      - name: Installer
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches[0].Groups[1].Value
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" "/DSourceDir=..\target\release" installer\DesktopFridge.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Desktop-Fridge-Setup
+          path: windows/fridge/installer/output/Desktop-Fridge-Setup.exe
+
       - uses: actions/upload-artifact@v4
         with:
           name: Desktop-Fridge-Windows
