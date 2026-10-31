@@ -7,7 +7,8 @@ use fridge_art::Image;
 use fridge_core::store::same_path;
 use std::path::{Path, PathBuf};
 use windows::core::{Interface, GUID, PWSTR};
-use windows::Win32::Foundation::{BOOL, ERROR_SUCCESS, LPARAM, POINT, RECT, SIZE};
+use windows::core::BOOL;
+use windows::Win32::Foundation::{ERROR_SUCCESS, LPARAM, POINT, RECT, SIZE};
 use windows::Win32::Graphics::Gdi::{
     DeleteObject, EnumDisplayMonitors, GetDC, GetDIBits, GetMonitorInfoW, GetObjectW, ReleaseDC, BITMAP, BITMAPINFO,
     BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HBITMAP, HDC, HMONITOR, MONITORINFO,
@@ -271,6 +272,31 @@ pub fn reduce_motion() -> bool {
 pub fn battery_saver() -> bool {
     let mut s = SYSTEM_POWER_STATUS::default();
     unsafe { GetSystemPowerStatus(&mut s).is_ok() && s.SystemStatusFlag == 1 }
+}
+
+// MARK: Desktop window
+
+/// The top-level window that holds the Desktop icons: Progman, or a WorkerW once Explorer has
+/// split the wallpaper off (slideshows and wallpaper changes do this).
+pub fn desktop_icons_host() -> Option<windows::Win32::Foundation::HWND> {
+    use windows::core::w;
+    use windows::Win32::UI::WindowsAndMessaging::{FindWindowExW, FindWindowW};
+    unsafe {
+        if let Ok(progman) = FindWindowW(w!("Progman"), None) {
+            if FindWindowExW(Some(progman), None, w!("SHELLDLL_DefView"), None).is_ok() {
+                return Some(progman);
+            }
+        }
+        let mut after = None;
+        for _ in 0..64 {
+            let worker = FindWindowExW(None, after, w!("WorkerW"), None).ok()?;
+            if FindWindowExW(Some(worker), None, w!("SHELLDLL_DefView"), None).is_ok() {
+                return Some(worker);
+            }
+            after = Some(worker);
+        }
+        None
+    }
 }
 
 // MARK: Monitors

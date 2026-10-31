@@ -1,0 +1,70 @@
+name: Windows fridge
+
+on:
+  push:
+    paths:
+      - "windows/fridge/**"
+      - ".github/workflows/windows-fridge.yml"
+  pull_request:
+    paths:
+      - "windows/fridge/**"
+      - ".github/workflows/windows-fridge.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Test and build
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: windows/fridge
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            windows/fridge/target
+          key: windows-fridge-${{ hashFiles('windows/fridge/Cargo.lock') }}
+
+      - name: Test
+        run: cargo test --workspace
+
+      - name: Build
+        run: cargo build --release -p desktop-fridge
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $out = "dist/Desktop Fridge"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item target/release/DesktopFridge.exe $out
+          Copy-Item -Recurse assets "$out/assets"
+          @"
+          Desktop Fridge for Windows
+
+          A fridge on your desktop that holds your files.
+
+          To run it: keep this folder together and double-click DesktopFridge.exe.
+          The "assets" folder must stay next to DesktopFridge.exe.
+
+          Windows may warn that the app is from an unknown publisher, because it is
+          not signed. Click "More info", then "Run anyway".
+
+          Files you put in the fridge are kept in the Fridge folder in your user
+          folder (%USERPROFILE%\Fridge). Right-click the fridge for Put Back,
+          Open Fridge Folder, Move Everything to Desktop and Quit.
+
+          Open source, MIT License: https://whimsydesk.art
+          "@ | Set-Content -Encoding utf8 "$out/README.txt"
+          Compress-Archive -Path $out -DestinationPath Desktop-Fridge-Windows.zip -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Desktop-Fridge-Windows
+          path: windows/fridge/Desktop-Fridge-Windows.zip
