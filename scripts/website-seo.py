@@ -198,7 +198,7 @@ def object_page(o, others):
     <nav class="crumbs" aria-label="Breadcrumb"><a href="../">WhimsyDesk</a> <span aria-hidden="true">/</span> {esc(o['name'])}</nav>
     <article class="obj">
       <div class="obj__text">
-        <p class="obj__kind">Free Mac app &middot; macOS {esc(o['minMacOS'].removesuffix('.0'))} or later &middot; Version {esc(o['version'])}</p>
+        <p class="obj__kind">Free Mac app &middot; macOS {esc(o['minMacOS'].removesuffix('.0'))} or later{' &middot; Windows in beta' if o['id'] in WINDOWS_BETA else ''} &middot; Version {esc(o['version'])}</p>
         <h1>{esc(o['name'])}</h1>
         <p class="obj__tag">{esc(o['tagline'])}</p>
         <p class="obj__desc">{esc(o['description'])}</p>
