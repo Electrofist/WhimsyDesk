@@ -908,8 +908,16 @@ impl Engine {
 
         {
             let st = self.st.as_ref().unwrap();
-            for hsp in &st.hinges {
-                blit_over(&mut frame, &hsp.bm, hsp.x, hsp.y - rise_px, 1.0);
+            // A plate shows while its door is shut and fades as the door opens, so plates never
+            // float on the cabinet edge beside an open door. HINGE_PLATE_Y runs top (freezer),
+            // middle (shared by both doors), bottom (fridge); `angles` is [fridge, freezer].
+            let fade = |a: f64| 1.0 - smoothstep(2.0 * DEG, 12.0 * DEG, a);
+            let owner = [angles[1], angles[0].max(angles[1]), angles[0]];
+            for (hsp, a) in st.hinges.iter().zip(owner) {
+                let alpha = fade(a) as f32;
+                if alpha > 0.003 {
+                    blit_over(&mut frame, &hsp.bm, hsp.x, hsp.y - rise_px, alpha);
+                }
             }
         }
 
