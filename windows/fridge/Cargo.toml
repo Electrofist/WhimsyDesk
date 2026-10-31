@@ -1,0 +1,19 @@
+[workspace]
+members = ["core"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Krrish Parmar"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+# Pixels are pushed by hand in the art crate; keep it fast in debug builds too.
+[profile.dev.package."*"]
+opt-level = 2
