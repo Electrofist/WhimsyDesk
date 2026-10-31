@@ -16,6 +16,10 @@ fn main() {
     if target_os != "windows" {
         return;
     }
+    if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
+        // 8 MB main thread stack (the macOS default; Windows gives 1 MB).
+        println!("cargo:rustc-link-arg-bins=/STACK:8388608");
+    }
     if !host.contains("windows") {
         println!("cargo:warning=not building on Windows: icon, manifest and version info are not embedded");
         return;

@@ -43,3 +43,25 @@ pub fn install_panic_hook() {
         ));
     }));
 }
+
+/// Logs crashes that skip Rust's panic handling (access violations, stack overflows) with their
+/// Windows exception code and address, then lets Windows end the app as usual.
+pub fn install_crash_filter() {
+    use windows::Win32::System::Diagnostics::Debug::{SetUnhandledExceptionFilter, EXCEPTION_POINTERS};
+    unsafe extern "system" fn filter(info: *const EXCEPTION_POINTERS) -> i32 {
+        if let Some(record) = info.as_ref().and_then(|i| i.ExceptionRecord.as_ref()) {
+            let base = windows::Win32::System::LibraryLoader::GetModuleHandleW(None).map(|h| h.0 as usize).unwrap_or(0);
+            let at = record.ExceptionAddress as usize;
+            line(&format!(
+                "HARD CRASH: code {:#010x} at {:#x} (exe offset {:#x})",
+                record.ExceptionCode.0 as u32,
+                at,
+                at.wrapping_sub(base)
+            ));
+        }
+        0 // EXCEPTION_CONTINUE_SEARCH
+    }
+    unsafe {
+        SetUnhandledExceptionFilter(Some(filter));
+    }
+}

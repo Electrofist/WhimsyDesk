@@ -132,6 +132,7 @@ fn wall_now() -> f64 {
 pub fn run() {
     log::start();
     log::install_panic_hook();
+    log::install_crash_filter();
     unsafe {
         // The manifest asks for this too; calling it covers a build without the manifest.
         let _ = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -301,6 +302,7 @@ unsafe fn start() -> Result<(), String> {
         None,
     )
     .map_err(|e| format!("Desktop Fridge could not create its window.\n\n{e}"))?;
+    log::line("window created");
     MAIN.with(|m| m.set(hwnd));
 
     // Windows knows best which monitor the window landed on.
@@ -315,8 +317,10 @@ unsafe fn start() -> Result<(), String> {
     }
 
     let note_face = register_note_font(&assets);
+    log::line("font ready");
     let seed = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos() as u64).unwrap_or(7);
     let mut model = Model::new(store, notes, geom, time_scale, seed);
+    log::line("model ready");
     model.reduce_motion = shell::reduce_motion();
     model.low_power = shell::battery_saver();
     if let Some(angles) = debug_angles() {
@@ -327,9 +331,13 @@ unsafe fn start() -> Result<(), String> {
         }
     }
     let renderer = Renderer::new(assets.clone(), geom.scale() as f32, shell::is_dark_mode());
+    log::line("renderer ready");
     let sounds = Sounds::new(hwnd, read_wav(&dir, "open_click.wav"), read_wav(&dir, "seal_click.wav"));
+    log::line("sounds ready");
     let cursors = Cursors::new(geom.dpi_scale);
+    log::line("cursors ready");
     TICKER.with(|t| *t.borrow_mut() = Some(Ticker::start(hwnd, WM_TICK)));
+    log::line("frame clock ready");
 
     APP.with(|a| {
         *a.borrow_mut() = Some(App {
@@ -361,6 +369,7 @@ unsafe fn start() -> Result<(), String> {
     }
 
     let _ = RegisterDragDrop(hwnd, &dnd::make_target(hwnd));
+    log::line("drag and drop ready");
     let _ = WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
     let mut notify = Vec::new();
     for guid in [GUID_CONSOLE_DISPLAY_STATE, GUID_POWER_SAVING_STATUS] {
@@ -369,11 +378,14 @@ unsafe fn start() -> Result<(), String> {
         }
     }
     shell::refresh_start_with_windows();
+    log::line("system hooks ready");
 
+    log::line("first draw");
     with_app(|a| {
         a.power_notify = notify;
         a.present();
     });
+    log::line("first draw done");
     let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
     let _ = SetWindowPos(hwnd, Some(HWND_BOTTOM), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     log::line(&format!("shown; icons host found: {}", shell::desktop_icons_host().is_some()));
