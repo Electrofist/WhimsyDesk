@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-2DG23JLKP3"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-2DG23JLKP3');
+  </script>
+  <!-- Microsoft Clarity -->
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "z6915i3wmu");
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Make your own Mac desktop object: a step-by-step guide | WhimsyDesk</title>
+  <meta name="description" content="Build your own desktop object for Mac from a template in about 15 minutes. Draw two pictures, set where files go, and send it in. No Swift needed.">
+  <link rel="canonical" href="https://whimsydesk.art/make-your-own/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="WhimsyDesk">
+  <meta property="og:title" content="Make your own Mac desktop object: a step-by-step guide | WhimsyDesk">
+  <meta property="og:description" content="Build your own desktop object for Mac from a template in about 15 minutes. Draw two pictures, set where files go, and send it in. No Swift needed.">
+  <meta property="og:url" content="https://whimsydesk.art/make-your-own/">
+  <meta property="og:image" content="https://whimsydesk.art/media/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" href="../media/favicon-32.png?v=2" sizes="32x32" type="image/png">
+  <link rel="icon" href="../media/favicon-192.png?v=2" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="../media/apple-touch-icon.png?v=2">
+  <link rel="preload" href="../fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../object-page.css">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "WhimsyDesk", "item": "https://whimsydesk.art/"}, {"@type": "ListItem", "position": 2, "name": "Make your own object", "item": "https://whimsydesk.art/make-your-own/"}]}</script>
+</head>
+<body>
+  <header class="top">
+    <a class="top__mark" href="../">WhimsyDesk</a>
+    <nav aria-label="Main"><a href="../#objects">Library</a><a href="../make-your-own/">Make your own</a><a href="../faq/">FAQ</a><a href="https://github.com/Electrofist/whimsydesk">GitHub</a></nav>
+  </header>
+  <main>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="../">WhimsyDesk</a> <span aria-hidden="true">/</span> Make your own object</nav>
+    <article class="doc">
+      <h1>Make your own object</h1>
+<p>From nothing to your own object on your desktop in about 15 minutes, then as long as you like on the art. No Swift needed.</p>
+<p>You start from a template: a wooden crate that already opens, closes, stores files, gives them back and remembers where it sits. You swap in your art, describe it, and send it in.</p>
+<h2 id="what-you-need">What you need</h2>
+<ul><li>A Mac with macOS 14 or later.</li><li>Apple's Command Line Tools. In Terminal, run <code>xcode-select --install</code> and follow the prompt. If it says they are already installed, you are set.</li><li>A free <a href="https://github.com">GitHub</a> account.</li><li>Any image editor that exports PNG with transparency: Figma, Sketch, Photoshop, Pixelmator, Procreate.</li></ul>
+<h2 id="recommended-phoenix-code">Recommended: Phoenix Code</h2>
+<p>You can use any editor, but <a href="https://phcode.dev">Phoenix Code</a> with the <a href="https://github.com/Electrofist/desktop-objects-phoenix">Desktop Objects Studio</a> extension makes the visual parts easier:</p>
+<ul><li>A side panel shows your object's art, icon, name and colour while you work.</li><li>The files area is drawn over your open art. Drag it into place instead of working out numbers (step 5).</li><li>Mistakes in <code>object.json</code> are marked as you type, with the same rules GitHub checks.</li><li>File, New Desktop Object… does step 2 for you.</li><li>Its Git panel and terminal panel cover steps 1, 3 and 10, so you never need to leave it.</li></ul>
+<p>To install it, open the Extension Manager in Phoenix Code (the building-block icon in the right-hand toolbar), search for <b>Desktop Objects Studio</b>, and click Install. Then click the fridge icon in the same toolbar to open the panel.</p>
+<h2 id="1-get-your-own-copy">1. Get your own copy</h2>
+<ol><li>Open <a href="https://github.com/Electrofist/whimsydesk">github.com/Electrofist/whimsydesk</a> and click <b>Fork</b>. This makes your own copy on GitHub.</li><li>Download your copy. In Phoenix Code: <b>Start Project, Get from Git</b>, paste <code>https://github.com/your-username/whimsydesk.git</code> and pick a folder. Or in Terminal (replace <code>your-username</code>):</li></ol>
+<pre><code>git clone https://github.com/your-username/whimsydesk.git
+cd whimsydesk</code></pre>
+<h2 id="2-create-your-object">2. Create your object</h2>
+<p>Pick a name and run (replace the name and username):</p>
+<pre><code>scripts/new-object.sh "Toaster" your-username</code></pre>
+<p>This creates <code>objects/toaster/</code> with everything inside, ready to build.</p>
+<p>In Phoenix Code with the extension, choose <b>File, New Desktop Object…</b> instead. It does the same thing.</p>
+<h2 id="3-see-it-on-your-desktop">3. See it on your desktop</h2>
+<p>In Terminal, or Phoenix Code's terminal panel:</p>
+<pre><code>cd objects/toaster
+bash build.sh run</code></pre>
+<p>The first build takes a minute or two. A wooden crate appears at the lower left of your screen, behind your windows, just above the desktop icons.</p>
+<p>Try it:</p>
+<ul><li>Click it to open and close.</li><li>Drag a file from your desktop onto it. The file moves into <code>~/Desktop Objects/Toaster</code>.</li><li>Drag the file back out, or right-click it and choose <b>Put Back</b>.</li><li>Hold <b>Option + Command</b> and drag to move the object.</li><li>Right-click and choose <b>Quit</b> when you are done.</li></ul>
+<h2 id="4-draw-your-art">4. Draw your art</h2>
+<p>Your object is two pictures: <code>Art/closed.png</code> and <code>Art/open.png</code>.</p>
+<ul><li>Design at 1x and export at <b>2x</b>. In Figma, make a 280 x 240 frame and export it as PNG at 2x, which gives 560 x 480 px. Any size works, as long as both images are the same size.</li><li>Use a <b>transparent background</b>, so the desktop shows around your object.</li><li>Draw the <b>shadow</b> into the art.</li><li>In <code>open.png</code>, leave a calm, light area where files will sit, so their icons and names stay readable.</li></ul>
+<p>Replace the two files, keep their names, then quit the object and run <code>./build.sh run</code> again.</p>
+<h2 id="5-tell-it-where-files-go">5. Tell it where files go</h2>
+<p>When your object is open, stored files are laid out inside one rectangle. Set it in <code>object.json</code>:</p>
+<pre><code>"look": {
+  "itemsArea": [0.12, 0.12, 0.76, 0.74],
+  "iconSize": 48
+}</code></pre>
+<p>The four numbers are x, y, width and height, as fractions of your image, measured from the <b>bottom left</b>.</p>
+<p>Working it out from your design: if your image is 560 x 480 px and the inside of your toaster starts 60 px from the left, 120 px up from the bottom, and is 440 px wide and 200 px tall, then:</p>
+<ul><li>x = 60 / 560 = 0.11</li><li>y = 120 / 480 = 0.25</li><li>width = 440 / 560 = 0.79</li><li>height = 200 / 480 = 0.42</li></ul>
+<p><code>iconSize</code> is the size of file icons in points, from 24 to 128.</p>
+<h2 id="6-add-an-app-icon-optional-but-people-love-it">6. Add an app icon (optional, but people love it)</h2>
+<p>Design a square icon on a plain background (any colour) and save it as PNG or JPG. Then, from the top folder of the repo:</p>
+<pre><code>swift scripts/make-icon.swift ~/Desktop/my-icon.png objects/toaster/Art</code></pre>
+<p>It removes the background, places the icon on Apple's icon grid with a soft shadow, and writes <code>Art/AppIcon.icns</code>. The next <code>./build.sh run</code> uses it.</p>
+<h2 id="7-add-sounds-optional">7. Add sounds (optional)</h2>
+<p>Put <code>open.wav</code> and <code>close.wav</code> in the <code>Sounds</code> folder. Keep them short and quiet. Leave them out for a silent object.</p>
+<h2 id="8-describe-it">8. Describe it</h2>
+<p>In <code>object.json</code>, write your own <code>tagline</code> (one line) and <code>description</code> (a few sentences). In <code>README.md</code>, describe how to use it.</p>
+<p>Record a short clip: press <b>Shift + Command + 5</b>, choose <b>Record Selected Portion</b>, and capture your object opening and taking a file. Turn the video into a GIF with a free tool like <a href="https://gif.ski">Gifski</a>, save it as <code>media/hero.gif</code> in your object's folder, and add <code>"media/hero.gif"</code> to <code>screenshots</code> in <code>object.json</code>.</p>
+<h2 id="9-check-it">9. Check it</h2>
+<p>From the top folder of the repo:</p>
+<pre><code>scripts/check-objects.sh</code></pre>
+<p>Fix anything it lists. It catches missing details, template text you forgot to replace, and art or build files that are missing.</p>
+<h2 id="10-send-it-in">10. Send it in</h2>
+<p>In Phoenix Code, use the Git panel: make a new branch, commit <code>objects/toaster</code> and <code>.github/CODEOWNERS</code>, and push. Or in Terminal:</p>
+<pre><code>git checkout -b add-toaster
+git add objects/toaster .github/CODEOWNERS
+git commit -m "Add Toaster"
+git push -u origin add-toaster</code></pre>
+<p>Open your fork on GitHub. Click <b>Compare &amp; pull request</b>, fill in the checklist, attach your GIF, and submit. GitHub checks and builds your object automatically. If something fails, the pull request shows what, and you can push a fix to the same branch.</p>
+<h2 id="going-further">Going further</h2>
+<p>The template covers the basics. Anything beyond it, like a door that swings with weight, frost, or a drawer that slides, is Swift code. The fridge (<code>objects/fridge</code>) and the drawer (<code>objects/drawer</code>) show how, and an AI coding assistant can help you change the template's code in <code>Sources/</code>.</p>
+<p>Whatever you add, keep the rules in <a href="https://github.com/Electrofist/whimsydesk/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>: files are moved, never lost; Put Back works; nothing runs while nobody is touching the object; no network or tracking.</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ul><li><b><code>xcrun: error</code> or <code>swift: command not found</code></b>: the Command Line Tools are missing. Run <code>xcode-select --install</code>.</li><li><b><code>permission denied: ./build.sh</code></b>: run <code>chmod +x build.sh</code> once, or use <code>bash build.sh run</code>.</li><li><b>I cannot see my object</b>: it sits behind your windows. Show the desktop with a four-finger spread on the trackpad, or press F11 (Fn + F11 on some keyboards).</li><li><b>My art looks blurry</b>: export at 2x.</li><li><b>My changes do not show up</b>: right-click the object, Quit, then run <code>./build.sh run</code> again.</li><li><b>macOS says the app cannot be opened</b>: this does not happen for apps you build yourself. If it does, see the <a href="../faq/">FAQ</a>.</li></ul>
+    </article>
+  </main>
+  <footer class="foot"><a href="../">WhimsyDesk</a>: little objects for your Mac desktop that hold your files. Free and open source. <a href="../faq/">FAQ</a> &middot; <a href="https://github.com/Electrofist/whimsydesk">GitHub</a></footer>
+</body>
+</html>

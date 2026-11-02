@@ -30,7 +30,7 @@ Right-click the object and choose Quit.
 
 ## Windows or Linux?
 
-No. The objects are native macOS apps and need macOS 14 or later.
+The Desktop Fridge has a beta for Windows 10 and 11. Get the installer from the [Desktop Fridge page](https://whimsydesk.art/desktop-fridge/). The other objects are macOS only for now and need macOS 14 or later. There is no Linux version.
 
 ## Can I make my own object?
 

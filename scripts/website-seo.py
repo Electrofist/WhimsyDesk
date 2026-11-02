@@ -201,7 +201,7 @@ def object_page(o, others):
 <body>
   <header class="top">
     <a class="top__mark" href="../">WhimsyDesk</a>
-    <nav aria-label="Main"><a href="../#objects">Library</a><a href="../#make">Make your own</a><a href="{REPO}">GitHub</a></nav>
+    <nav aria-label="Main"><a href="../#objects">Library</a><a href="../make-your-own/">Make your own</a><a href="../faq/">FAQ</a><a href="{REPO}">GitHub</a></nav>
   </header>
   <main>
     <nav class="crumbs" aria-label="Breadcrumb"><a href="../">WhimsyDesk</a> <span aria-hidden="true">/</span> {esc(o['name'])}</nav>
@@ -250,7 +250,155 @@ def object_page(o, others):
       </ul>
     </section>
   </main>
-  <footer class="foot"><a href="../">WhimsyDesk</a>: little objects for your Mac desktop that hold your files. Free and open source. <a href="{REPO}">GitHub</a></footer>
+  <footer class="foot"><a href="../">WhimsyDesk</a>: little objects for your Mac desktop that hold your files. Free and open source. <a href="../faq/">FAQ</a> &middot; <a href="{REPO}">GitHub</a></footer>
+</body>
+</html>
+'''
+
+
+# Guides from docs/, published on the site so they rank for whimsydesk.art, not github.com.
+DOCS = [
+    {'src': 'docs/faq.md', 'slug': 'faq', 'name': 'FAQ',
+     'title': 'WhimsyDesk FAQ: where your files go, Put Back, battery and more',
+     'desc': 'Answers about WhimsyDesk desktop objects for Mac: where your files are kept, Put Back, battery use, opening an unsigned app, and Windows.'},
+    {'src': 'docs/make-your-own.md', 'slug': 'make-your-own', 'name': 'Make your own object',
+     'title': 'Make your own Mac desktop object: a step-by-step guide | WhimsyDesk',
+     'desc': 'Build your own desktop object for Mac from a template in about 15 minutes. Draw two pictures, set where files go, and send it in. No Swift needed.'},
+]
+DOC_LINKS = {'faq.md': '../faq/', 'make-your-own.md': '../make-your-own/'}
+
+
+def doc_href(h):
+    if re.match(r'^[a-z]+:', h) or h.startswith('#'):
+        return h
+    name = h.rsplit('/', 1)[-1]
+    if name in DOC_LINKS:
+        return DOC_LINKS[name]
+    return f"{REPO}/blob/main/{h.removeprefix('../')}"
+
+
+def doc_inline(s):
+    s = esc(s, quote=False)
+    s = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', s)
+    s = re.sub(r'`([^`]+)`', r'<code>\1</code>', s)
+    return re.sub(r'\[([^\]]+)\]\(([^)]+)\)', lambda m: f'<a href="{esc(doc_href(m.group(2)))}">{m.group(1)}</a>', s)
+
+
+def slugify(t):
+    return re.sub(r'[^a-z0-9]+', '-', t.lower()).strip('-')
+
+
+def md_blocks(text):
+    """A small Markdown reader for our own docs: headings, paragraphs, lists and code."""
+    out, para, items, kind = [], [], [], None
+    lines = text.splitlines()
+
+    def flush():
+        nonlocal para, items, kind
+        if para:
+            out.append(f'<p>{doc_inline(" ".join(para))}</p>')
+            para = []
+        if items:
+            tag = 'ol' if kind == 'ol' else 'ul'
+            out.append(f'<{tag}>' + ''.join(f'<li>{doc_inline(i)}</li>' for i in items) + f'</{tag}>')
+            items, kind = [], None
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith('```'):
+            flush()
+            code = []
+            i += 1
+            while i < len(lines) and not lines[i].startswith('```'):
+                code.append(lines[i])
+                i += 1
+            out.append('<pre><code>' + esc('\n'.join(code), quote=False) + '</code></pre>')
+        elif m := re.match(r'^(#{1,3})\s+(.*)', line):
+            flush()
+            lvl = len(m.group(1))
+            if lvl > 1:
+                out.append(f'<h{lvl} id="{slugify(m.group(2))}">{doc_inline(m.group(2))}</h{lvl}>')
+        elif m := re.match(r'^(?:- |\d+\. )(.*)', line):
+            if para:
+                flush()
+            k = 'ul' if line.startswith('- ') else 'ol'
+            if items and k != kind:
+                flush()
+            kind = k
+            items.append(m.group(1))
+        elif not line.strip():
+            flush()
+        elif items:
+            items[-1] += ' ' + line.strip()
+        else:
+            para.append(line.strip())
+        i += 1
+    flush()
+    return '\n'.join(out)
+
+
+def faq_jsonld(text):
+    qa, q, a = [], None, []
+    for line in text.splitlines() + ['## end']:
+        if line.startswith('## '):
+            if q:
+                ans = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', ' '.join(a)).replace('`', '').replace('**', '')
+                qa.append({'@type': 'Question', 'name': q,
+                           'acceptedAnswer': {'@type': 'Answer', 'text': ans.strip()}})
+            q, a = line[3:].strip(), []
+        elif q and line.strip():
+            a.append(line.strip())
+    return {'@context': 'https://schema.org', '@type': 'FAQPage', 'mainEntity': qa}
+
+
+def doc_page(d):
+    text = open(os.path.join(ROOT, d['src'])).read()
+    h1 = re.search(r'^#\s+(.*)', text, re.M).group(1)
+    url = f"{BASE}{d['slug']}/"
+    body = md_blocks(text)
+    crumbs = {'@context': 'https://schema.org', '@type': 'BreadcrumbList', 'itemListElement': [
+        {'@type': 'ListItem', 'position': 1, 'name': 'WhimsyDesk', 'item': BASE},
+        {'@type': 'ListItem', 'position': 2, 'name': d['name'], 'item': url}]}
+    ld = [crumbs] + ([faq_jsonld(text)] if d['slug'] == 'faq' else [])
+    ld_html = '\n'.join(f'  <script type="application/ld+json">{json.dumps(x, ensure_ascii=False)}</script>' for x in ld)
+    return f'''<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+{HEAD_TAGS}
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{esc(d['title'])}</title>
+  <meta name="description" content="{esc(d['desc'])}">
+  <link rel="canonical" href="{url}">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="WhimsyDesk">
+  <meta property="og:title" content="{esc(d['title'])}">
+  <meta property="og:description" content="{esc(d['desc'])}">
+  <meta property="og:url" content="{url}">
+  <meta property="og:image" content="{BASE}media/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" href="../media/favicon-32.png?v=2" sizes="32x32" type="image/png">
+  <link rel="icon" href="../media/favicon-192.png?v=2" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="../media/apple-touch-icon.png?v=2">
+  <link rel="preload" href="../fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../object-page.css">
+{ld_html}
+</head>
+<body>
+  <header class="top">
+    <a class="top__mark" href="../">WhimsyDesk</a>
+    <nav aria-label="Main"><a href="../#objects">Library</a><a href="../make-your-own/">Make your own</a><a href="../faq/">FAQ</a><a href="{REPO}">GitHub</a></nav>
+  </header>
+  <main>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="../">WhimsyDesk</a> <span aria-hidden="true">/</span> {esc(d['name'])}</nav>
+    <article class="doc">
+      <h1>{doc_inline(h1)}</h1>
+{body}
+    </article>
+  </main>
+  <footer class="foot"><a href="../">WhimsyDesk</a>: little objects for your Mac desktop that hold your files. Free and open source. <a href="../faq/">FAQ</a> &middot; <a href="{REPO}">GitHub</a></footer>
 </body>
 </html>
 '''
@@ -284,7 +432,13 @@ def main():
         os.makedirs(folder, exist_ok=True)
         open(os.path.join(folder, 'index.html'), 'w').write(object_page(o, others))
 
+    for d in DOCS:
+        folder = os.path.join(SITE, d['slug'])
+        os.makedirs(folder, exist_ok=True)
+        open(os.path.join(folder, 'index.html'), 'w').write(doc_page(d))
+
     urls = [BASE] + [f"{BASE}{SLUGS[o['id']]}/" for o in objs if o['id'] in SLUGS]
+    urls += [f"{BASE}{d['slug']}/" for d in DOCS]
     sm = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     sm += [f'  <url><loc>{u}</loc><lastmod>{TODAY}</lastmod></url>' for u in urls]
     sm.append('</urlset>')
@@ -300,7 +454,7 @@ def main():
     s = replace_between(s, '<!-- seo:objects -->', '<!-- /seo:objects -->',
                         f'\n      <ul class="lib-list">\n{cards}\n      </ul>\n      ')
     open(p, 'w').write(s)
-    print(f'{len(urls) - 1} object pages, sitemap with {len(urls)} addresses, homepage refreshed')
+    print(f'{len(urls) - 1 - len(DOCS)} object pages, {len(DOCS)} guides, sitemap with {len(urls)} addresses, homepage refreshed')
 
 
 main()
