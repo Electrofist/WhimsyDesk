@@ -94,8 +94,8 @@ function card(o) {
     : `<span class="card__soon">Soon</span>`;
   return `<article class="card" style="--accent:${esc(o.accent)}" data-id="${esc(o.id)}">
     <div class="card__cover${SHOTS[o.id] ? ' has-shot' : ''}">
-      ${SHOTS[o.id] ? `<img class="card__shot" src="${esc(SHOTS[o.id])}" alt="" loading="lazy">`
-        : o.art ? `<img class="card__art${wide ? ' is-wide' : ''}" src="${esc(o.art)}" alt="" loading="lazy">` : ''}
+      ${SHOTS[o.id] ? `<img class="card__shot" src="${esc(SHOTS[o.id])}" alt="${esc(o.name)} on a Mac desktop" loading="lazy">`
+        : o.art ? `<img class="card__art${wide ? ' is-wide' : ''}" src="${esc(o.art)}" alt="${esc(o.name)}" loading="lazy">` : ''}
       <div class="card__front"><span class="card__label">${o.ready ? 'Free' : 'Coming soon'} · v${esc(o.version)}</span></div>
     </div>
     <div class="card__body">

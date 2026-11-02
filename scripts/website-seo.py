@@ -39,11 +39,20 @@ FALLBACK_FEATURES = {
 }
 # A line that says what the object is in plain search words, used in titles.
 KIND = {
-    'fridge': 'a fridge on your Mac desktop that holds your files',
-    'drawer': 'a wooden drawer on your Mac desktop that holds your files',
-    'mailbox': 'a post box on your Mac desktop with letters and file storage',
-    'vending': 'a vending machine on your Mac desktop that holds your files',
-    'vending-keypad': 'a keypad vending machine on your Mac desktop that holds your files',
+    'fridge': 'a fridge for your Mac files',
+    'drawer': 'a wooden drawer for your Mac files',
+    'mailbox': 'a post box for your Mac files',
+    'vending': 'files on shelves for your Mac',
+    'vending-keypad': 'type a code to get a file',
+}
+
+# Search descriptions, 155 characters or fewer so Google shows them whole.
+DESC = {
+    'fridge': 'A retro fridge on your Mac desktop that holds your files, with a heavy door, cold fog and frost. Free and open source, for macOS 14 or later.',
+    'drawer': 'A wooden drawer that slides up from the bottom of your Mac screen and holds your files. Put Back returns them. Free and open source, for macOS 14+.',
+    'mailbox': 'A red post box for your Mac desktop. Letters arrive now and then, and it holds your files behind its door. Free and open source, for macOS 14+.',
+    'vending': 'A vending machine for your Mac desktop. Your files sit on little shelves; press a button and one drops. Free and open source, for macOS 14+.',
+    'vending-keypad': 'The vending machine with a keypad: type a code like B2 and your file drops. It holds your files on your Mac desktop. Free and open source, macOS 14+.',
 }
 
 esc = html.escape
@@ -144,9 +153,9 @@ def object_page(o, others):
     slug = SLUGS[o['id']]
     url = f'{BASE}{slug}/'
     title = f"{o['name']}: {KIND.get(o['id'], 'a desktop object for your Mac')} | WhimsyDesk"
-    desc = f"{o['tagline']} {o['description']} Free and open source, for macOS {o['minMacOS'].removesuffix('.0')} or later."
-    if len(desc) > 300:
-        desc = desc[:297].rsplit(' ', 1)[0] + '...'
+    desc = DESC.get(o['id']) or f"{o['tagline']} Free and open source, for macOS {o['minMacOS'].removesuffix('.0')} or later."
+    if len(desc) > 155:
+        desc = desc[:152].rsplit(' ', 1)[0] + '...'
     img = hero_image(o)
     feats = features(o['id'])
     feat_html = '\n'.join(f'        <li>{f}</li>' for f in feats)
