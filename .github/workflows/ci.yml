@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch cancels an in-progress run, so overlapping
+# runs do not fight over the shared macOS runners and leave jobs cancelled.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     name: Check object.json cards
