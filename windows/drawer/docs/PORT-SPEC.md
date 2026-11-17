@@ -51,7 +51,7 @@ range(a, b) = a + (b - a) * next
 - `perRow` = 8 if count <= 8, else `max(5, ceil(count / 2))`. At most two rows are expected; more items keep wrapping every `perRow`.
 - `areaX` = 46 + 28 = 74. `step = min(80, (688 - 56 - 76) / (perRow - 1))` (items overlap when crowded).
 - For item `i`: `row = i / perRow`, `col = i % perRow`, `cx = areaX + 38 + col x step`, `top = 76 + 26 + row x 92`. Icon rect `(cx - 26, top, 52, 52)`. Label rect `(cx - 38, top + 57, 76, 16)`.
-- Order: by date added to the folder (fallback modified date), oldest first.
+- Order: oldest first. The Mac uses the file system's "date added to directory"; Windows has no such date, so the index records `addedAt` when a file is stashed (hand-placed files use their creation, else modified, time).
 - Tilt: item `i` is rotated by `sin(i x 12.9898 + 1.7) x 3.5` degrees about its centre.
 - Contact shadow: dark oval under the icon, rect `(left + 6, bottom - 8, width - 12, 10)`, alpha 0.45. Icon drop shadow: offset (0.5, 2.5) down, blur 3.5, alpha 0.55.
 - Label: 10.5 pt semibold, white at the theme's label alpha, centred, truncated in the MIDDLE, soft black shadow. Use the Windows system UI font.
@@ -101,8 +101,8 @@ Pause on screen lock, system sleep, display off: stop the clock, set `velocity =
 
 ## 6. Files (`DrawerStore`)
 
-- Folder: `%USERPROFILE%\Desktop Drawer` (created if missing). Index: `%APPDATA%\WhimsyDesk\Desktop Drawer\index.json`, a map from stored file name to `{ originalName, originalDirectory, desktopPosition? }`. Written atomically.
-- `reload` (at launch and each time the drawer opens past 0.6): list the folder, skip hidden files, sort by date added; forget index entries whose files are gone.
+- Folder: `%USERPROFILE%\Desktop Drawer` (created if missing). Index: `%APPDATA%\WhimsyDesk\Desktop Drawer\index.json`, a map from stored file name to `{ originalName, originalDirectory, addedAt, desktopX?, desktopY? }`. Written atomically.
+- `reload` (at launch and each time the drawer opens past 0.6): list the folder, skip hidden files (dot-files and the Windows Hidden attribute) and `desktop.ini` / `Thumbs.db`, sort by `addedAt`; forget index entries whose files are gone.
 - `stash(paths)`: for each path: skip if already inside the drawer folder; skip if it is an ancestor of the drawer folder; remember its parent folder, and its Desktop icon position if the parent is the Desktop; move it into the drawer using a unique name (`name 2.ext`, `name 3.ext`, ...); record the index entry. Files are moved, never copied or deleted. If a move fails, log it and continue with the rest.
 - `putBack(names)`: move each file to `originalDirectory` if that folder still exists, otherwise the Desktop, under a unique name based on `originalName`; drop the index entry; if it lands on the Desktop and a saved position exists, restore the icon position (best effort, retry up to 6 times, 0.2 s apart; reuse the fridge's `shell.rs` Desktop icon code).
 - `moveAllToDesktop`: same as put back but always to the Desktop; returns how many failed.
