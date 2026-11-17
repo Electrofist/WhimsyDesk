@@ -3,5 +3,12 @@
 version = 4
 
 [[package]]
+name = "drawer-art"
+version = "0.1.0"
+dependencies = [
+ "drawer-core",
+]
+
+[[package]]
 name = "drawer-core"
 version = "0.1.0"

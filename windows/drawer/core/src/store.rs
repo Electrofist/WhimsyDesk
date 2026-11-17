@@ -622,7 +622,7 @@ mod tests {
     fn unicode_names_and_windows_style_paths_round_trip_through_the_index() {
         let s = sandbox();
         let mut store = open(&s);
-        let name = "résumé 日本語 🎉 (v2) it's.txt";
+        let name = "résumé 日本語 🎉 (v2) it's.txt"; // no quotes: Windows forbids them in file names
         store.stash(&make(&s.desk, name), None, 1.0).unwrap();
         let again = open(&s);
         assert_eq!(names(&again), vec![name.to_string()]);

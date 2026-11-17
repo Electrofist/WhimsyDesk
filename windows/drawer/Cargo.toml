@@ -1,5 +1,5 @@
 [workspace]
-members = ["core"]
+members = ["core", "art"]
 resolver = "2"
 
 [workspace.package]
@@ -13,3 +13,7 @@ opt-level = 3
 lto = true
 codegen-units = 1
 strip = true
+
+# Pixels are pushed by hand in the art crate; keep it fast in debug builds and tests too.
+[profile.dev.package.drawer-art]
+opt-level = 2
