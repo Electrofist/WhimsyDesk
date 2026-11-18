@@ -89,6 +89,39 @@ fn solid(c: Color) -> Paint {
     Paint::Solid(c)
 }
 
+// MARK: Cast shadow
+
+/// The soft shadow the drawer throws on the desktop around its visible outline: the front panel
+/// plus the slot it slides out of. Only the shadow is drawn (the artwork covers the shape itself),
+/// at the full 780 x 300 point size, for a slide `position` from 0 (closed) to 1 (open).
+///
+/// The shadow grows deeper and softer as the drawer comes out. It depends on the position, so the
+/// app keeps a few of these, one per step of position, instead of blurring on every frame; the
+/// slot is drawn long enough that cropping the top rows is right for any window height.
+pub fn render_cast_shadow(position: f64, scale: f64) -> Canvas {
+    let s = drawer_core::geometry::shadow_params(position);
+    let f = FACE_RECT;
+    let slot_left = drawer_core::geometry::MARGIN + drawer_core::geometry::BOX_INSET;
+    let mut shape = Path::rounded_rect(f.x, f.y, f.w, f.h, 4.0);
+    shape.extend(&Path::rect(
+        slot_left,
+        f.max_y() - 2.0,
+        drawer_core::geometry::WIDTH - 2.0 * drawer_core::geometry::BOX_INSET,
+        VIEW_HEIGHT + 60.0,
+    ));
+    let mut c = Canvas::new(VIEW_WIDTH, VIEW_HEIGHT, scale);
+    c.fill_shadowed(
+        &shape,
+        &solid(Color::CLEAR),
+        Shadow {
+            offset: (0.0, s.offset_down),
+            blur: s.radius,
+            color: black(s.opacity),
+        },
+    );
+    c
+}
+
 // MARK: Back: box and floor
 
 pub fn render_back(theme: &Theme, scale: f64) -> Canvas {
@@ -616,6 +649,21 @@ mod tests {
             wood < 0.75 && wood > 0.2,
             "wood well away from the pull, got {wood}"
         );
+    }
+
+    #[test]
+    fn cast_shadow_is_soft_and_grows_with_the_slide() {
+        let closed = render_cast_shadow(0.0, 1.0);
+        let open = render_cast_shadow(1.0, 1.0);
+        assert_eq!((closed.width(), closed.height()), (780, 300));
+        // Beside the slot, at the height of the panel: a visible shadow, stronger when open.
+        let (a0, a1) = (closed.pixel(26, 46)[3], open.pixel(26, 46)[3]);
+        assert!(a0 > 0.02 && a0 < 0.5, "closed shadow {a0}");
+        assert!(a1 > a0, "open shadow is stronger: {a1} vs {a0}");
+        // Far from the drawer: nothing.
+        assert!(closed.pixel(2, 150)[3] < 0.01);
+        // Down the side of the slot the shadow carries on to the bottom of the artwork.
+        assert!(open.pixel(40, 290)[3] > 0.02);
     }
 
     #[test]

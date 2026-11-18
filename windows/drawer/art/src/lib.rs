@@ -8,5 +8,6 @@ pub mod scene;
 
 pub use canvas::{Canvas, Color};
 pub use scene::{
-    render_back, render_front, render_layers, render_preview, Layers, Theme, DARK, LIGHT,
+    render_back, render_cast_shadow, render_front, render_layers, render_preview, Layers, Theme,
+    DARK, LIGHT,
 };

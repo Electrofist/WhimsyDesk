@@ -220,6 +220,12 @@ impl Path {
         self
     }
 
+    /// Adds all of `other`'s sub-paths to this one (a union when they share a winding direction).
+    pub fn extend(&mut self, other: &Path) -> &mut Self {
+        self.subs.extend(other.subs.iter().cloned());
+        self
+    }
+
     pub fn polygon(points: &[P]) -> Path {
         let mut p = Path::new();
         for (i, pt) in points.iter().enumerate() {

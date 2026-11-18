@@ -4,6 +4,9 @@ Each object keeps its own version in its `object.json`. Entries are grouped by o
 
 ## Unreleased
 
+### Desktop Drawer for Windows
+- New: `windows/drawer`, a Rust port of the macOS Desktop Drawer (core, art and app crates, like the Windows fridge). Pull or double-click to open, drop files in, drag them out, Put Back, the right-click menu and synthesized sounds.
+
 ### Library
 - Started the library, now called WhimsyDesk: one repo, one folder per object.
 - Added `object.json` cards and `scripts/check-objects.sh`.
