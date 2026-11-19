@@ -21,10 +21,10 @@ jobs:
       run:
         working-directory: windows/fridge
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -76,12 +76,12 @@ jobs:
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" "/DBuild=$build" "/DSourceDir=..\target\release" installer\DesktopFridge.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Desktop-Fridge-Setup-${{ env.BUILD }}
           path: windows/fridge/installer/output/*.exe
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Desktop-Fridge-Windows
           path: windows/fridge/Desktop-Fridge-Windows.zip

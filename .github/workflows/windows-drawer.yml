@@ -21,10 +21,10 @@ jobs:
       run:
         working-directory: windows/drawer
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -63,7 +63,7 @@ jobs:
           "@ | Set-Content -Encoding utf8 "$out/README.txt"
           Compress-Archive -Path $out -DestinationPath Desktop-Drawer-Windows.zip -Force
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Desktop-Drawer-Windows
           path: windows/drawer/Desktop-Drawer-Windows.zip
