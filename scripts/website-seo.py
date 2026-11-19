@@ -48,11 +48,11 @@ KIND = {
 
 # Search descriptions, 155 characters or fewer so Google shows them whole.
 DESC = {
-    'fridge': 'A retro fridge on your Mac desktop that holds your files, with a heavy door, cold fog and frost. Free and open source, for macOS 14 or later.',
-    'drawer': 'A wooden drawer that slides up from the bottom of your Mac screen and holds your files. Put Back returns them. Free and open source, for macOS 14+.',
-    'mailbox': 'A red post box for your Mac desktop. Letters arrive now and then, and it holds your files behind its door. Free and open source, for macOS 14+.',
-    'vending': 'A vending machine for your Mac desktop. Your files sit on little shelves; press a button and one drops. Free and open source, for macOS 14+.',
-    'vending-keypad': 'The vending machine with a keypad: type a code like B2 and your file drops. It holds your files on your Mac desktop. Free and open source, macOS 14+.',
+    'fridge': 'A fun desktop organizer for Mac: drag files into a retro fridge, shut the heavy door, and watch forgotten files frost over. Free and open source.',
+    'drawer': 'Organize your Mac desktop with a wooden drawer that slides up from the bottom of the screen. Put Back returns every file. Free and open source.',
+    'mailbox': 'A red post box that organizes your Mac desktop: hide files behind its door, and read the letters that arrive now and then. Free and open source.',
+    'vending': 'Organize your Mac desktop with a vending machine: files sit on little shelves, press a button and one drops. Free and open source, for macOS 14+.',
+    'vending-keypad': 'A vending machine desktop organizer for Mac with a keypad: type a code like B2 and your file drops into the tray. Free and open source.',
 }
 
 esc = html.escape
@@ -207,7 +207,7 @@ def object_page(o, others):
     <nav class="crumbs" aria-label="Breadcrumb"><a href="../">WhimsyDesk</a> <span aria-hidden="true">/</span> {esc(o['name'])}</nav>
     <article class="obj">
       <div class="obj__text">
-        <p class="obj__kind">Free Mac app &middot; macOS {esc(o['minMacOS'].removesuffix('.0'))} or later{' &middot; Windows in beta' if o['id'] in WINDOWS_BETA else ''} &middot; Version {esc(o['version'])}</p>
+        <p class="obj__kind">Free desktop organizer for Mac &middot; macOS {esc(o['minMacOS'].removesuffix('.0'))} or later{' &middot; Windows in beta' if o['id'] in WINDOWS_BETA else ''} &middot; Version {esc(o['version'])}</p>
         <h1>{esc(o['name'])}</h1>
         <p class="obj__tag">{esc(o['tagline'])}</p>
         <p class="obj__desc">{esc(o['description'])}</p>
@@ -264,8 +264,12 @@ DOCS = [
     {'src': 'docs/make-your-own.md', 'slug': 'make-your-own', 'name': 'Make your own object',
      'title': 'Make your own Mac desktop object: a step-by-step guide | WhimsyDesk',
      'desc': 'Build your own desktop object for Mac from a template in about 15 minutes. Draw two pictures, set where files go, and send it in. No Swift needed.'},
+    {'src': 'docs/clean-up-mac-desktop.md', 'slug': 'clean-up-mac-desktop', 'name': 'Clean up your Mac desktop',
+     'title': 'How to clean up your Mac desktop without losing files | WhimsyDesk',
+     'desc': 'Clear a cluttered Mac desktop in minutes with Stacks, a screenshots folder and hidden icons, without deleting anything. Plus a playful way to store files.'},
 ]
-DOC_LINKS = {'faq.md': '../faq/', 'make-your-own.md': '../make-your-own/'}
+DOC_LINKS = {'faq.md': '../faq/', 'make-your-own.md': '../make-your-own/',
+             'clean-up-mac-desktop.md': '../clean-up-mac-desktop/'}
 
 
 def doc_href(h):
@@ -407,9 +411,13 @@ def doc_page(d):
 def site_jsonld(objs):
     graph = [
         {'@type': 'WebSite', '@id': BASE + '#site', 'url': BASE, 'name': 'WhimsyDesk',
-         'description': 'Free, open source objects for your Mac desktop that hold your files.'},
+         'description': 'Fun, free, open source desktop organizer apps for Mac: objects that hold your files.'},
         {'@type': 'Organization', '@id': BASE + '#org', 'name': 'WhimsyDesk', 'url': BASE,
          'logo': BASE + 'media/apple-touch-icon.png', 'sameAs': [REPO]},
+        {'@type': 'VideoObject', 'name': 'Desktop Fridge on a Mac desktop',
+         'description': 'The Desktop Fridge door swings open, cold fog rolls out, and files are dragged inside.',
+         'thumbnailUrl': BASE + 'media/fridge.png', 'contentUrl': BASE + 'media/fridge.mp4',
+         'uploadDate': '2026-10-31'},
         {'@type': 'ItemList', 'name': 'WhimsyDesk objects',
          'itemListElement': [{'@type': 'ListItem', 'position': i + 1, 'url': f"{BASE}{SLUGS[o['id']]}/", 'name': o['name']}
                              for i, o in enumerate(objs) if o['id'] in SLUGS]},
