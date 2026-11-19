@@ -267,9 +267,16 @@ DOCS = [
     {'src': 'docs/clean-up-mac-desktop.md', 'slug': 'clean-up-mac-desktop', 'name': 'Clean up your Mac desktop',
      'title': 'How to clean up your Mac desktop without losing files | WhimsyDesk',
      'desc': 'Clear a cluttered Mac desktop in minutes with Stacks, a screenshots folder and hidden icons, without deleting anything. Plus a playful way to store files.'},
+    {'src': 'docs/desktop-fridge-windows.md', 'slug': 'desktop-fridge-windows', 'name': 'Desktop Fridge for Windows',
+     'title': 'Desktop Fridge for Windows: a fridge on your desktop that holds files | WhimsyDesk',
+     'desc': 'A free, open source fridge for your Windows 10 and 11 desktop. Drag files in, shut the door, and Put Back returns them. Beta, with an installer.'},
+    {'src': 'docs/fun-mac-desktop.md', 'slug': 'fun-mac-desktop', 'name': 'Fun things for your Mac desktop',
+     'title': 'Fun things to put on your Mac desktop | WhimsyDesk',
+     'desc': 'Make your Mac desktop more fun: widgets, moving wallpapers, a fridge and a drawer that hold your files, holiday lights and desktop companions.'},
 ]
 DOC_LINKS = {'faq.md': '../faq/', 'make-your-own.md': '../make-your-own/',
-             'clean-up-mac-desktop.md': '../clean-up-mac-desktop/'}
+             'clean-up-mac-desktop.md': '../clean-up-mac-desktop/',
+             'desktop-fridge-windows.md': '../desktop-fridge-windows/', 'fun-mac-desktop.md': '../fun-mac-desktop/'}
 
 
 def doc_href(h):
