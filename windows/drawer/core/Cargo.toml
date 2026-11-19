@@ -1,0 +1,9 @@
+[package]
+name = "drawer-core"
+description = "Sliding physics, item layout, sounds and the file store for Desktop Drawer. Platform independent, no dependencies."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]

@@ -1,0 +1,22 @@
+[workspace]
+members = ["core", "art", "app"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["WhimsyDesk contributors"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+# Pixels are pushed by hand in the art crate; keep it fast in debug builds and tests too.
+[profile.dev.package.drawer-art]
+opt-level = 2
+
+[profile.dev.package.desktop-drawer]
+opt-level = 2
