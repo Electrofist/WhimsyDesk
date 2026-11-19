@@ -1,0 +1,53 @@
+name: Stats
+
+# Refreshes the password-protected stats page at whimsydesk.art/stats once a day.
+#
+# Repository secrets it needs:
+#   STATS_TOKEN     fine-grained token for this repo: Administration read (traffic numbers),
+#                   Contents read and write (to save the new data). Pushing with it also
+#                   triggers the website deploy.
+#   STATS_PASSWORD  the stats page password. The data is encrypted with it before it is saved.
+# Optional, for website visitors:
+#   GA_PROPERTY_ID  the numeric Google Analytics 4 property id
+#   GA_KEY_JSON     a Google service account key (JSON) with Viewer access to that property
+
+on:
+  schedule:
+    - cron: "30 1 * * *"   # every day, 07:00 in India
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stats
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.STATS_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Gather and encrypt the numbers
+        env:
+          GH_TOKEN: ${{ secrets.STATS_TOKEN }}
+          STATS_PASSWORD: ${{ secrets.STATS_PASSWORD }}
+          GA_PROPERTY_ID: ${{ secrets.GA_PROPERTY_ID }}
+          GA_KEY_JSON: ${{ secrets.GA_KEY_JSON }}
+        run: node scripts/stats-snapshot.mjs
+
+      - name: Save
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add website/stats/data.json
+          git diff --cached --quiet && { echo "No change."; exit 0; }
+          git commit -m "Stats: daily refresh"
+          git push

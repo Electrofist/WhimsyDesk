@@ -116,8 +116,72 @@ for (const rel of releases) {
   }
 }
 
+// --- website visitors from Google Analytics (optional) ---
+// Needs GA_PROPERTY_ID (the numeric GA4 property id) and a service account key with Viewer
+// access to that property, as a file path (GA_KEY_FILE) or the JSON itself (GA_KEY_JSON).
+async function googleToken(key) {
+  const now = Math.floor(Date.now() / 1000);
+  const enc = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const unsigned = `${enc({ alg: 'RS256', typ: 'JWT' })}.${enc({
+    iss: key.client_email, scope: 'https://www.googleapis.com/auth/analytics.readonly',
+    aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600,
+  })}`;
+  const { createSign } = await import('node:crypto');
+  const sig = createSign('RSA-SHA256').update(unsigned).sign(key.private_key).toString('base64url');
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: `${unsigned}.${sig}` }),
+  });
+  if (!res.ok) throw new Error(`Google sign-in failed: ${res.status} ${await res.text()}`);
+  return (await res.json()).access_token;
+}
+
+async function googleAnalytics() {
+  const property = process.env.GA_PROPERTY_ID;
+  const keyText = process.env.GA_KEY_JSON || (process.env.GA_KEY_FILE && readFileSync(process.env.GA_KEY_FILE, 'utf8'));
+  if (!property || !keyText) return null;
+  const token = await googleToken(JSON.parse(keyText));
+  const report = async (body) => {
+    const res = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${property}:runReport`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dateRanges: [{ startDate: '28daysAgo', endDate: 'today' }], ...body }),
+    });
+    if (!res.ok) throw new Error(`Analytics report failed: ${res.status} ${await res.text()}`);
+    return (await res.json()).rows ?? [];
+  };
+  const rows = (r) => r.map((x) => ({ name: x.dimensionValues?.[0]?.value ?? '', users: +x.metricValues[0].value, views: +(x.metricValues[1]?.value ?? 0) }));
+  const metrics = [{ name: 'activeUsers' }, { name: 'screenPageViews' }];
+  const [total, daily, pages, sources, countries] = await Promise.all([
+    report({ metrics: [...metrics, { name: 'sessions' }] }),
+    report({ dimensions: [{ name: 'date' }], metrics }),
+    report({ dimensions: [{ name: 'pagePath' }], metrics, orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }], limit: 10 }),
+    report({ dimensions: [{ name: 'sessionSource' }], metrics, orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 10 }),
+    report({ dimensions: [{ name: 'country' }], metrics, orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 10 }),
+  ]);
+  const t = total[0]?.metricValues ?? [];
+  return {
+    users28: +(t[0]?.value ?? 0), views28: +(t[1]?.value ?? 0), sessions28: +(t[2]?.value ?? 0),
+    daily: rows(daily).map((d) => ({ day: `${d.name.slice(0, 4)}-${d.name.slice(4, 6)}-${d.name.slice(6, 8)}`, users: d.users, views: d.views })),
+    pages: rows(pages), sources: rows(sources), countries: rows(countries),
+  };
+}
+
+let ga = null;
+try {
+  ga = await googleAnalytics();
+  if (ga) {
+    history.site ??= {};
+    for (const d of ga.daily) history.site[d.day] = { count: d.views, uniques: d.users };
+  }
+} catch (e) {
+  // A Google problem should never stop the GitHub numbers from updating.
+  console.error(`Skipped Google Analytics: ${e.message}`);
+}
+
 const snapshot = {
   updated: new Date().toISOString(),
+  ga,
   repo: {
     stars: repo.stargazers_count, forks: repo.forks_count, watchers: repo.subscribers_count,
     openIssues: repo.open_issues_count,

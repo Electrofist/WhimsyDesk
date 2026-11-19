@@ -132,15 +132,7 @@ function render(d) {
   const objects = Object.entries(byObject).map(([name, p]) => ({ name, ...p, all: p.Mac + p.Windows })).sort((a, b) => b.all - a.all);
   const maxObj = Math.max(1, ...objects.map((o) => o.all));
 
-  // Daily views, oldest first, with any missing days filled in as zero.
-  const days = Object.keys(d.history.views).sort();
-  const series = [];
-  if (days.length) {
-    for (let t = new Date(days[0] + 'T00:00:00Z'); t <= new Date(days.at(-1) + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + 1)) {
-      const k = t.toISOString().slice(0, 10);
-      series.push({ day: k, ...(d.history.views[k] ?? { count: 0, uniques: 0 }) });
-    }
-  }
+  const series = daily(d.history.views);
 
   dash.innerHTML = `
     <section class="nums" aria-label="Totals">
@@ -150,10 +142,17 @@ function render(d) {
       <div class="num"><b>${fmt(d.repo.forks)}</b><span>forks</span></div>
     </section>
 
+    ${site(d)}
+
     <h2>Visits to the GitHub repo</h2>
     <p class="sub">Each day since tracking began. GitHub only keeps 14 days, so this page keeps the rest.</p>
     ${series.length ? chart(series) : '<p class="empty">No visits recorded yet.</p>'}
     <div class="legend"><span><i style="background:var(--olive)"></i>Views</span><span><i style="background:var(--ink)"></i>People</span></div>
+
+    <h2>Clones of the repo</h2>
+    <p class="sub">${fmt(d.traffic14.clones)} clones by ${fmt(d.traffic14.cloners)} people in the last 14 days. Mostly developers and bots grabbing the code.</p>
+    ${daily(d.history.clones).length ? chart(daily(d.history.clones), 'Daily clones of the GitHub repo') : '<p class="empty">No clones recorded yet.</p>'}
+    <div class="legend"><span><i style="background:var(--olive)"></i>Clones</span><span><i style="background:var(--ink)"></i>People</span></div>
 
     <h2>Downloads by object</h2>
     <p class="sub">Every release and file added up.</p>
@@ -186,8 +185,8 @@ function render(d) {
       <td class="n">${new Date(s.at).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</td></tr>`).join('')}</table>`
       : '<p class="empty">No stars yet.</p>'}
 
-    <p class="note">Visits to whimsydesk.art itself are in Google Analytics and Microsoft Clarity.
-      This page counts GitHub only: the repo, its releases and its downloads.</p>`;
+    <p class="note">Website numbers come from Google Analytics; session recordings are in Microsoft Clarity.
+      Everything else comes from GitHub: the repo, its releases and its downloads.</p>`;
 }
 
 // GitHub lists one page more than once when only the capital letters differ. Add those up.
@@ -207,7 +206,39 @@ function table(rows, label, cell, cls = '') {
     <tr><td class="${cls}">${cell(r)}</td><td class="n">${fmt(r.count)}</td><td class="n">${fmt(r.uniques)}</td></tr>`).join('')}</table>`;
 }
 
-function chart(series) {
+// A day-by-day series, oldest first, with missing days filled in as zero.
+function daily(byDay = {}) {
+  const days = Object.keys(byDay).sort();
+  const out = [];
+  if (!days.length) return out;
+  for (let t = new Date(days[0] + 'T00:00:00Z'); t <= new Date(days.at(-1) + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + 1)) {
+    const k = t.toISOString().slice(0, 10);
+    out.push({ day: k, ...(byDay[k] ?? { count: 0, uniques: 0 }) });
+  }
+  return out;
+}
+
+// Visitors to whimsydesk.art itself, once Google Analytics is connected.
+function site(d) {
+  if (!d.ga) {
+    return `<h2>Visitors to whimsydesk.art</h2>
+      <p class="empty">Not connected yet. Add the Google Analytics key to the stats refresh and this fills in.</p>`;
+  }
+  const g = d.ga;
+  const list = (rows, label) => table(rows.map((r) => ({ name: r.name, count: r.views, uniques: r.users })), label, (r) => esc(r.name || '(not set)'));
+  const s = daily(d.history.site);
+  return `<h2>Visitors to whimsydesk.art</h2>
+    <p class="sub">${fmt(g.users28)} people, ${fmt(g.sessions28)} visits and ${fmt(g.views28)} page views in the last 28 days, from Google Analytics.</p>
+    ${s.length ? chart(s, 'Daily visitors to whimsydesk.art') : ''}
+    <div class="legend"><span><i style="background:var(--olive)"></i>Page views</span><span><i style="background:var(--ink)"></i>People</span></div>
+    <div class="two">
+      <div><h2>How they found the site</h2><p class="sub">Last 28 days.</p>${list(g.sources, 'Source')}</div>
+      <div><h2>Where they are</h2><p class="sub">Last 28 days.</p>${list(g.countries, 'Country')}</div>
+    </div>
+    <h2>Most viewed pages on the site</h2><p class="sub">Last 28 days.</p>${list(g.pages, 'Page')}`;
+}
+
+function chart(series, label = 'Daily views of the GitHub repo') {
   const W = 940, H = 190, pad = 26, n = series.length;
   const max = Math.max(1, ...series.map((s) => s.count));
   const bw = (W - pad) / n;
@@ -219,7 +250,7 @@ function chart(series) {
   const every = Math.ceil(n / 7);
   const labels = series.map((s, i) => i % every ? '' :
     `<text x="${pad + i * bw + bw / 2}" y="${H - 4}" text-anchor="middle">${new Date(s.day + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</text>`).join('');
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily views of the GitHub repo">
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}">
     <text x="0" y="14">${max}</text><line x1="${pad}" x2="${W}" y1="${H - 20}" y2="${H - 20}" stroke="var(--line)"/>${bars}${labels}</svg>`;
 }
 </script>

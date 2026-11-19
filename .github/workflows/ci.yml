@@ -3,6 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+    # Website-only pushes (including the daily stats refresh) do not need the apps rebuilt.
+    paths-ignore:
+      - "website/**"
   pull_request:
 
 permissions:
