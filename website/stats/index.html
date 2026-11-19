@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>WhimsyDesk stats</title>
+  <link rel="icon" href="../media/favicon-32.png?v=2" sizes="32x32" type="image/png">
+  <style>
+    @font-face { font-family: "Grandstander"; src: url("../fonts/grandstander.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+    @font-face { font-family: "Instrument Sans"; src: url("../fonts/instrument-sans.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
+    :root { --ink: #1b1d16; --mute: #585d50; --olive: #a3b020; --olive-deep: #7f8a17; --line: rgba(27, 29, 22, .12); --win: #3e6fb0; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; background: #fff; color: var(--ink); font: 16px/1.5 "Instrument Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 22px 24px 72px; }
+    .top { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+    .mark { font: 700 20px/1 "Grandstander", sans-serif; text-decoration: none; }
+    .updated { color: var(--mute); font-size: 14px; }
+
+    /* Lock */
+    .lock { min-height: 70vh; display: grid; place-items: center; text-align: center; }
+    .lock h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -.01em; }
+    .lock p { color: var(--mute); margin: 0 0 22px; }
+    .lock form { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .lock input { font: inherit; padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px; width: 250px; }
+    .lock input:focus-visible, button:focus-visible { outline: 3px solid var(--olive); outline-offset: 2px; }
+    button { font: 600 15px/1 "Instrument Sans", -apple-system, sans-serif; padding: 12px 18px; border: 0; border-radius: 10px; background: var(--ink); color: #fff; cursor: pointer; }
+    button[disabled] { opacity: .6; cursor: progress; }
+    .error { color: #b3261e; min-height: 1.5em; margin-top: 12px; font-size: 15px; }
+
+    /* Dashboard */
+    h2 { font-size: 19px; margin: 52px 0 4px; letter-spacing: -.005em; }
+    .sub { color: var(--mute); font-size: 14px; margin: 0 0 16px; }
+    .nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 36px; padding: 26px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .num b { display: block; font-size: 44px; line-height: 1; letter-spacing: -.02em; }
+    .num span { color: var(--mute); font-size: 14px; }
+    .chart { width: 100%; height: 190px; display: block; }
+    .chart text { font: 11px "Instrument Sans", sans-serif; fill: var(--mute); }
+    .legend { display: flex; gap: 18px; font-size: 13px; color: var(--mute); margin-top: 8px; }
+    .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+    .bars { display: grid; gap: 10px; }
+    .bar { display: grid; grid-template-columns: 190px 1fr 56px; align-items: center; gap: 12px; font-size: 15px; }
+    .track { height: 14px; background: #f1f2ec; border-radius: 4px; overflow: hidden; display: flex; }
+    .track i { display: block; height: 100%; }
+    .bar b { text-align: right; font-variant-numeric: tabular-nums; }
+    table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    td, th { text-align: left; padding: 9px 0; border-bottom: 1px solid var(--line); }
+    th { font-weight: 600; color: var(--mute); font-size: 13px; }
+    td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; padding-left: 16px; white-space: nowrap; }
+    td.path { overflow-wrap: anywhere; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+    .empty { color: var(--mute); font-size: 15px; }
+    .note { margin-top: 56px; color: var(--mute); font-size: 14px; }
+    @media (max-width: 720px) {
+      .nums { grid-template-columns: repeat(2, 1fr); }
+      .two { grid-template-columns: 1fr; gap: 0; }
+      .bar { grid-template-columns: 120px 1fr 44px; font-size: 14px; }
+      .num b { font-size: 36px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <a class="mark" href="../">WhimsyDesk</a>
+      <span class="updated" id="updated"></span>
+    </header>
+
+    <main id="lock" class="lock">
+      <div>
+        <h1>The numbers are in the drawer</h1>
+        <p>Enter the password to open it.</p>
+        <form id="unlock">
+          <label for="pw" class="sr" style="position:absolute;left:-9999px">Password</label>
+          <input id="pw" type="password" autocomplete="current-password" autofocus>
+          <button id="go" type="submit">Open</button>
+        </form>
+        <div class="error" id="error" role="alert"></div>
+      </div>
+    </main>
+
+    <main id="dash" hidden></main>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => n.toLocaleString('en-IN');
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+async function open(password) {
+  const file = await (await fetch('data.json', { cache: 'no-store' })).json();
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: unb64(file.salt), iterations: file.iterations, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(file.iv) }, key, unb64(file.data));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+$('unlock').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('go').disabled = true; $('error').textContent = '';
+  try {
+    const data = await open($('pw').value);
+    sessionStorage.setItem('wd-stats', $('pw').value);
+    render(data);
+  } catch {
+    $('error').textContent = 'That password did not open it. Try again.';
+    $('go').disabled = false; $('pw').select();
+  }
+});
+
+// Stay open for this tab after a reload.
+const saved = sessionStorage.getItem('wd-stats');
+if (saved) open(saved).then(render).catch(() => sessionStorage.removeItem('wd-stats'));
+
+function render(d) {
+  $('lock').hidden = true;
+  const dash = $('dash'); dash.hidden = false;
+  $('updated').textContent = 'Updated ' + new Date(d.updated).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+
+  // Downloads: highest count ever seen per file, so re-uploads do not lose numbers.
+  const dl = Object.values(d.history.downloads);
+  const total = dl.reduce((n, f) => n + f.count, 0);
+  const byObject = {};
+  for (const f of dl) {
+    byObject[f.object] ??= { Mac: 0, Windows: 0 };
+    byObject[f.object][f.platform] += f.count;
+  }
+  const objects = Object.entries(byObject).map(([name, p]) => ({ name, ...p, all: p.Mac + p.Windows })).sort((a, b) => b.all - a.all);
+  const maxObj = Math.max(1, ...objects.map((o) => o.all));
+
+  // Daily views, oldest first, with any missing days filled in as zero.
+  const days = Object.keys(d.history.views).sort();
+  const series = [];
+  if (days.length) {
+    for (let t = new Date(days[0] + 'T00:00:00Z'); t <= new Date(days.at(-1) + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + 1)) {
+      const k = t.toISOString().slice(0, 10);
+      series.push({ day: k, ...(d.history.views[k] ?? { count: 0, uniques: 0 }) });
+    }
+  }
+
+  dash.innerHTML = `
+    <section class="nums" aria-label="Totals">
+      <div class="num"><b>${fmt(total)}</b><span>downloads, all time</span></div>
+      <div class="num"><b>${fmt(d.traffic14.uniques)}</b><span>people on GitHub, last 14 days</span></div>
+      <div class="num"><b>${fmt(d.repo.stars)}</b><span>stars</span></div>
+      <div class="num"><b>${fmt(d.repo.forks)}</b><span>forks</span></div>
+    </section>
+
+    <h2>Visits to the GitHub repo</h2>
+    <p class="sub">Each day since tracking began. GitHub only keeps 14 days, so this page keeps the rest.</p>
+    ${series.length ? chart(series) : '<p class="empty">No visits recorded yet.</p>'}
+    <div class="legend"><span><i style="background:var(--olive)"></i>Views</span><span><i style="background:var(--ink)"></i>People</span></div>
+
+    <h2>Downloads by object</h2>
+    <p class="sub">Every release and file added up.</p>
+    <div class="bars">${objects.map((o) => `
+      <div class="bar"><span>${esc(o.name)}</span>
+        <span class="track" role="img" aria-label="${o.Mac} on Mac, ${o.Windows} on Windows">
+          <i style="width:${o.Mac / maxObj * 100}%;background:var(--olive)"></i>
+          <i style="width:${o.Windows / maxObj * 100}%;background:var(--win)"></i>
+        </span><b>${fmt(o.all)}</b></div>`).join('')}
+    </div>
+    <div class="legend"><span><i style="background:var(--olive)"></i>Mac</span><span><i style="background:var(--win)"></i>Windows</span></div>
+
+    <div class="two">
+      <div>
+        <h2>Where visitors came from</h2>
+        <p class="sub">Last 14 days, sites that sent people to the repo.</p>
+        ${table(d.referrers, 'Site', (r) => esc(r.source))}
+      </div>
+      <div>
+        <h2>Most viewed in the repo</h2>
+        <p class="sub">Last 14 days.</p>
+        ${table(mergePaths(d.paths), 'Page', (p) => esc(p.path), 'path')}
+      </div>
+    </div>
+
+    <h2>Stars</h2>
+    <p class="sub">Newest first.</p>
+    ${d.stars.length ? `<table><tr><th>Who</th><th class="n">When</th></tr>${d.stars.slice().reverse().map((s) => `
+      <tr><td><a href="https://github.com/${esc(s.who)}">${esc(s.who)}</a></td>
+      <td class="n">${new Date(s.at).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</td></tr>`).join('')}</table>`
+      : '<p class="empty">No stars yet.</p>'}
+
+    <p class="note">Visits to whimsydesk.art itself are in Google Analytics and Microsoft Clarity.
+      This page counts GitHub only: the repo, its releases and its downloads.</p>`;
+}
+
+// GitHub lists one page more than once when only the capital letters differ. Add those up.
+function mergePaths(rows) {
+  const by = new Map();
+  for (const r of rows) {
+    const path = r.path.replace(/^\/electrofist\/whimsydesk/i, '').replace(/^\/(tree|blob)\/main/i, '').toLowerCase() || 'Repo home';
+    const m = by.get(path) ?? { path, count: 0, uniques: 0 };
+    m.count += r.count; m.uniques += r.uniques; by.set(path, m);
+  }
+  return [...by.values()].sort((x, y) => y.count - x.count);
+}
+
+function table(rows, label, cell, cls = '') {
+  if (!rows.length) return '<p class="empty">Nothing yet.</p>';
+  return `<table><tr><th>${label}</th><th class="n">Views</th><th class="n">People</th></tr>${rows.map((r) => `
+    <tr><td class="${cls}">${cell(r)}</td><td class="n">${fmt(r.count)}</td><td class="n">${fmt(r.uniques)}</td></tr>`).join('')}</table>`;
+}
+
+function chart(series) {
+  const W = 940, H = 190, pad = 26, n = series.length;
+  const max = Math.max(1, ...series.map((s) => s.count));
+  const bw = (W - pad) / n;
+  const bars = series.map((s, i) => {
+    const x = pad + i * bw, h = s.count / max * (H - 40), u = s.uniques / max * (H - 40);
+    return `<rect x="${x + 1}" y="${H - 20 - h}" width="${Math.max(1, bw - 3)}" height="${h}" rx="2" fill="var(--olive)"><title>${s.day}: ${s.count} views, ${s.uniques} people</title></rect>
+      <rect x="${x + 1}" y="${H - 20 - u}" width="${Math.max(1, bw - 3)}" height="2" fill="var(--ink)"/>`;
+  }).join('');
+  const every = Math.ceil(n / 7);
+  const labels = series.map((s, i) => i % every ? '' :
+    `<text x="${pad + i * bw + bw / 2}" y="${H - 4}" text-anchor="middle">${new Date(s.day + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</text>`).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily views of the GitHub repo">
+    <text x="0" y="14">${max}</text><line x1="${pad}" x2="${W}" y1="${H - 20}" y2="${H - 20}" stroke="var(--line)"/>${bars}${labels}</svg>`;
+}
+</script>
+</body>
+</html>
