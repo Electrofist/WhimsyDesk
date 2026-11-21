@@ -63,6 +63,23 @@ jobs:
           "@ | Set-Content -Encoding utf8 "$out/README.txt"
           Compress-Archive -Path $out -DestinationPath Desktop-Drawer-Windows.zip -Force
 
+      - name: Installer
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches[0].Groups[1].Value
+          $build = "${{ github.sha }}".Substring(0, 7)
+          "BUILD=$build" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" "/DBuild=$build" "/DSourceDir=..\target\release" installer\DesktopDrawer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Desktop-Drawer-Setup-${{ env.BUILD }}
+          path: windows/drawer/installer/output/*.exe
+
       - uses: actions/upload-artifact@v7
         with:
           name: Desktop-Drawer-Windows
