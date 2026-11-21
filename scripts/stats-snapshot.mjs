@@ -179,6 +179,12 @@ try {
   console.error(`Skipped Google Analytics: ${e.message}`);
 }
 
+// A daily snapshot of the running totals, so the page can show week-on-week change.
+// Downloads and stars have no daily history from GitHub, so we build our own here.
+const downloadTotal = Object.values(history.downloads).reduce((n, d) => n + d.count, 0);
+history.totals ??= {};
+history.totals[today] = { downloads: downloadTotal, stars: repo.stargazers_count, forks: repo.forks_count };
+
 const snapshot = {
   updated: new Date().toISOString(),
   ga,

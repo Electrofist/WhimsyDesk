@@ -36,6 +36,14 @@
     .nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 36px; padding: 26px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
     .num b { display: block; font-size: 44px; line-height: 1; letter-spacing: -.02em; }
     .num span { color: var(--mute); font-size: 14px; }
+    .delta { display: block; font-style: normal; font-size: 12.5px; font-weight: 600; margin-top: 4px; }
+    .delta.up { color: var(--olive-deep); }
+    .delta.down { color: #b3261e; }
+    .week { margin-top: 36px; }
+    .week__h { font-size: 15px; color: var(--mute); margin: 0 0 12px; letter-spacing: .02em; text-transform: uppercase; }
+    .week__row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; padding: 18px 20px; background: #f6f7f1; border-radius: 12px; }
+    .wk b { display: block; font-size: 28px; line-height: 1; letter-spacing: -.01em; }
+    .wk span { color: var(--mute); font-size: 13px; }
     .chart { width: 100%; height: 190px; display: block; }
     .chart text { font: 11px "Instrument Sans", sans-serif; fill: var(--mute); }
     .legend { display: flex; gap: 18px; font-size: 13px; color: var(--mute); margin-top: 8px; }
@@ -58,6 +66,7 @@
       .two { grid-template-columns: 1fr; gap: 0; }
       .bar { grid-template-columns: 120px 1fr 44px; font-size: 14px; }
       .num b { font-size: 36px; }
+      .week__row { grid-template-columns: repeat(2, 1fr); gap: 14px; }
     }
   </style>
 </head>
@@ -134,12 +143,29 @@ function render(d) {
 
   const series = daily(d.history.views);
 
+  // Last 7 days vs the 7 before, from whatever history we have.
+  const dlWeek = totalChange(d.history.totals, 'downloads');
+  const starWeek = starsInLastDays(d.stars, 7);
+  const viewsWeek = windowSum(d.history.views, 7);
+  const viewsPrev = windowSum(d.history.views, 7, 7);
+
   dash.innerHTML = `
     <section class="nums" aria-label="Totals">
-      <div class="num"><b>${fmt(total)}</b><span>downloads, all time</span></div>
-      <div class="num"><b>${fmt(d.traffic14.uniques)}</b><span>people on GitHub, last 14 days</span></div>
-      <div class="num"><b>${fmt(d.repo.stars)}</b><span>stars</span></div>
+      <div class="num"><b>${fmt(total)}</b>${delta(dlWeek)}<span>downloads, all time</span></div>
+      <div class="num"><b>${fmt(d.traffic14.uniques)}</b>${delta(viewsWeek - viewsPrev, viewsPrev > 0)}<span>people on GitHub, last 14 days</span></div>
+      <div class="num"><b>${fmt(d.repo.stars)}</b>${delta(starWeek)}<span>stars</span></div>
       <div class="num"><b>${fmt(d.repo.forks)}</b><span>forks</span></div>
+    </section>
+
+    <section class="week" aria-label="Last 7 days">
+      <h2 class="week__h">This week</h2>
+      <div class="week__row">
+        <div class="wk"><b>${dlWeek == null ? '—' : (dlWeek >= 0 ? '+' : '') + fmt(dlWeek)}</b><span>downloads</span></div>
+        <div class="wk"><b>${fmt(viewsWeek)}</b><span>repo views</span></div>
+        <div class="wk"><b>${starWeek >= 0 ? '+' : ''}${fmt(starWeek)}</b><span>new stars</span></div>
+        <div class="wk"><b>${d.ga ? fmt(windowSum(d.history.site, 7)) : '—'}</b><span>site views</span></div>
+      </div>
+      ${dlWeek == null ? '<p class="sub">Download and star trends build up from here; a few days of history are still filling in.</p>' : ''}
     </section>
 
     ${site(d)}
@@ -204,6 +230,43 @@ function table(rows, label, cell, cls = '') {
   if (!rows.length) return '<p class="empty">Nothing yet.</p>';
   return `<table><tr><th>${label}</th><th class="n">Views</th><th class="n">People</th></tr>${rows.map((r) => `
     <tr><td class="${cls}">${cell(r)}</td><td class="n">${fmt(r.count)}</td><td class="n">${fmt(r.uniques)}</td></tr>`).join('')}</table>`;
+}
+
+// Sum a daily "count" series over a window of days ending `skip` days ago.
+function windowSum(byDay = {}, days, skip = 0) {
+  const now = new Date();
+  const start = new Date(now); start.setUTCDate(start.getUTCDate() - skip - days);
+  const end = new Date(now); end.setUTCDate(end.getUTCDate() - skip);
+  let sum = 0;
+  for (const [day, v] of Object.entries(byDay)) {
+    const t = new Date(day + 'T00:00:00Z');
+    if (t > start && t <= end) sum += v.count ?? 0;
+  }
+  return sum;
+}
+
+// Change in a running total over the last 7 days. null until we have a point ~7 days back.
+function totalChange(totals = {}, field) {
+  const days = Object.keys(totals).sort();
+  if (days.length < 2) return null;
+  const latest = totals[days.at(-1)][field];
+  const cutoff = new Date(); cutoff.setUTCDate(cutoff.getUTCDate() - 6);
+  // The most recent snapshot still at least ~6 days old: the start of the week window.
+  const older = days.filter((day) => new Date(day + 'T00:00:00Z') <= cutoff);
+  if (!older.length) return null;
+  return latest - totals[older.at(-1)][field];
+}
+
+function starsInLastDays(stars = [], days) {
+  const cut = new Date(); cut.setUTCDate(cut.getUTCDate() - days);
+  return stars.filter((s) => new Date(s.at) >= cut).length;
+}
+
+// A small "+12 this week" tag next to a headline number.
+function delta(n, show = true) {
+  if (!show || n == null || n === 0) return '';
+  const up = n > 0;
+  return `<em class="delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${fmt(Math.abs(n))} this week</em>`;
 }
 
 // A day-by-day series, oldest first, with missing days filled in as zero.
