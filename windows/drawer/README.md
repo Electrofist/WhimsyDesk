@@ -43,7 +43,19 @@ cargo run --release -p desktop-drawer
 
 [docs/PORT-SPEC.md](docs/PORT-SPEC.md) describes every behaviour carried over from the Mac version.
 
+## Installer
+
+`installer/DesktopDrawer.iss` is an [Inno Setup 6](https://jrsoftware.org/isinfo.php) script: it installs
+for the current user (no admin prompt), adds a Start menu entry, can start the drawer with Windows and
+never deletes your files. CI builds it; to build it yourself:
+
+```
+cargo build --release -p desktop-drawer
+iscc /DSourceDir=..\target\release installer\DesktopDrawer.iss
+```
+
+The app icon (`app/icon.ico`) is the macOS Desktop Drawer icon, cropped to fill the square.
+
 ## Not done yet
 
-An installer and an app icon (the fridge has both); putting a file back to the exact Desktop icon
-position it had.
+Putting a file back to the exact Desktop icon position it had.
