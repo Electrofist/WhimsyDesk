@@ -274,10 +274,14 @@ DOCS = [
     {'src': 'docs/fun-mac-desktop.md', 'slug': 'fun-mac-desktop', 'name': 'Fun things for your Mac desktop',
      'title': 'Fun things to put on your Mac desktop | WhimsyDesk',
      'desc': 'Make your Mac desktop more fun: widgets, moving wallpapers, a fridge and a drawer that hold your files, holiday lights and desktop companions.'},
+    {'src': 'docs/desktop-drawer-windows.md', 'slug': 'desktop-drawer-windows', 'name': 'Desktop Drawer for Windows',
+     'title': 'Desktop Drawer for Windows: a drawer on your desktop that holds files | WhimsyDesk',
+     'desc': 'A free, open source wooden drawer for your Windows 10 and 11 desktop. Pull it out, drop files in, push it shut. Beta, with an installer.'},
 ]
 DOC_LINKS = {'faq.md': '../faq/', 'make-your-own.md': '../make-your-own/',
              'clean-up-mac-desktop.md': '../clean-up-mac-desktop/',
-             'desktop-fridge-windows.md': '../desktop-fridge-windows/', 'fun-mac-desktop.md': '../fun-mac-desktop/'}
+             'desktop-fridge-windows.md': '../desktop-fridge-windows/', 'fun-mac-desktop.md': '../fun-mac-desktop/',
+             'desktop-drawer-windows.md': '../desktop-drawer-windows/'}
 
 
 def doc_href(h):

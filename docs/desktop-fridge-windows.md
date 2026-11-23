@@ -33,4 +33,6 @@ Prefer no installer? There is also a [portable zip](https://github.com/Electrofi
 
 It works, but it is new, so expect a few rough edges. If something goes wrong, [open an issue](https://github.com/Electrofist/WhimsyDesk/issues) and attach the log from `%LOCALAPPDATA%\WhimsyDesk\Desktop Fridge\fridge.log`.
 
+There is also a [Desktop Drawer for Windows](https://whimsydesk.art/desktop-drawer-windows/) in beta.
+
 On a Mac? The [Mac version](https://whimsydesk.art/desktop-fridge/) is finished, and comes with a drawer, a mailbox and two vending machines.

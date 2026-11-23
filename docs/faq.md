@@ -30,7 +30,7 @@ Right-click the object and choose Quit.
 
 ## Windows or Linux?
 
-The Desktop Fridge has a beta for Windows 10 and 11. Get the installer from the [Desktop Fridge page](https://whimsydesk.art/desktop-fridge/). The other objects are macOS only for now and need macOS 14 or later. There is no Linux version.
+The Desktop Fridge and the Desktop Drawer both have betas for Windows 10 and 11. Get them from the [Desktop Fridge page](https://whimsydesk.art/desktop-fridge/) and the [Desktop Drawer page](https://whimsydesk.art/desktop-drawer/). The other objects are macOS only for now and need macOS 14 or later. There is no Linux version.
 
 ## Can I make my own object?
 

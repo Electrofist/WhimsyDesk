@@ -1,6 +1,6 @@
 # WhimsyDesk
 
-> Free, open source desktop organizer apps for Mac: real-feeling objects (a fridge, a wooden drawer, a post box and two vending machines) that sit on your desktop and hold your files. Files are moved into normal folders, never copied or deleted, and Put Back returns each file to its exact desktop spot. No accounts, no tracking. macOS 14 or later, Apple silicon and Intel. The fridge also has a beta for Windows 10 and 11.
+> Free, open source desktop organizer apps for Mac: real-feeling objects (a fridge, a wooden drawer, a post box and two vending machines) that sit on your desktop and hold your files. Files are moved into normal folders, never copied or deleted, and Put Back returns each file to its exact desktop spot. No accounts, no tracking. macOS 14 or later, Apple silicon and Intel. The fridge and the drawer also have betas for Windows 10 and 11.
 
 Made by Krrish Parmar, a product designer in Mumbai (https://krisby.in). MIT licensed. Source: https://github.com/Electrofist/WhimsyDesk
 
@@ -12,6 +12,7 @@ Made by Krrish Parmar, a product designer in Mumbai (https://krisby.in). MIT lic
 - [Desktop Vending Machine](https://whimsydesk.art/desktop-vending-machine/): files stand on shelves; press a button and one drops into the tray.
 - [Desktop Vending Machine Keypad](https://whimsydesk.art/desktop-vending-machine-keypad/): the same machine with a keypad; type a code like B2 to drop a file.
 - [Desktop Fridge for Windows](https://whimsydesk.art/desktop-fridge-windows/): beta for Windows 10 and 11, with an installer.
+- [Desktop Drawer for Windows](https://whimsydesk.art/desktop-drawer-windows/): beta for Windows 10 and 11, with an installer.
 
 ## Guides
 
