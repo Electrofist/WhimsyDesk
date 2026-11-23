@@ -61,6 +61,7 @@ esc = html.escape
 # Objects with a Windows beta: the installer from the GitHub pre-release.
 WINDOWS_BETA = {
     'fridge': 'https://github.com/Electrofist/WhimsyDesk/releases/download/windows-fridge-beta.1/Desktop-Fridge-Setup.exe',
+    'drawer': 'https://github.com/Electrofist/WhimsyDesk/releases/download/windows-drawer-beta.1/Desktop-Drawer-Setup.exe',
 }
 
 # Makers with a site of their own.
